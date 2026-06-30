@@ -1,25 +1,85 @@
 import { MAX_DRAFTS_PER_DAY } from '@/lib/constants.mjs';
+import { AxonResetSettings } from '@/components/axon/axon-reset-settings';
+import { fetchTopSignals, fetchMemories, getOperatorProfile } from '@/lib/axon-profile';
+
+export const dynamic = 'force-dynamic';
 
 const GUARDRAILS = [
   { label: 'No auto-send', detail: 'Every outbound requires JB approval via dashboard or Telegram.' },
   { label: 'Daily cap', detail: `Max ${MAX_DRAFTS_PER_DAY} new drafts per day.` },
   { label: 'API budget', detail: '$20/mo cap — monitor Anthropic console.' },
-  { label: 'Hermes separate', detail: 'Sync only, no LLM overlap.' },
-  { label: 'Score threshold', detail: 'Leads below 55 fit score are auto-skipped.' },
+  { label: 'Adaptive tone', detail: 'AXON learns from every message. Reset anytime below.' },
 ];
 
-const SCHEDULE = [
-  { job: 'AXON NI Outreach', cron: '30 7 * * * UTC', est: '2:30 AM EST daily' },
-  { job: 'AXON Telegram Poll', cron: '*/15 * * * * UTC', est: 'Every 15 min' },
-];
+export default async function SettingsPage() {
+  const [profile, signals, memories] = await Promise.all([
+    getOperatorProfile(),
+    fetchTopSignals(undefined, 8),
+    fetchMemories(undefined, 5),
+  ]);
 
-export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold">Settings & Guardrails</h1>
-        <p className="mt-1 text-sm text-axon-muted">Phase 1 operational constraints from nv-vault.</p>
+        <h1 className="text-2xl font-semibold">Settings</h1>
+        <p className="mt-1 text-sm text-axon-muted">Voice, learning, guardrails, and reset controls.</p>
       </header>
+
+      <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+        <h2 className="text-sm font-medium">Communication Profile</h2>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-axon-muted">Input mode</dt>
+            <dd className="capitalize">{profile.input_mode}</dd>
+          </div>
+          <div>
+            <dt className="text-axon-muted">Read aloud</dt>
+            <dd>{profile.read_aloud ? 'On' : 'Off'}</dd>
+          </div>
+          <div>
+            <dt className="text-axon-muted">Voice</dt>
+            <dd>{profile.voice_id}</dd>
+          </div>
+          <div>
+            <dt className="text-axon-muted">Active signals</dt>
+            <dd>{signals.length}</dd>
+          </div>
+        </dl>
+        {profile.tone_preset.summary && (
+          <p className="mt-4 text-xs text-axon-muted">{profile.tone_preset.summary}</p>
+        )}
+      </section>
+
+      {signals.length > 0 && (
+        <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+          <h2 className="text-sm font-medium">Top Communication Learnings</h2>
+          <div className="mt-4 space-y-2">
+            {signals.map((s) => (
+              <div key={s.id} className="flex justify-between gap-4 text-xs">
+                <span className="text-axon-muted">
+                  [{s.signal_type}] {s.signal_key}
+                </span>
+                <span className="font-mono text-axon-gold">w{s.weight.toFixed(1)} · n{s.evidence_count}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {memories.length > 0 && (
+        <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+          <h2 className="text-sm font-medium">Recent Memories</h2>
+          <ul className="mt-4 space-y-2 text-sm text-axon-muted">
+            {memories.map((m) => (
+              <li key={m.id}>
+                <span className="text-[10px] uppercase text-axon-gold">{m.memory_type}</span> — {m.content}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <AxonResetSettings />
 
       <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
         <h2 className="text-sm font-medium">Guardrails</h2>
@@ -31,58 +91,6 @@ export default function SettingsPage() {
             </div>
           ))}
         </div>
-      </section>
-
-      <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
-        <h2 className="text-sm font-medium">GitHub Actions Schedule</h2>
-        <div className="mt-4 overflow-hidden rounded-lg border border-axon-border">
-          <table className="w-full text-sm">
-            <thead className="bg-axon-elevated text-xs uppercase text-axon-muted">
-              <tr>
-                <th className="px-4 py-2 text-left">Workflow</th>
-                <th className="px-4 py-2 text-left">Cron</th>
-                <th className="px-4 py-2 text-left">Local</th>
-              </tr>
-            </thead>
-            <tbody>
-              {SCHEDULE.map((s) => (
-                <tr key={s.job} className="border-t border-axon-border">
-                  <td className="px-4 py-3">{s.job}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{s.cron}</td>
-                  <td className="px-4 py-3 text-axon-muted">{s.est}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
-        <h2 className="text-sm font-medium">NI-Brain Connection</h2>
-        <dl className="mt-4 space-y-2 text-sm">
-          <div className="flex gap-2">
-            <dt className="text-axon-muted">Project:</dt>
-            <dd className="font-mono text-xs">kxijunwgbrlfzvgkhklo</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-axon-muted">Table:</dt>
-            <dd className="font-mono text-xs">ni_brain_outreach</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-axon-muted">Source filter:</dt>
-            <dd className="font-mono text-xs">axon_ni_services</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
-        <h2 className="text-sm font-medium">Telegram Commands</h2>
-        <pre className="mt-4 rounded-lg bg-axon-elevated p-4 font-mono text-xs text-axon-muted">
-{`/status              — pipeline summary
-/approve <id>        — send email or approve LinkedIn
-/reject <id>         — kill lead
-/sent_li <id>        — mark LinkedIn DM sent`}
-        </pre>
       </section>
     </div>
   );

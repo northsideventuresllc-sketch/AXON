@@ -1,15 +1,21 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-base';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+
+const NAV = [
+  { href: '/', label: 'AXON', icon: '◈' },
+  { href: '/tools/ni-outreach', label: 'Outreach', icon: '◎' },
+  { href: '/queue', label: 'Queue', icon: '▣' },
+  { href: '/pipeline', label: 'Pipeline', icon: '▤' },
+  { href: '/settings', label: 'Settings', icon: '⚙' },
+];
 
 function SignOutButton() {
-  const router = useRouter();
-
   async function handleSignOut() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-    router.refresh();
+    await fetch(apiUrl('/api/auth/logout'), { method: 'POST' });
+    window.location.href = apiUrl('/login');
   }
 
   return (
@@ -22,14 +28,6 @@ function SignOutButton() {
     </button>
   );
 }
-
-const NAV = [
-  { href: '/', label: 'Dashboard', icon: '◈' },
-  { href: '/queue', label: 'Approval Queue', icon: '◎' },
-  { href: '/pipeline', label: 'Pipeline', icon: '▤' },
-  { href: '/services', label: 'Services', icon: '◆' },
-  { href: '/settings', label: 'Settings', icon: '⚙' },
-];
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -45,7 +43,10 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-1 px-3 py-4">
         {NAV.map((item) => {
-          const active = pathname === item.href;
+          const active =
+            item.href === '/'
+              ? pathname === '/'
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}
@@ -64,13 +65,6 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-axon-border px-4 py-4">
-        <Link
-          href="/axon"
-          target="_blank"
-          className="block rounded-lg border border-axon-border px-3 py-2 text-xs text-axon-muted transition hover:border-axon-gold/40 hover:text-axon-gold"
-        >
-          Public landing ↗
-        </Link>
         <SignOutButton />
       </div>
     </aside>
