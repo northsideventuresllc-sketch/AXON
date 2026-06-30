@@ -1,0 +1,15 @@
+{
+  "name": "axon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AXON — NORTHSiDE autonomous profit engines",
+  "scripts": {
+    "outreach": "node scripts/axon-ni-outreach.mjs",
+    "telegram:poll": "node scripts/axon-telegram-poll.mjs",
+    "outreach:dry": "AXON_DRY_RUN=1 node scripts/axon-ni-outreach.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

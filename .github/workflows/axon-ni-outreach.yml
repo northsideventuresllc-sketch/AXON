@@ -1,0 +1,43 @@
+name: AXON NI Outreach
+
+on:
+  schedule:
+    # 2:30 AM EST = 7:30 AM UTC (after Hermes 2 AM EST / 7:00 UTC)
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: axon-ni-outreach
+  cancel-in-progress: false
+
+jobs:
+  outreach:
+    name: AXON — find · score · draft · queue
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run outreach engine
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_BACKUP: ${{ secrets.GEMINI_API_KEY_BACKUP }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+        run: node scripts/axon-ni-outreach.mjs
+
+      - name: Report failure
+        if: failure()
+        run: echo "❌ AXON outreach failed — check Actions logs"
