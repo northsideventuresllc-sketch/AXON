@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { refreshTonePresetFromSignals } from '@/lib/axon-chat';
+import { refreshTonePresetFromSignals } from '@/lib/axon-web-chat';
 
 /** Background tone refresh — infuses latest signal patterns into preset */
 export async function POST() {

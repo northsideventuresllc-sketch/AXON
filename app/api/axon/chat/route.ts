@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateAxonReply } from '@/lib/axon-chat';
+import { generateAxonReply } from '@/lib/axon-web-chat';
 import { fetchChatHistory } from '@/lib/axon-profile';
 
 export async function GET() {
