@@ -7,8 +7,10 @@ import { SOURCE, parseNotes, shortId } from '../lib/constants.mjs';
 import { resendSend } from '../lib/resend.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { parseCommand, telegramGetUpdates, telegramSend } from '../lib/telegram.mjs';
+import { welcomeMessage } from '../lib/telegram-commands.mjs';
 
 const OFFSET_KEY = 'AXON_TELEGRAM_OFFSET';
+const COMMAND_WITH_ID = new Set(['/approve', '/reject', '/sent_li']);
 
 async function loadOffset(sbSelect) {
   const rows = await sbSelect(
@@ -50,17 +52,17 @@ async function handleApprove(cfg, sbPatch, lead) {
   const meta = parseNotes(lead.notes);
   if (meta.channel === 'linkedin') {
     await sbPatch('ni_brain_outreach', `id=eq.${lead.id}`, { status: 'approved' });
-    return `✅ Approved ${shortId(lead.id)} (LinkedIn). Copy the DM and send manually, then /sent_li ${shortId(lead.id)}`;
+    return `Approved ${shortId(lead.id)} (LinkedIn). Copy the DM and send manually, then /sent_li ${shortId(lead.id)}`;
   }
 
   const to = meta.contact_email;
   if (!to) {
-    return `⚠️ ${shortId(lead.id)} approved but no contact_email in notes. Add email manually or use LinkedIn.`;
+    return `${shortId(lead.id)} approved but no contact_email in notes. Use LinkedIn or edit in NI-Brain.`;
   }
 
   if (!cfg.resendKey) {
     await sbPatch('ni_brain_outreach', `id=eq.${lead.id}`, { status: 'approved' });
-    return `✅ Approved ${shortId(lead.id)} but RESEND_API_KEY missing — send manually.`;
+    return `Approved ${shortId(lead.id)} but RESEND_API_KEY missing — send manually.`;
   }
 
   const subject = meta.email_subject || `NORTHSiDE Intelligence — ${lead.handle}`;
@@ -75,7 +77,51 @@ async function handleApprove(cfg, sbPatch, lead) {
     dm_sent: true,
   });
 
-  return `📤 Sent email to ${to} for ${lead.handle} (${shortId(lead.id)})`;
+  return `Sent email to ${to} for ${lead.handle} (${shortId(lead.id)})`;
+}
+
+async function buildReply(cfg, sbSelect, sbPatch, parsed, rawText) {
+  const { cmd, arg } = parsed;
+
+  if (cmd === '/start' || cmd === '/help') {
+    return welcomeMessage();
+  }
+
+  if (cmd === '/status') {
+    const s = await pipelineSummary(sbSelect);
+    return [
+      'AXON NI pipeline',
+      `Total: ${s.total}`,
+      `Pending approval: ${s.pending}`,
+      `Closed won: ${s.won}/4`,
+      s.total === 0
+        ? 'No drafts yet — run AXON NI Outreach in GitHub Actions or wait for tonight.'
+        : `By status: ${JSON.stringify(s.counts)}`,
+    ].join('\n');
+  }
+
+  if (COMMAND_WITH_ID.has(cmd) && !arg) {
+    return `Usage: ${cmd} <id>  (id is the 8-char code on each draft message)`;
+  }
+
+  if (!COMMAND_WITH_ID.has(cmd)) {
+    return `Unknown command. Send /help for AXON commands.`;
+  }
+
+  const lead = await findLeadByShortId(sbSelect, arg);
+  if (!lead) return `Lead not found: ${arg}`;
+
+  if (cmd === '/approve') return handleApprove(cfg, sbPatch, lead);
+  if (cmd === '/reject') {
+    await sbPatch('ni_brain_outreach', `id=eq.${lead.id}`, { status: 'dead' });
+    return `Rejected ${lead.handle} (${shortId(lead.id)})`;
+  }
+  if (cmd === '/sent_li') {
+    await sbPatch('ni_brain_outreach', `id=eq.${lead.id}`, { status: 'sent', dm_sent: true });
+    return `Marked LinkedIn sent for ${lead.handle} (${shortId(lead.id)})`;
+  }
+
+  return `Unknown command: ${cmd}`;
 }
 
 async function main() {
@@ -92,6 +138,7 @@ async function main() {
   const offset = await loadOffset(sbSelect);
   const updates = await telegramGetUpdates(cfg.telegramToken, offset || undefined);
   let nextOffset = offset;
+  let replied = 0;
 
   for (const update of updates) {
     nextOffset = Math.max(nextOffset, update.update_id + 1);
@@ -99,59 +146,36 @@ async function main() {
     if (!msg?.text || String(msg.chat.id) !== String(cfg.telegramChatId)) continue;
 
     const parsed = parseCommand(msg.text);
-    if (!parsed) continue;
-
-    const { cmd, arg } = parsed;
     let reply;
 
     try {
-      if (cmd === '/status') {
-        const s = await pipelineSummary(sbSelect);
-        reply = [
-          '📊 AXON NI pipeline',
-          `Total: ${s.total}`,
-          `Pending approval: ${s.pending}`,
-          `Closed won: ${s.won}/4`,
-          `By status: ${JSON.stringify(s.counts)}`,
-        ].join('\n');
-      } else if (!arg) {
-        reply = 'Usage: /approve <id> · /reject <id> · /sent_li <id> · /status';
+      if (parsed) {
+        reply = await buildReply(cfg, sbSelect, sbPatch, parsed, msg.text);
       } else {
-        const lead = await findLeadByShortId(sbSelect, arg);
-        if (!lead) {
-          reply = `❌ Lead not found: ${arg}`;
-        } else if (cmd === '/approve') {
-          reply = await handleApprove(cfg, sbPatch, lead);
-        } else if (cmd === '/reject') {
-          await sbPatch('ni_brain_outreach', `id=eq.${lead.id}`, { status: 'dead' });
-          reply = `🗑 Rejected ${lead.handle} (${shortId(lead.id)})`;
-        } else if (cmd === '/sent_li') {
-          await sbPatch('ni_brain_outreach', `id=eq.${lead.id}`, {
-            status: 'sent',
-            dm_sent: true,
-          });
-          reply = `✅ Marked LinkedIn sent for ${lead.handle} (${shortId(lead.id)})`;
-        } else {
-          reply = `Unknown command: ${cmd}`;
-        }
+        reply = 'AXON heard you. Try /help or /status.';
       }
     } catch (err) {
-      reply = `❌ Error: ${err.message}`;
+      reply = `Error: ${err.message}`;
     }
 
     if (reply) {
       await telegramSend(cfg.telegramToken, cfg.telegramChatId, reply, cfg.dryRun);
+      replied++;
+    }
+
+    if (!cfg.dryRun) {
+      await saveOffset(sbUpsertSecret, nextOffset);
     }
   }
 
-  if (nextOffset !== offset && !cfg.dryRun) {
+  if (nextOffset !== offset && !cfg.dryRun && replied === 0) {
     await saveOffset(sbUpsertSecret, nextOffset);
   }
 
-  console.log(`Processed ${updates.length} update(s). Offset: ${nextOffset}`);
+  console.log(`Processed ${updates.length} update(s), replied ${replied}. Offset: ${nextOffset}`);
 }
 
 main().catch((err) => {
-  console.error('❌ AXON telegram poll failed:', err.message);
+  console.error('AXON telegram poll failed:', err.message);
   process.exit(1);
 });

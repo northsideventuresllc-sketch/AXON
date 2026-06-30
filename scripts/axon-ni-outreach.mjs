@@ -4,7 +4,7 @@
  * find → score → draft → queue → Telegram notify
  */
 import { randomUUID } from 'node:crypto';
-import { geminiScanProspect, haikuScoreAndDraft } from '../lib/ai.mjs';
+import { geminiScanProspect, haikuScoreAndDraft, scanProspect } from '../lib/ai.mjs';
 import { loadConfig } from '../lib/config.mjs';
 import {
   MAX_DRAFTS_PER_DAY,
@@ -19,7 +19,7 @@ import { searchProspects } from '../lib/serpapi.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { formatDraftMessage, telegramSend } from '../lib/telegram.mjs';
 
-const today = todayUtc();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function countTodayDrafts(sbSelect) {
   const rows = await sbSelect(
@@ -86,14 +86,15 @@ async function main() {
   console.log(`Prospects from search: ${prospects.length}`);
 
   let created = 0;
+  const maxPerRun = Math.min(remaining, 5);
   for (const prospect of prospects) {
-    if (created >= remaining) break;
+    if (created >= maxPerRun) break;
 
     let scan;
     try {
-      scan = await geminiScanProspect(cfg, prospect);
+      scan = await scanProspect(cfg, prospect);
     } catch (err) {
-      console.warn(`Gemini scan skip: ${err.message}`);
+      console.warn(`Scan skip: ${err.message}`);
       continue;
     }
 
@@ -171,6 +172,8 @@ async function main() {
     } else {
       console.warn('Telegram not configured — draft saved to NI-Brain only');
     }
+
+    await sleep(1500);
   }
 
   console.log(`Done. Created ${created} draft(s).`);
