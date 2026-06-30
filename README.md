@@ -14,7 +14,9 @@
 | **NI-Brain** | `ni_brain_outreach` where `source = axon_ni_services` |
 | **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Telegram Poll |
 
-**Web UI** at `/` (dashboard) and `/axon` (public waitlist). Login via `AXON_DASHBOARD_SECRET`.
+**Web UI** at `northsideintelligence.com/axon` — Jarvis interface (chat/voice), autonomous task tools, outreach dashboard.
+
+Set `NEXT_PUBLIC_BASE_PATH=/axon` in production env.
 
 ---
 
