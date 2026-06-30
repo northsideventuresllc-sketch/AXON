@@ -4,7 +4,7 @@
  * find → score → draft → queue → Telegram notify
  */
 import { randomUUID } from 'node:crypto';
-import { geminiScanProspect, haikuScoreAndDraft } from '../lib/ai.mjs';
+import { haikuScoreAndDraft, scanProspect } from '../lib/ai.mjs';
 import { loadConfig } from '../lib/config.mjs';
 import {
   MAX_DRAFTS_PER_DAY,
@@ -24,7 +24,7 @@ const today = todayUtc();
 async function countTodayDrafts(sbSelect) {
   const rows = await sbSelect(
     'ni_brain_outreach',
-    `source=eq.${SOURCE}&created_at=gte.${today}T00:00:00Z&select=id`
+    `source=eq.${SOURCE}&added=eq.${today}&select=id`
   );
   return rows?.length || 0;
 }
@@ -89,12 +89,9 @@ async function main() {
   for (const prospect of prospects) {
     if (created >= remaining) break;
 
-    let scan;
-    try {
-      scan = await geminiScanProspect(cfg, prospect);
-    } catch (err) {
-      console.warn(`Gemini scan skip: ${err.message}`);
-      continue;
+    const scan = await scanProspect(cfg, prospect);
+    if (scan._scan_source) {
+      console.log(`Scan via ${scan._scan_source}: ${prospect.title?.slice(0, 60) || 'prospect'}`);
     }
 
     const company = (scan.company || prospect.title || '').trim();
@@ -114,6 +111,13 @@ async function main() {
     }
 
     const channel = draft.channel === 'linkedin' ? 'linkedin' : 'email';
+    const draftBody =
+      channel === 'email' ? (draft.email_body || '').trim() : (draft.linkedin_dm || '').trim();
+    if (!draftBody) {
+      console.warn(`Skip empty draft body: ${company}`);
+      continue;
+    }
+
     const meta = {
       channel,
       score: draft.score,
@@ -122,6 +126,7 @@ async function main() {
       contact_email: draft.contact_email || null,
       source_link: prospect.link,
       serp_title: prospect.title,
+      scan_source: scan._scan_source || 'unknown',
     };
 
     const row = {
@@ -130,8 +135,8 @@ async function main() {
       niche: scan.industry || scan.niche || 'general',
       target_group: draft.target_group || scan.segment || 'smb',
       why_match_fit: draft.why_match_fit || scan.fit_summary || '',
-      comment_draft: channel === 'email' ? (draft.email_body || '') : '',
-      dm_draft: channel === 'linkedin' ? (draft.linkedin_dm || '') : (draft.linkedin_dm || ''),
+      comment_draft: channel === 'email' ? draftBody : '',
+      dm_draft: channel === 'linkedin' ? draftBody : '',
       status: 'pending_approval',
       notes: formatNotes(meta),
       added: today,
