@@ -1,10 +1,13 @@
 {
   "name": "axon",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "AXON — NORTHSiDE autonomous profit engines",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "outreach": "node scripts/axon-ni-outreach.mjs",
     "telegram:poll": "node scripts/axon-telegram-poll.mjs",
     "telegram:setup": "node scripts/axon-telegram-setup.mjs",
@@ -13,5 +16,18 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "next": "^15.3.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.8",
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5.8.3"
   }
 }

@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-axon-bg: #070708;
+  --color-axon-surface: #111113;
+  --color-axon-elevated: #1a1a1e;
+  --color-axon-border: #2a2a30;
+  --color-axon-muted: #6b6b76;
+  --color-axon-text: #ececee;
+  --color-axon-gold: #c9a962;
+  --color-axon-gold-dim: #8a7340;
+  --color-axon-teal: #3dd6c5;
+  --color-axon-danger: #e05252;
+  --color-axon-success: #4ade80;
+  --font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-axon-bg text-axon-text font-[family-name:var(--font-display)];
+  }
+
+  ::selection {
+    @apply bg-axon-gold/30 text-white;
+  }
+}
+
+@layer utilities {
+  .axon-grid-bg {
+    background-image:
+      linear-gradient(rgba(201, 169, 98, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201, 169, 98, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .axon-glow {
+    box-shadow: 0 0 40px rgba(201, 169, 98, 0.08);
+  }
+}
+
+@keyframes scan {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}

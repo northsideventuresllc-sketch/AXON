@@ -1,0 +1,65 @@
+import Link from 'next/link';
+import type { LeadWithMeta } from '@/lib/types';
+import { StatusBadge } from './status-badge';
+
+export function LeadCard({ lead }: { lead: LeadWithMeta }) {
+  const channel = lead.meta.channel || 'email';
+  const score = lead.meta.score;
+
+  return (
+    <Link
+      href={`/leads/${lead.id}`}
+      className="group block rounded-xl border border-axon-border bg-axon-surface p-5 transition hover:border-axon-gold/40 hover:bg-axon-elevated/50"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs text-axon-gold">{lead.shortId}</span>
+            {score != null && (
+              <span className="rounded bg-axon-elevated px-1.5 py-0.5 font-mono text-xs text-axon-teal">
+                {score}
+              </span>
+            )}
+          </div>
+          <h3 className="mt-1 truncate text-base font-medium group-hover:text-axon-gold">
+            {lead.handle}
+          </h3>
+          <p className="mt-1 text-xs text-axon-muted">
+            {lead.niche} · {lead.target_group?.toUpperCase()} · {channel}
+          </p>
+        </div>
+        <StatusBadge status={lead.status} />
+      </div>
+
+      {lead.meta.recommended_service && (
+        <p className="mt-3 line-clamp-1 text-xs text-axon-muted">
+          → {lead.meta.recommended_service}
+        </p>
+      )}
+
+      {lead.why_match_fit && (
+        <p className="mt-2 line-clamp-2 text-sm text-axon-muted/80">{lead.why_match_fit}</p>
+      )}
+    </Link>
+  );
+}
+
+export function LeadRow({ lead }: { lead: LeadWithMeta }) {
+  const channel = lead.meta.channel || 'email';
+
+  return (
+    <Link
+      href={`/leads/${lead.id}`}
+      className="grid grid-cols-[100px_1fr_120px_100px_100px] items-center gap-4 border-b border-axon-border px-4 py-3 text-sm transition hover:bg-axon-elevated/40"
+    >
+      <span className="font-mono text-xs text-axon-gold">{lead.shortId}</span>
+      <div className="min-w-0">
+        <p className="truncate font-medium">{lead.handle}</p>
+        <p className="truncate text-xs text-axon-muted">{lead.niche}</p>
+      </div>
+      <span className="text-xs capitalize text-axon-muted">{channel}</span>
+      <span className="font-mono text-xs">{lead.meta.score ?? '—'}</span>
+      <StatusBadge status={lead.status} />
+    </Link>
+  );
+}

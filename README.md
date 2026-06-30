@@ -10,10 +10,12 @@
 
 | Surface | What |
 |---------|------|
+| **Web UI** | `northsideintelligence.com/axon` — Jarvis interface (chat/voice), autonomous task tools, outreach dashboard |
 | **Telegram** | Chat with AXON like a normal AI assistant. Slash commands for pipeline actions. Drafts land nightly. |
-| **AXON Dashboard** | All Telegram conversations — chat + commands + draft notifications. Deploy at `/axon`. |
 | **NI-Brain** | `ni_brain_outreach` where `source = axon_ni_services` |
 | **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Telegram Poll / AXON Telegram Setup |
+
+Set `NEXT_PUBLIC_BASE_PATH=/axon` in production env.
 
 ---
 
@@ -44,29 +46,11 @@ npm run telegram:setup
 **Real-time chat (recommended)** — deploy to Vercel and set webhook:
 
 ```bash
-npm run telegram:setup -- --webhook https://your-domain/api/telegram-webhook
+npm run telegram:setup -- --webhook https://northsideintelligence.com/api/telegram-webhook
 # Or: GitHub Actions → AXON Telegram Setup → mode: webhook
 ```
 
-Without webhook, GitHub Actions polls every 2 minutes (slower but works).
-
----
-
-## AXON Dashboard
-
-Every Telegram message is saved to NI-Brain and visible on the dashboard.
-
-```bash
-npm run dashboard
-# → http://localhost:3847/axon
-```
-
-**Deploy to Vercel** (northsideintelligence.com/axon):
-
-1. Connect this repo to Vercel
-2. Set env vars: `SUPABASE_SERVICE_KEY`, `ANTHROPIC_API_KEY`, `TELEGRAM_*`, optional `AXON_DASHBOARD_TOKEN`
-3. Run telegram setup with your Vercel webhook URL
-4. Open `/axon` on your domain
+Without webhook, GitHub Actions polls every 2 minutes (fallback).
 
 ---
 
@@ -77,7 +61,7 @@ Add in **Settings → Secrets → Actions** on this repo:
 | Secret | Required | Notes |
 |--------|----------|-------|
 | `SUPABASE_SERVICE_KEY` | **Yes** | NI-Brain service role |
-| `ANTHROPIC_API_KEY` | **Yes** | Haiku drafts + Telegram chat |
+| `ANTHROPIC_API_KEY` | **Yes** | Haiku drafts + chat |
 | `GEMINI_API_KEY` | Yes | Prospect scan |
 | `SERPAPI_API_KEY` | Yes | Lead discovery |
 | `TELEGRAM_BOT_TOKEN` | **Yes** | From [@BotFather](https://t.me/BotFather) |
@@ -85,7 +69,7 @@ Add in **Settings → Secrets → Actions** on this repo:
 | `RESEND_API_KEY` | For email send | After approve |
 | `RESEND_FROM_EMAIL` | Optional | Default: `Jonny <northside@northsideintelligence.com>` |
 | `TELEGRAM_WEBHOOK_SECRET` | Optional | Webhook auth header |
-| `AXON_DASHBOARD_TOKEN` | Optional | Protect dashboard API |
+| `AXON_DASHBOARD_SECRET` | **Yes** | Web UI login |
 | `GEMINI_API_KEY_BACKUP` | Optional | Fallback |
 
 Keys can also live in NI-Brain `ni_platform_secrets` — env vars take precedence.
@@ -96,11 +80,12 @@ Keys can also live in NI-Brain `ni_platform_secrets` — env vars take precedenc
 
 ```bash
 cp .env.example .env   # fill from NI-Brain / GitHub secrets
+npm install
+npm run dev            # web UI at http://localhost:3000
 npm run outreach:dry   # no writes
 npm run outreach       # live run
 npm run telegram:poll  # process Telegram commands once
 npm run telegram:setup # register slash commands
-npm run dashboard      # view conversation history
 ```
 
 ---
@@ -126,9 +111,10 @@ npm run dashboard      # view conversation history
 ## Repo map
 
 ```
-lib/           shared clients (supabase, ai, telegram, chat, conversations)
-scripts/       outreach engine + telegram poll/setup + dashboard server
-api/           Vercel serverless (webhook + dashboard API)
-dashboard/     AXON web UI for Telegram history
+app/           Next.js web UI (Jarvis + tools + outreach)
+components/    AXON UI components
+lib/           shared clients (supabase, ai, telegram, chat, resend)
+api/           Vercel serverless (Telegram webhook + legacy API)
+scripts/       outreach engine + telegram poll/setup
 .github/       scheduled workflows
 ```

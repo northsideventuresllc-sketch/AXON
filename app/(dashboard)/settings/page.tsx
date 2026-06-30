@@ -1,0 +1,97 @@
+import { MAX_DRAFTS_PER_DAY } from '@/lib/constants.mjs';
+import { AxonResetSettings } from '@/components/axon/axon-reset-settings';
+import { fetchTopSignals, fetchMemories, getOperatorProfile } from '@/lib/axon-profile';
+
+export const dynamic = 'force-dynamic';
+
+const GUARDRAILS = [
+  { label: 'No auto-send', detail: 'Every outbound requires JB approval via dashboard or Telegram.' },
+  { label: 'Daily cap', detail: `Max ${MAX_DRAFTS_PER_DAY} new drafts per day.` },
+  { label: 'API budget', detail: '$20/mo cap — monitor Anthropic console.' },
+  { label: 'Adaptive tone', detail: 'AXON learns from every message. Reset anytime below.' },
+];
+
+export default async function SettingsPage() {
+  const [profile, signals, memories] = await Promise.all([
+    getOperatorProfile(),
+    fetchTopSignals(undefined, 8),
+    fetchMemories(undefined, 5),
+  ]);
+
+  return (
+    <div className="space-y-8">
+      <header>
+        <h1 className="text-2xl font-semibold">Settings</h1>
+        <p className="mt-1 text-sm text-axon-muted">Voice, learning, guardrails, and reset controls.</p>
+      </header>
+
+      <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+        <h2 className="text-sm font-medium">Communication Profile</h2>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-axon-muted">Input mode</dt>
+            <dd className="capitalize">{profile.input_mode}</dd>
+          </div>
+          <div>
+            <dt className="text-axon-muted">Read aloud</dt>
+            <dd>{profile.read_aloud ? 'On' : 'Off'}</dd>
+          </div>
+          <div>
+            <dt className="text-axon-muted">Voice</dt>
+            <dd>{profile.voice_id}</dd>
+          </div>
+          <div>
+            <dt className="text-axon-muted">Active signals</dt>
+            <dd>{signals.length}</dd>
+          </div>
+        </dl>
+        {profile.tone_preset.summary && (
+          <p className="mt-4 text-xs text-axon-muted">{profile.tone_preset.summary}</p>
+        )}
+      </section>
+
+      {signals.length > 0 && (
+        <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+          <h2 className="text-sm font-medium">Top Communication Learnings</h2>
+          <div className="mt-4 space-y-2">
+            {signals.map((s) => (
+              <div key={s.id} className="flex justify-between gap-4 text-xs">
+                <span className="text-axon-muted">
+                  [{s.signal_type}] {s.signal_key}
+                </span>
+                <span className="font-mono text-axon-gold">w{s.weight.toFixed(1)} · n{s.evidence_count}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {memories.length > 0 && (
+        <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+          <h2 className="text-sm font-medium">Recent Memories</h2>
+          <ul className="mt-4 space-y-2 text-sm text-axon-muted">
+            {memories.map((m) => (
+              <li key={m.id}>
+                <span className="text-[10px] uppercase text-axon-gold">{m.memory_type}</span> — {m.content}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <AxonResetSettings />
+
+      <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+        <h2 className="text-sm font-medium">Guardrails</h2>
+        <div className="mt-4 space-y-4">
+          {GUARDRAILS.map((g) => (
+            <div key={g.label} className="border-l-2 border-axon-gold/40 pl-4">
+              <p className="text-sm font-medium">{g.label}</p>
+              <p className="text-xs text-axon-muted">{g.detail}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
