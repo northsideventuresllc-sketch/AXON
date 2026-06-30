@@ -10,24 +10,63 @@
 
 | Surface | What |
 |---------|------|
-| **Telegram** | Drafts land in your chat nightly. Commands below. |
+| **Telegram** | Chat with AXON like a normal AI assistant. Slash commands for pipeline actions. Drafts land nightly. |
+| **AXON Dashboard** | All Telegram conversations — chat + commands + draft notifications. Deploy at `/axon`. |
 | **NI-Brain** | `ni_brain_outreach` where `source = axon_ni_services` |
-| **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Telegram Poll |
-
-There is no web UI yet (Phase 3–4).
+| **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Telegram Poll / AXON Telegram Setup |
 
 ---
 
-## Telegram commands
+## Telegram — chat + slash commands
+
+**Talk normally:** Just message AXON in Telegram. It replies in plain human language — no jargon unless you ask for technical detail.
+
+**Built-in slash commands** (visible when you type `/` in Telegram):
 
 ```
-/status              — pipeline summary
-/approve <id>        — send approved email (Resend) or mark LinkedIn approved
-/reject <id>         — kill lead
-/sent_li <id>        — mark LinkedIn DM sent manually
+/start, /help       — intro and how to use AXON
+/status             — pipeline summary in plain English
+/approve <id>       — send approved email (Resend) or mark LinkedIn approved
+/reject <id>        — pass on a lead
+/sent_li <id>       — you sent the LinkedIn DM manually
+/new                — fresh conversation note
 ```
 
 `<id>` = first 8 chars of lead UUID (shown in each draft message).
+
+**First-time setup** — register slash commands with BotFather API:
+
+```bash
+npm run telegram:setup
+# Or: GitHub Actions → AXON Telegram Setup → mode: commands
+```
+
+**Real-time chat (recommended)** — deploy to Vercel and set webhook:
+
+```bash
+npm run telegram:setup -- --webhook https://your-domain/api/telegram-webhook
+# Or: GitHub Actions → AXON Telegram Setup → mode: webhook
+```
+
+Without webhook, GitHub Actions polls every 2 minutes (slower but works).
+
+---
+
+## AXON Dashboard
+
+Every Telegram message is saved to NI-Brain and visible on the dashboard.
+
+```bash
+npm run dashboard
+# → http://localhost:3847/axon
+```
+
+**Deploy to Vercel** (northsideintelligence.com/axon):
+
+1. Connect this repo to Vercel
+2. Set env vars: `SUPABASE_SERVICE_KEY`, `ANTHROPIC_API_KEY`, `TELEGRAM_*`, optional `AXON_DASHBOARD_TOKEN`
+3. Run telegram setup with your Vercel webhook URL
+4. Open `/axon` on your domain
 
 ---
 
@@ -38,13 +77,15 @@ Add in **Settings → Secrets → Actions** on this repo:
 | Secret | Required | Notes |
 |--------|----------|-------|
 | `SUPABASE_SERVICE_KEY` | **Yes** | NI-Brain service role |
-| `ANTHROPIC_API_KEY` | **Yes** | Haiku drafts |
+| `ANTHROPIC_API_KEY` | **Yes** | Haiku drafts + Telegram chat |
 | `GEMINI_API_KEY` | Yes | Prospect scan |
 | `SERPAPI_API_KEY` | Yes | Lead discovery |
 | `TELEGRAM_BOT_TOKEN` | **Yes** | From [@BotFather](https://t.me/BotFather) |
 | `TELEGRAM_CHAT_ID` | **Yes** | Your personal chat ID |
 | `RESEND_API_KEY` | For email send | After approve |
 | `RESEND_FROM_EMAIL` | Optional | Default: `Jonny <northside@northsideintelligence.com>` |
+| `TELEGRAM_WEBHOOK_SECRET` | Optional | Webhook auth header |
+| `AXON_DASHBOARD_TOKEN` | Optional | Protect dashboard API |
 | `GEMINI_API_KEY_BACKUP` | Optional | Fallback |
 
 Keys can also live in NI-Brain `ni_platform_secrets` — env vars take precedence.
@@ -58,6 +99,8 @@ cp .env.example .env   # fill from NI-Brain / GitHub secrets
 npm run outreach:dry   # no writes
 npm run outreach       # live run
 npm run telegram:poll  # process Telegram commands once
+npm run telegram:setup # register slash commands
+npm run dashboard      # view conversation history
 ```
 
 ---
@@ -67,7 +110,7 @@ npm run telegram:poll  # process Telegram commands once
 | Workflow | Cron (UTC) | EST |
 |----------|------------|-----|
 | AXON NI Outreach | `30 7 * * *` | 2:30 AM (after Hermes 2 AM) |
-| AXON Telegram Poll | `*/15 * * * *` | Every 15 min |
+| AXON Telegram Poll | `*/2 * * * *` | Every 2 min (fallback) |
 
 ---
 
@@ -83,7 +126,9 @@ npm run telegram:poll  # process Telegram commands once
 ## Repo map
 
 ```
-lib/           shared clients (supabase, ai, telegram, resend, serpapi)
-scripts/       outreach engine + telegram poll
+lib/           shared clients (supabase, ai, telegram, chat, conversations)
+scripts/       outreach engine + telegram poll/setup + dashboard server
+api/           Vercel serverless (webhook + dashboard API)
+dashboard/     AXON web UI for Telegram history
 .github/       scheduled workflows
 ```

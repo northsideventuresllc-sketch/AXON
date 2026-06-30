@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/axon", "destination": "/dashboard/public/index.html" },
+    { "source": "/axon/(.*)", "destination": "/dashboard/public/$1" },
+    { "source": "/api/conversations/([^/]+)/messages", "destination": "/api/conversations/$1/messages" }
+  ],
+  "headers": [
+    {
+      "source": "/dashboard/public/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    }
+  ]
+}

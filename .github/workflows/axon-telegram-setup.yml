@@ -1,0 +1,55 @@
+name: AXON Telegram Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Setup mode'
+        required: true
+        default: 'commands'
+        type: choice
+        options:
+          - commands
+          - webhook
+          - polling
+      webhook_url:
+        description: 'Webhook URL (required for webhook mode, e.g. https://your-domain/api/telegram-webhook)'
+        required: false
+        type: string
+
+jobs:
+  setup:
+    name: AXON — Register Telegram commands / webhook
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Register slash commands
+        if: inputs.mode == 'commands'
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: node scripts/axon-telegram-setup.mjs
+
+      - name: Set webhook (real-time chat)
+        if: inputs.mode == 'webhook' && inputs.webhook_url != ''
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/axon-telegram-setup.mjs --webhook "${{ inputs.webhook_url }}"
+
+      - name: Switch to polling mode
+        if: inputs.mode == 'polling'
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: node scripts/axon-telegram-setup.mjs --polling

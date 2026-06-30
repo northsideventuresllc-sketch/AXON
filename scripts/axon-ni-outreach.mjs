@@ -17,6 +17,7 @@ import {
 } from '../lib/constants.mjs';
 import { searchProspects } from '../lib/serpapi.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
+import { recordDraftNotification } from '../lib/telegram-handler.mjs';
 import { formatDraftMessage, telegramSend } from '../lib/telegram.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -47,7 +48,7 @@ function pickQueries() {
 
 async function main() {
   console.log(`AXON NI outreach — ${new Date().toISOString()}`);
-  const { sbSelect, sbInsert } = createSupabaseClient(
+  const { sbSelect, sbInsert, sbPatch } = createSupabaseClient(
     process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
   );
   const cfg = await loadConfig(sbSelect);
@@ -161,11 +162,17 @@ async function main() {
       try {
         const notifyLead = { ...inserted, _meta: meta };
         if (!notifyLead._meta.score) notifyLead._meta = { ...parseNotes(inserted.notes), ...meta };
+        const draftText = formatDraftMessage(notifyLead, sid);
         await telegramSend(
           cfg.telegramToken,
           cfg.telegramChatId,
-          formatDraftMessage(notifyLead, sid),
+          draftText,
           false
+        );
+        await recordDraftNotification(
+          { sbSelect, sbInsert, sbPatch },
+          cfg.telegramChatId,
+          draftText
         );
       } catch (err) {
         console.warn(`Telegram notify failed for ${sid}: ${err.message}`);

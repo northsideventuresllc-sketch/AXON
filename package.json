@@ -7,6 +7,8 @@
   "scripts": {
     "outreach": "node scripts/axon-ni-outreach.mjs",
     "telegram:poll": "node scripts/axon-telegram-poll.mjs",
+    "telegram:setup": "node scripts/axon-telegram-setup.mjs",
+    "dashboard": "node scripts/axon-dashboard.mjs",
     "outreach:dry": "AXON_DRY_RUN=1 node scripts/axon-ni-outreach.mjs"
   },
   "engines": {

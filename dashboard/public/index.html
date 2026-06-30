@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AXON — NORTHSiDE Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark">AXON</span>
+        <span class="brand-sub">NORTHSiDE Intelligence</span>
+      </div>
+      <p class="tagline">Telegram conversations with JB — every message, saved here.</p>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <h2>Conversations</h2>
+          <button id="refresh-btn" type="button" title="Refresh">↻</button>
+        </div>
+        <ul id="conversation-list" class="conversation-list"></ul>
+      </aside>
+
+      <section class="thread">
+        <div id="thread-empty" class="thread-empty">
+          <p>Select a conversation to read the full thread.</p>
+          <p class="hint">Messages from Telegram appear here in real time when the webhook or poll is running.</p>
+        </div>
+        <div id="thread-active" class="thread-active hidden">
+          <div class="thread-head">
+            <h2 id="thread-title">Telegram</h2>
+            <span id="thread-meta" class="thread-meta"></span>
+          </div>
+          <div id="messages" class="messages"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
