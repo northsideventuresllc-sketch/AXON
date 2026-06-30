@@ -1,0 +1,76 @@
+export type LeadStatus =
+  | 'pending_approval'
+  | 'approved'
+  | 'sent'
+  | 'dead'
+  | 'closed_won'
+  | 'Lead'
+  | string;
+
+export type LeadChannel = 'email' | 'linkedin';
+
+export interface LeadMeta {
+  channel?: LeadChannel;
+  score?: number;
+  recommended_service?: string;
+  email_subject?: string | null;
+  contact_email?: string | null;
+  source_link?: string;
+  serp_title?: string;
+  raw?: string;
+}
+
+export interface Lead {
+  id: string;
+  handle: string;
+  niche: string | null;
+  target_group: string | null;
+  why_match_fit: string | null;
+  dm_draft: string | null;
+  comment_draft: string | null;
+  status: LeadStatus;
+  notes: string | null;
+  added: string | null;
+  source: string | null;
+  dm_sent: boolean | null;
+  followed: boolean | null;
+  commented: boolean | null;
+  created_at: string;
+}
+
+export interface LeadWithMeta extends Lead {
+  meta: LeadMeta;
+  shortId: string;
+}
+
+export interface PipelineStats {
+  total: number;
+  pending: number;
+  approved: number;
+  sent: number;
+  dead: number;
+  closedWon: number;
+  goalTarget: number;
+  draftsToday: number;
+  draftsCap: number;
+  counts: Record<string, number>;
+}
+
+export const GOAL_TARGET = 4;
+
+export const STATUS_LABELS: Record<string, string> = {
+  pending_approval: 'Pending Approval',
+  approved: 'Approved',
+  sent: 'Sent',
+  dead: 'Rejected',
+  closed_won: 'Closed Won',
+  Lead: 'Lead',
+};
+
+export const STATUS_ORDER = [
+  'pending_approval',
+  'approved',
+  'sent',
+  'closed_won',
+  'dead',
+] as const;

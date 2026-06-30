@@ -14,7 +14,7 @@
 | **NI-Brain** | `ni_brain_outreach` where `source = axon_ni_services` |
 | **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Telegram Poll |
 
-There is no web UI yet (Phase 3–4).
+**Web UI** at `/` (dashboard) and `/axon` (public waitlist). Login via `AXON_DASHBOARD_SECRET`.
 
 ---
 
@@ -55,6 +55,8 @@ Keys can also live in NI-Brain `ni_platform_secrets` — env vars take precedenc
 
 ```bash
 cp .env.example .env   # fill from NI-Brain / GitHub secrets
+npm install
+npm run dev            # web UI at http://localhost:3000
 npm run outreach:dry   # no writes
 npm run outreach       # live run
 npm run telegram:poll  # process Telegram commands once
@@ -83,6 +85,8 @@ npm run telegram:poll  # process Telegram commands once
 ## Repo map
 
 ```
+app/           Next.js web UI (dashboard + /axon landing)
+components/    AXON UI components
 lib/           shared clients (supabase, ai, telegram, resend, serpapi)
 scripts/       outreach engine + telegram poll
 .github/       scheduled workflows
