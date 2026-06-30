@@ -20,6 +20,7 @@ import { createSupabaseClient } from '../lib/supabase.mjs';
 import { formatDraftMessage, telegramSend } from '../lib/telegram.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const today = todayUtc();
 
 async function countTodayDrafts(sbSelect) {
   const rows = await sbSelect(
