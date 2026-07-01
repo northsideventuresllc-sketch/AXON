@@ -13,8 +13,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'AXON — NORTHSiDE Autonomous Systems',
-  description: '24/7 NI Services outreach engine. Find, score, draft, approve, close.',
+  title: 'AXON — Northside Intelligence',
+  description: 'State of the Art Personalized Agentic Assistant for outreach, briefing, and autonomous tasks.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

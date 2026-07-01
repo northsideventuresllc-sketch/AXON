@@ -2,12 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { JarvisOrb } from './jarvis-orb';
-import { AXON_VOICES, type ChatMessage, type InputMode } from '@/lib/axon-types';
+import { BriefingPanel } from './briefing-panel';
+import { TodoPanel } from './todo-panel';
+import {
+  AXON_VOICES,
+  type AxonWorkspace,
+  type ChatMessage,
+  type InputMode,
+} from '@/lib/axon-types';
 import { useAxonVoice } from '@/lib/use-axon-voice';
 import { apiUrl } from '@/lib/api-base';
 
 interface AxonInterfaceProps {
   initialMessages: ChatMessage[];
+  initialWorkspace: AxonWorkspace;
   initialProfile: {
     input_mode: InputMode;
     read_aloud: boolean;
@@ -16,8 +24,13 @@ interface AxonInterfaceProps {
   };
 }
 
-export function AxonInterface({ initialMessages, initialProfile }: AxonInterfaceProps) {
+export function AxonInterface({
+  initialMessages,
+  initialWorkspace,
+  initialProfile,
+}: AxonInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [workspace, setWorkspace] = useState<AxonWorkspace>(initialWorkspace);
   const [input, setInput] = useState('');
   const [inputMode, setInputMode] = useState<InputMode>(initialProfile.input_mode);
   const [readAloud, setReadAloud] = useState(initialProfile.read_aloud);
@@ -26,6 +39,14 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
   const [speaking, setSpeaking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const voice = useAxonVoice(inputMode, voiceId, readAloud);
+
+  const refreshWorkspace = useCallback(async () => {
+    const res = await fetch(apiUrl('/api/axon/workspace'));
+    if (res.ok) {
+      const data = await res.json();
+      setWorkspace(data.workspace);
+    }
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -79,6 +100,12 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
         data.assistantMsg,
       ]);
 
+      if (data.workspace) {
+        setWorkspace(data.workspace);
+      } else {
+        refreshWorkspace();
+      }
+
       if (readAloud && data.reply) {
         setSpeaking(true);
         voice.speak(data.reply);
@@ -87,10 +114,7 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
     } catch (err) {
       setMessages((m) => [
         ...m.filter((x) => x.id !== optimistic.id),
-        {
-          ...optimistic,
-          id: `err-${Date.now()}`,
-        },
+        optimistic,
         {
           id: `sys-${Date.now()}`,
           operator_id: 'default',
@@ -119,16 +143,12 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
   }
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+    <div className="grid gap-6 xl:grid-cols-[minmax(240px,280px)_1fr_minmax(260px,320px)]">
       {/* Jarvis core */}
-      <div className="flex shrink-0 flex-col items-center gap-4 lg:w-72">
-        <JarvisOrb
-          active={!loading}
-          listening={voice.listening}
-          speaking={speaking}
-        />
+      <div className="flex shrink-0 flex-col items-center gap-4">
+        <JarvisOrb active={!loading} listening={voice.listening} speaking={speaking} />
 
-        <div className="flex rounded-full border border-axon-border bg-axon-elevated p-1">
+        <div className="flex rounded-full border border-axon-border/60 bg-axon-elevated/80 p-1 axon-glass">
           <ModeButton
             active={inputMode === 'chat'}
             onClick={() => toggleInputMode('chat')}
@@ -142,7 +162,7 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
           />
         </div>
 
-        <div className="w-full space-y-3 rounded-xl border border-axon-border bg-axon-surface p-4">
+        <div className="axon-card-3d w-full space-y-3 rounded-2xl border border-axon-border/50 bg-axon-surface/80 p-4 axon-glass">
           <Toggle
             label="Read aloud"
             checked={readAloud}
@@ -162,7 +182,7 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
                 setVoiceId(e.target.value);
                 savePrefs({ voice_id: e.target.value });
               }}
-              className="mt-1 w-full rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm outline-none focus:border-axon-gold/50"
+              className="mt-1 w-full rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm outline-none focus:border-axon-purple-glow/50"
             >
               {AXON_VOICES.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -180,12 +200,14 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
       </div>
 
       {/* Chat panel */}
-      <div className="flex min-h-[420px] flex-1 flex-col rounded-xl border border-axon-border bg-axon-surface/90 backdrop-blur-sm">
+      <div className="axon-card-3d flex min-h-[480px] flex-col rounded-2xl border border-axon-border/50 bg-axon-surface/70 axon-glass backdrop-blur-md">
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
           {messages.length === 0 && (
             <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
-              <p>Good to see you. I&apos;m AXON — your autonomous partner.</p>
-              <p className="mt-2 text-xs">Ask about outreach, pipeline status, or anything on your mind.</p>
+              <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
+              <p className="mt-2 text-xs">
+                Ask about outreach, set up your briefing, or add tasks to your to-do list.
+              </p>
             </div>
           )}
           {messages.map((m) => (
@@ -193,13 +215,13 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
           ))}
           {loading && (
             <div className="flex items-center gap-2 text-xs text-axon-muted">
-              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-axon-gold" />
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-axon-purple-glow" />
               AXON is thinking…
             </div>
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="border-t border-axon-border p-4">
+        <form onSubmit={handleSubmit} className="border-t border-axon-border/60 p-4">
           {inputMode === 'voice' ? (
             <div className="flex flex-col gap-3">
               <button
@@ -208,18 +230,16 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
                 className={`rounded-xl border px-4 py-4 text-sm font-medium transition ${
                   voice.listening
                     ? 'border-axon-teal bg-axon-teal/10 text-axon-teal'
-                    : 'border-axon-border hover:border-axon-gold/40'
+                    : 'border-axon-border hover:border-axon-purple-glow/40'
                 }`}
               >
                 {voice.listening ? 'Stop listening' : 'Hold to speak — tap to start'}
               </button>
-              {input && (
-                <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>
-              )}
+              {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
               <button
                 type="submit"
                 disabled={!input.trim() || loading}
-                className="rounded-lg bg-axon-gold px-4 py-2 text-sm font-medium text-black disabled:opacity-40"
+                className="rounded-lg bg-gradient-to-r from-axon-purple to-axon-violet px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
               >
                 Send voice message
               </button>
@@ -230,18 +250,32 @@ export function AxonInterface({ initialMessages, initialProfile }: AxonInterface
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Talk to AXON…"
-                className="flex-1 rounded-lg border border-axon-border bg-axon-elevated px-4 py-3 text-sm outline-none focus:border-axon-gold/50"
+                className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-purple-glow/50"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || loading}
-                className="rounded-lg bg-axon-gold px-5 py-3 text-sm font-medium text-black disabled:opacity-40"
+                className="rounded-lg bg-gradient-to-r from-axon-purple to-axon-violet px-5 py-3 text-sm font-medium text-white disabled:opacity-40"
               >
                 Send
               </button>
             </div>
           )}
         </form>
+      </div>
+
+      {/* Briefing + To-Do */}
+      <div className="flex flex-col gap-4">
+        <BriefingPanel
+          items={workspace.briefing}
+          autonomous={workspace.briefing_autonomous}
+          onRefresh={refreshWorkspace}
+        />
+        <TodoPanel
+          items={workspace.todos}
+          autonomous={workspace.todos_autonomous}
+          onRefresh={refreshWorkspace}
+        />
       </div>
     </div>
   );
@@ -264,7 +298,9 @@ function ModeButton({
       onClick={onClick}
       disabled={disabled}
       className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
-        active ? 'bg-axon-gold text-black' : 'text-axon-muted hover:text-axon-text disabled:opacity-40'
+        active
+          ? 'bg-gradient-to-r from-axon-purple to-axon-violet text-white'
+          : 'text-axon-muted hover:text-axon-text disabled:opacity-40'
       }`}
     >
       {label}
@@ -292,7 +328,7 @@ function Toggle({
         aria-checked={checked}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative h-5 w-9 rounded-full transition ${checked ? 'bg-axon-gold' : 'bg-axon-border'} disabled:opacity-40`}
+        className={`relative h-5 w-9 rounded-full transition ${checked ? 'bg-axon-purple' : 'bg-axon-border'} disabled:opacity-40`}
       >
         <span
           className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${checked ? 'left-4' : 'left-0.5'}`}
@@ -317,12 +353,12 @@ function MessageBubble({
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
           isUser
-            ? 'bg-axon-gold/15 text-axon-text'
-            : 'border border-axon-border bg-axon-elevated/80 text-axon-text/90'
+            ? 'bg-axon-purple/20 text-axon-text border border-axon-purple/30'
+            : 'border border-axon-border/60 bg-axon-elevated/80 text-axon-text/90'
         }`}
       >
         {!isUser && (
-          <span className="mb-1 block text-[10px] uppercase tracking-wider text-axon-gold">
+          <span className="mb-1 block text-[10px] uppercase tracking-wider text-axon-purple-glow">
             AXON {channel === 'voice' ? '· voice' : ''}
           </span>
         )}
