@@ -1,0 +1,100 @@
+'use client';
+
+import type { BriefingItem } from '@/lib/axon-types';
+import { apiUrl } from '@/lib/api-base';
+
+interface BriefingPanelProps {
+  items: BriefingItem[];
+  autonomous: boolean;
+  onRefresh: () => void;
+}
+
+const PRIORITY_STYLES = {
+  high: 'border-axon-purple-glow/50 bg-axon-purple/20 text-axon-purple-glow',
+  medium: 'border-axon-gold/30 bg-axon-gold/10 text-axon-gold',
+  low: 'border-axon-border bg-axon-elevated/60 text-axon-muted',
+};
+
+export function BriefingPanel({ items, autonomous, onRefresh }: BriefingPanelProps) {
+  async function dismiss(id: string) {
+    await fetch(apiUrl('/api/axon/workspace'), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ remove_briefing_id: id }),
+    });
+    onRefresh();
+  }
+
+  return (
+    <section className="axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden">
+      <header className="border-b border-axon-border/60 px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xs uppercase tracking-[0.2em] text-axon-purple-glow">Briefing</h2>
+          {autonomous && (
+            <span className="rounded-full bg-axon-purple/25 px-2 py-0.5 text-[10px] text-axon-purple-glow animate-pulse-glow">
+              Autonomous
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-[11px] text-axon-muted">
+          Ask AXON to build or refresh your daily briefing
+        </p>
+      </header>
+
+      <div className="flex-1 space-y-2 overflow-y-auto p-3 max-h-[280px]">
+        {items.length === 0 ? (
+          <EmptyState
+            icon="◈"
+            text="No briefing yet. Try: “Set up my morning briefing with pipeline and priorities.”"
+          />
+        ) : (
+          items.map((item, i) => (
+            <article
+              key={item.id}
+              className="group rounded-xl border border-axon-border/50 bg-axon-elevated/40 p-3 transition hover:border-axon-purple/40"
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[9px] uppercase tracking-wider border ${PRIORITY_STYLES[item.priority]}`}
+                    >
+                      {item.priority}
+                    </span>
+                    {item.source === 'axon' && (
+                      <span className="text-[9px] text-axon-muted">AXON</span>
+                    )}
+                  </div>
+                  <h3 className="mt-1.5 text-sm font-medium text-axon-text">{item.title}</h3>
+                  {item.content && (
+                    <p className="mt-1 text-xs leading-relaxed text-axon-muted line-clamp-3">
+                      {item.content}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => dismiss(item.id)}
+                  className="shrink-0 rounded p-1 text-axon-muted opacity-0 transition hover:bg-axon-border/50 hover:text-axon-text group-hover:opacity-100"
+                  aria-label="Dismiss briefing item"
+                >
+                  ×
+                </button>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
+function EmptyState({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <span className="text-2xl text-axon-purple/50 animate-float">{icon}</span>
+      <p className="mt-3 max-w-[220px] text-xs leading-relaxed text-axon-muted">{text}</p>
+    </div>
+  );
+}

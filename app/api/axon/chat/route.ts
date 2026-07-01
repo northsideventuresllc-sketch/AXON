@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       reply: result.reply,
       userMsg: result.userMsg,
       assistantMsg: result.assistantMsg,
+      workspace: result.workspace,
     });
   } catch (err) {
     return NextResponse.json(
