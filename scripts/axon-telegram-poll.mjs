@@ -5,7 +5,7 @@
 import { loadConfig } from '../lib/config.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { handleTelegramMessage } from '../lib/telegram-handler.mjs';
-import { telegramGetUpdates } from '../lib/telegram.mjs';
+import { telegramDeleteWebhook, telegramGetUpdates } from '../lib/telegram.mjs';
 
 const OFFSET_KEY = 'AXON_TELEGRAM_OFFSET';
 
@@ -34,6 +34,7 @@ async function main() {
   }
 
   const offset = await loadOffset(sb.sbSelect);
+  await telegramDeleteWebhook(cfg.telegramToken);
   const updates = await telegramGetUpdates(cfg.telegramToken, offset || undefined);
   let nextOffset = offset;
   let replied = 0;
