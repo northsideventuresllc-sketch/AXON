@@ -9,9 +9,7 @@ interface NotificationsPanelProps {
   settings: NotificationSettings;
   notifications: AxonNotification[];
   onOpen?: (notification: AxonNotification) => void;
-  /** External trigger for demo / integration */
   trigger?: { notification: AxonNotification; key: number } | null;
-  /** When urgent fires, parent can overlay chat */
   onUrgentStart?: () => void;
   onUrgentEnd?: () => void;
 }
@@ -29,6 +27,7 @@ export function NotificationsPanel({
   const [hoverIdle, setHoverIdle] = useState(false);
   const [urgentRed, setUrgentRed] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const running = useRef(false);
   const unread = notifications.filter((n) => !n.read);
 
   const clearTimers = useCallback(() => {
@@ -36,41 +35,58 @@ export function NotificationsPanel({
     timers.current = [];
   }, []);
 
-  const playUrgentAlarm = useCallback(() => {
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const t = setTimeout(fn, ms);
+    timers.current.push(t);
+  }, []);
+
+  const playTwoBeeps = useCallback(() => {
     if (!settings.urgencySound || typeof window === 'undefined') return;
     try {
       const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = 880;
-      gain.gain.value = settings.urgencyVolume * 0.15;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-      osc.stop(ctx.currentTime + 0.45);
-      setTimeout(() => {
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'square';
-        osc2.frequency.value = 660;
-        gain2.gain.value = settings.urgencyVolume * 0.12;
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start();
-        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-        osc2.stop(ctx.currentTime + 0.4);
-      }, 500);
+      const vol = settings.urgencyVolume * 0.12;
+
+      function beep(freq: number, startAt: number, duration: number) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        gain.gain.value = vol;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + startAt);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startAt + duration);
+        osc.stop(ctx.currentTime + startAt + duration + 0.05);
+      }
+
+      beep(880, 0, 0.35);
+      beep(660, 0.55, 0.35);
     } catch {
       /* audio optional */
     }
   }, [settings.urgencySound, settings.urgencyVolume]);
 
+  const resetToIdle = useCallback(() => {
+    setPhase('idle');
+    setActive(null);
+    setUrgentRed(false);
+    running.current = false;
+    onUrgentEnd?.();
+  }, [onUrgentEnd]);
+
+  const runStandardChain = useCallback(() => {
+    setPhase('new');
+    schedule(() => setPhase('from'), 1400);
+    schedule(() => setPhase('click'), 2800);
+    schedule(() => resetToIdle(), 4200);
+  }, [resetToIdle, schedule]);
+
   const runChain = useCallback(
     (notification: AxonNotification, skipUrgentFlash = false) => {
-      if (!settings.enabled) return;
+      if (!settings.enabled || running.current) return;
+
       clearTimers();
+      running.current = true;
       setActive(notification);
 
       const isUrgent = notification.urgent && settings.urgencyEnabled;
@@ -79,39 +95,26 @@ export function NotificationsPanel({
         setPhase('urgent_flash');
         setUrgentRed(true);
         onUrgentStart?.();
-        playUrgentAlarm();
+        playTwoBeeps();
 
-        const flashMs = settings.urgencyFlashSeconds * 1000;
-        const t1 = setTimeout(() => {
+        const flashMs = Math.max(1200, settings.urgencyFlashSeconds * 1000);
+        schedule(() => {
           setUrgentRed(false);
           onUrgentEnd?.();
-          setPhase('new');
-          const t2 = setTimeout(() => setPhase('from'), 1400);
-          const t3 = setTimeout(() => setPhase('click'), 2800);
-          const t4 = setTimeout(() => {
-            setPhase('idle');
-            setActive(null);
-          }, 4200);
-          timers.current.push(t2, t3, t4);
+          runStandardChain();
         }, flashMs);
-        timers.current.push(t1);
         return;
       }
 
-      setPhase('new');
-      const t2 = setTimeout(() => setPhase('from'), 1400);
-      const t3 = setTimeout(() => setPhase('click'), 2800);
-      const t4 = setTimeout(() => {
-        setPhase('idle');
-        setActive(null);
-      }, 4200);
-      timers.current.push(t2, t3, t4);
+      runStandardChain();
     },
     [
       clearTimers,
       onUrgentEnd,
       onUrgentStart,
-      playUrgentAlarm,
+      playTwoBeeps,
+      runStandardChain,
+      schedule,
       settings.enabled,
       settings.urgencyEnabled,
       settings.urgencyFlashSeconds,
@@ -119,18 +122,19 @@ export function NotificationsPanel({
   );
 
   useEffect(() => {
-    if (trigger?.notification) {
+    if (trigger?.key) {
       runChain(trigger.notification);
     }
-  }, [trigger?.key, trigger?.notification, runChain]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger?.key]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 
   function handlePanelClick() {
     if (phase === 'click' && active) {
+      clearTimers();
       onOpen?.(active);
-      setPhase('idle');
-      setActive(null);
+      resetToIdle();
     } else if (phase === 'idle' && unread[0]) {
       runChain(unread[0], true);
     }
@@ -148,7 +152,7 @@ export function NotificationsPanel({
         <span className="absolute right-2 top-2 z-10 h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
       )}
 
-      <header className="border-b border-axon-border/60 px-4 py-2">
+      <header className="border-b border-axon-border/60 px-4 py-2 shrink-0">
         <h2 className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">Notifications</h2>
       </header>
 
@@ -157,18 +161,13 @@ export function NotificationsPanel({
         onClick={handlePanelClick}
         onMouseEnter={() => setHoverIdle(true)}
         onMouseLeave={() => setHoverIdle(false)}
-        className="relative flex flex-1 min-h-[100px] cursor-pointer items-center justify-center p-4 text-center"
+        className="relative flex min-h-[100px] flex-1 cursor-pointer items-stretch justify-center overflow-hidden p-0 text-center"
       >
         {phase === 'idle' && (
-          <div className="relative w-full">
+          <div className="relative h-full min-h-[100px] w-full">
             <HeartbeatMonitor />
-            {hoverIdle && unread.length > 0 && (
-              <p className="absolute inset-0 flex items-center justify-center bg-axon-bg/60 text-xs uppercase tracking-[0.2em] text-axon-cyan animate-pulse">
-                Click to open
-              </p>
-            )}
-            {hoverIdle && unread.length === 0 && (
-              <p className="absolute inset-0 flex items-center justify-center bg-axon-bg/40 text-[10px] uppercase tracking-wider text-axon-muted">
+            {hoverIdle && (
+              <p className="absolute inset-0 z-10 flex items-center justify-center bg-axon-bg/50 text-xs uppercase tracking-[0.2em] text-axon-cyan">
                 Click to open
               </p>
             )}
@@ -176,14 +175,14 @@ export function NotificationsPanel({
         )}
 
         {phase === 'urgent_flash' && (
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-red-400 animate-pulse">
+          <p className="flex flex-1 items-center justify-center px-4 text-sm font-bold uppercase tracking-[0.25em] text-red-400 animate-pulse">
             Urgent notification
           </p>
         )}
 
         {phase === 'new' && (
           <p
-            className={`text-sm font-semibold uppercase tracking-[0.3em] animate-notif-slide ${
+            className={`flex flex-1 items-center justify-center px-4 text-sm font-semibold uppercase tracking-[0.3em] animate-notif-slide ${
               urgentText ? 'text-red-400' : 'text-axon-cyan'
             }`}
           >
@@ -193,7 +192,7 @@ export function NotificationsPanel({
 
         {phase === 'from' && active && (
           <p
-            className={`max-w-full truncate text-sm font-medium animate-notif-slide ${
+            className={`flex flex-1 items-center justify-center px-4 text-sm font-medium animate-notif-slide ${
               urgentText ? 'text-red-300' : 'text-axon-blue-glow'
             }`}
           >
@@ -203,7 +202,7 @@ export function NotificationsPanel({
 
         {phase === 'click' && (
           <p
-            className={`text-xs uppercase tracking-[0.35em] animate-notif-slide ${
+            className={`flex flex-1 items-center justify-center px-4 text-xs uppercase tracking-[0.35em] animate-notif-slide ${
               urgentText ? 'text-red-400' : 'text-axon-text'
             }`}
           >
@@ -217,40 +216,36 @@ export function NotificationsPanel({
 
 function HeartbeatMonitor() {
   return (
-    <div className="axon-heartbeat-wrap mx-auto w-full max-w-[280px]">
-      <svg viewBox="0 0 300 60" className="h-14 w-full" preserveAspectRatio="none">
+    <div className="absolute inset-0 flex items-center justify-center">
+      <svg viewBox="0 0 400 80" className="h-full w-full" preserveAspectRatio="none">
         <defs>
           <linearGradient id="hbGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2" />
-            <stop offset="50%" stopColor="#22d3ee" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#818cf8" stopOpacity="0.2" />
+            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.15" />
+            <stop offset="35%" stopColor="#22d3ee" stopOpacity="0.85" />
+            <stop offset="65%" stopColor="#60a5fa" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#818cf8" stopOpacity="0.15" />
           </linearGradient>
         </defs>
         <path
           className="axon-heartbeat-line"
-          d="M0,30 L40,30 L55,12 L70,48 L85,30 L300,30"
+          d="M0,40 L60,40 L78,14 L96,66 L114,40 L180,40 L198,22 L216,58 L234,40 L400,40"
           fill="none"
           stroke="url(#hbGrad)"
-          strokeWidth="2"
+          strokeWidth="2.5"
+          vectorEffect="non-scaling-stroke"
         />
       </svg>
-      <div className="mt-1 flex justify-between font-mono text-[9px] text-axon-muted/60">
-        <span>SYS</span>
-        <span className="animate-pulse text-axon-cyan/70">MONITORING</span>
-        <span>OK</span>
-      </div>
     </div>
   );
 }
 
-/** Play urgent alarm externally (e.g. when chat is replaced) */
 export function playUrgentAlarmSound(volume = 0.35) {
   try {
     const ctx = new AudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.frequency.value = 880;
-    gain.gain.value = volume * 0.15;
+    gain.gain.value = volume * 0.12;
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();

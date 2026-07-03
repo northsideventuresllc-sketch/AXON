@@ -61,7 +61,7 @@ export function JarvisOrb({
 
   return (
     <div
-      className={`relative flex items-center justify-center perspective-[900px] ${large ? 'scale-110 sm:scale-125' : ''}`}
+      className={`relative flex items-center justify-center perspective-[900px] ${large ? 'scale-100 sm:scale-105' : ''}`}
       style={{
         transform: `rotateX(${-tilt.x}deg) rotateY(${tilt.y}deg)`,
         transition: 'transform 0.15s ease-out',

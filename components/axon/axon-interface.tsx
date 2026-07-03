@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { JarvisOrb } from './jarvis-orb';
 import { BriefingPanel } from './briefing-panel';
 import { TodoPanel } from './todo-panel';
@@ -279,13 +279,19 @@ export function AxonInterface({
     </div>
   );
 
-  function renderWidget(id: HomeWidgetId) {
+  function renderWidget(id: HomeWidgetId, arc?: 'left-wing' | 'right-wing' | 'center-chat' | 'orb-zone' | 'controls' | 'none') {
     if (!isVisible(id)) return null;
+
+    const wrap = (node: ReactNode, className = '') => (
+      <div key={id} className={className}>
+        {node}
+      </div>
+    );
 
     switch (id) {
       case 'test_buttons':
-        return (
-          <div key={id} className="flex flex-col gap-2">
+        return wrap(
+          <div className="flex flex-col gap-2">
             <button
               type="button"
               onClick={() => fireTestNotification(false)}
@@ -303,48 +309,55 @@ export function AxonInterface({
           </div>
         );
       case 'briefing':
-        return <div key={id} className="min-h-[400px]">{briefingPanel}</div>;
+        return wrap(
+          briefingPanel,
+          arc === 'left-wing' ? 'axon-lab-wing-left axon-card-3d min-h-[400px]' : 'min-h-[400px]'
+        );
       case 'chat':
-        return <div key={id}>{chatPanel}</div>;
+        return wrap(
+          chatPanel,
+          arc === 'center-chat' ? 'axon-lab-center axon-center-chat w-full' : ''
+        );
       case 'todo':
-        return <div key={id} className="min-h-[400px]">{todoPanel}</div>;
+        return wrap(
+          todoPanel,
+          arc === 'right-wing' ? 'axon-lab-wing-right axon-card-3d min-h-[400px]' : 'min-h-[400px]'
+        );
       case 'notifications':
-        return (
-          <div key={id} className="w-full">
-            <NotificationsPanel
-              settings={preferences.notifications}
-              notifications={preferences.notificationsInbox}
-              trigger={notifTrigger}
-              onUrgentStart={() => setUrgentChatOverlay(true)}
-              onUrgentEnd={() => setUrgentChatOverlay(false)}
-              onOpen={(n) => {
-                fetch(apiUrl('/api/axon/preferences'), {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ markReadId: n.id }),
-                })
-                  .then((r) => r.json())
-                  .then((d) => d.preferences && setPreferences(d.preferences));
-              }}
-            />
-          </div>
+        return wrap(
+          <NotificationsPanel
+            settings={preferences.notifications}
+            notifications={preferences.notificationsInbox}
+            trigger={notifTrigger}
+            onUrgentStart={() => setUrgentChatOverlay(true)}
+            onUrgentEnd={() => setUrgentChatOverlay(false)}
+            onOpen={(n) => {
+              fetch(apiUrl('/api/axon/preferences'), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ markReadId: n.id }),
+              })
+                .then((r) => r.json())
+                .then((d) => d.preferences && setPreferences(d.preferences));
+            }}
+          />,
+          arc === 'right-wing' ? 'axon-lab-wing-right w-full' : 'w-full'
         );
       case 'orb':
-        return (
-          <div key={id} className="flex justify-center py-3">
-            <JarvisOrb
-              active={!loading}
-              listening={voice.listening}
-              speaking={speaking}
-              processing={loading}
-              size="large"
-            />
-          </div>
+        return wrap(
+          <JarvisOrb
+            active={!loading}
+            listening={voice.listening}
+            speaking={speaking}
+            processing={loading}
+            size="large"
+          />,
+          arc === 'orb-zone' ? 'axon-orb-zone w-full' : 'flex justify-center py-6'
         );
       case 'controls':
-        return (
-          <div key={id} className="relative z-40 flex flex-col items-center gap-3 overflow-visible pb-4">
-            <div className="flex rounded-full border border-axon-blue/30 bg-axon-elevated/90 p-1 axon-glass">
+        return wrap(
+          <div className="relative z-40 flex flex-col items-center gap-3 overflow-visible pb-2">
+            <div className="flex rounded-full border border-axon-blue/30 bg-axon-elevated/90 p-1 axon-glass shadow-lg">
               <ModeButton
                 active={inputMode === 'chat'}
                 onClick={() => {
@@ -393,16 +406,23 @@ export function AxonInterface({
                 </select>
               </label>
             </div>
-          </div>
+          </div>,
+          arc === 'controls' ? 'axon-lab-controls w-full pt-2' : 'relative z-40 pb-4'
         );
       default:
         return null;
     }
   }
 
-  function Column({ ids }: { ids: HomeWidgetId[] }) {
-    if (!ids.length) return null;
-    return <div className="flex flex-col gap-4">{ids.map((id) => renderWidget(id))}</div>;
+  function arcWrapForCenter(id: HomeWidgetId): 'center-chat' | 'orb-zone' | 'controls' | 'none' {
+    if (id === 'chat') return 'center-chat';
+    if (id === 'orb') return 'orb-zone';
+    if (id === 'controls') return 'controls';
+    return 'none';
+  }
+
+  function arcWrapForRight(id: HomeWidgetId): 'right-wing' | 'none' {
+    return id === 'todo' || id === 'notifications' ? 'right-wing' : 'none';
   }
 
   const mobileOrder: HomeWidgetId[] = [
@@ -422,12 +442,20 @@ export function AxonInterface({
           {mobileOrder.map((id) => renderWidget(id))}
         </div>
 
-        {/* Desktop: test | briefing | chat/orb/controls | todo/notifications */}
-        <div className="relative z-20 mx-auto hidden max-w-[1520px] grid-cols-[110px_minmax(280px,1fr)_minmax(420px,1.35fr)_minmax(280px,1fr)] items-start gap-5 px-1 xl:grid">
-          <Column ids={narrowLeft} />
-          <Column ids={sideLeft} />
-          <Column ids={centerWidgets} />
-          <Column ids={rightWidgets} />
+        {/* Desktop: 3D semicircle arc */}
+        <div className="axon-lab-arc relative z-20 mx-auto hidden max-w-[1520px] grid-cols-[110px_minmax(280px,1fr)_minmax(420px,1.35fr)_minmax(280px,1fr)] items-start gap-5 px-1 xl:grid">
+          <div className="flex flex-col gap-3 pt-2">
+            {narrowLeft.map((id) => renderWidget(id))}
+          </div>
+          <div className="flex flex-col gap-4 lg:mb-8">
+            {sideLeft.map((id) => renderWidget(id, 'left-wing'))}
+          </div>
+          <div className="flex flex-col lg:mb-4">
+            {centerWidgets.map((id) => renderWidget(id, arcWrapForCenter(id)))}
+          </div>
+          <div className="flex flex-col gap-4 lg:mb-8">
+            {rightWidgets.map((id) => renderWidget(id, arcWrapForRight(id)))}
+          </div>
         </div>
 
         <p className="relative z-10 mx-auto mt-6 max-w-lg text-center text-[10px] leading-relaxed text-axon-muted/80">

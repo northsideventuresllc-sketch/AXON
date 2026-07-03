@@ -117,6 +117,24 @@
     transform: translateZ(24px) scale(0.98);
   }
 
+  .axon-orb-zone {
+    display: flex;
+    min-height: 260px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 15;
+    transform: translateZ(32px);
+    isolation: isolate;
+  }
+
+  .axon-center-chat {
+    transform: translateZ(48px) scale(1);
+    margin-bottom: 0.5rem;
+  }
+
   .axon-lab-wing-left.axon-card-3d:hover {
     transform: rotateY(22deg) translateZ(-48px) translateX(8px) scale(0.96) translateY(-4px);
   }
@@ -129,7 +147,7 @@
     transform: translateZ(56px) scale(1.01) translateY(-4px);
   }
 
-  @media (max-width: 1023px) {
+  @media (max-width: 1279px) {
     .axon-lab-wing-left,
     .axon-lab-wing-right,
     .axon-lab-center,
