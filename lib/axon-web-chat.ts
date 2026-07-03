@@ -10,6 +10,13 @@ import {
   updateOperatorProfile,
   upsertSignal,
 } from './axon-profile';
+import {
+  applyBriefingUpdates,
+  applyTodoUpdates,
+  formatWorkspaceForPrompt,
+  getWorkspace,
+  setWorkspaceFlags,
+} from './axon-workspace';
 import type { ChatMessage, TonePreset } from './axon-types';
 import { createSupabaseClient } from './supabase.mjs';
 
@@ -48,27 +55,32 @@ export async function generateAxonReply(
   const { sbSelect } = createSupabaseClient(key);
   const cfg = await loadConfig(sbSelect);
 
-  const [profile, signals, memories] = await Promise.all([
+  const [profile, signals, memories, workspace] = await Promise.all([
     getOperatorProfile(),
     fetchTopSignals(),
     fetchMemories(undefined, 15),
+    getWorkspace(),
   ]);
 
   const toneBlock = buildToneInstructions(profile.tone_preset, signals);
   const memoryBlock = memories.length
     ? `\nOperator context you remember:\n${memories.map((m) => `- (${m.memory_type}) ${m.content}`).join('\n')}`
     : '';
+  const workspaceBlock = `\n${formatWorkspaceForPrompt(workspace)}`;
 
-  const system = `You are AXON — NORTHSiDE Intelligence's autonomous partner. Sector 5. Underground-premium voice.
+  const system = `You are AXON — Northside Intelligence's State of the Art Personalized Agentic Assistant. Underground-premium voice.
 
 You help the operator run autonomous profit engines, review outreach, and make decisions. You grow WITH the operator — adapting tone from every interaction.
 
+You manage the operator's briefing panel and to-do list. When they ask to set up a briefing, add tasks, mark items complete, or enable autonomous management — confirm in your reply and the system will apply updates automatically.
+
 ${toneBlock}
 ${memoryBlock}
+${workspaceBlock}
 
 ${channel === 'voice' ? 'This is a voice conversation. Keep responses concise (2-4 sentences unless detail is requested). Sound natural when spoken aloud.' : 'This is text chat. Be conversational and human — not bullet-heavy unless listing data.'}
 
-Brand: NORTHSiDE (exact casing). Never auto-send outreach. Phase 1 goal: close 4 paid NI Services clients.`;
+Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand name). Never auto-send outreach. Phase 1 goal: close 4 paid NI Services clients.`;
 
   const recent = history.slice(-12).map((m) => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',
@@ -93,27 +105,42 @@ Brand: NORTHSiDE (exact casing). Never auto-send outreach. Phase 1 goal: close 4
     metadata: { signal_count: signals.length },
   });
 
-  // Fire-and-forget learning analysis (don't block response)
-  analyzeAndLearn(cfg.anthropicKey, userMessage, reply, profile.tone_preset).catch(console.error);
+  // Learning + workspace updates — await so UI gets fresh briefing/todos
+  let updatedWorkspace = workspace;
+  try {
+    updatedWorkspace =
+      (await analyzeAndLearn(
+        cfg.anthropicKey,
+        userMessage,
+        reply,
+        profile.tone_preset,
+        workspace
+      )) ?? workspace;
+  } catch (err) {
+    console.error(err);
+  }
 
-  return { reply, userMsg, assistantMsg };
+  return { reply, userMsg, assistantMsg, workspace: updatedWorkspace };
 }
 
 async function analyzeAndLearn(
   apiKey: string,
   userMessage: string,
   assistantReply: string,
-  currentPreset: TonePreset
+  currentPreset: TonePreset,
+  currentWorkspace: Awaited<ReturnType<typeof getWorkspace>>
 ) {
-  const system = `You analyze operator↔AXON conversations to extract communication learnings. Return JSON only.
+  const system = `You analyze operator↔AXON conversations to extract communication learnings and workspace updates. Return JSON only.
 
 Extract signals that help AXON match how THIS operator talks and what responses work.
-Weight higher when the user message shows engagement (questions, follow-ups, approval words like "good", "yes", "perfect", "do that").
-Return at most 5 signals and at most 2 memories.`;
+When the user asks about briefings, to-dos, tasks, priorities, or daily planning — emit briefing_updates and/or todo_updates.
+Enable autonomous mode when the user asks AXON to manage briefing or todos automatically over time.
+Return at most 5 signals, at most 2 memories, at most 4 briefing updates, at most 5 todo updates.`;
 
   const user = `User: ${userMessage}
 AXON: ${assistantReply}
 Current tone: ${JSON.stringify(currentPreset)}
+Current workspace: ${JSON.stringify(currentWorkspace)}
 
 Return JSON:
 {
@@ -123,11 +150,21 @@ Return JSON:
   "memories": [
     { "content": "fact about operator", "memory_type": "fact|preference|context|relationship", "confidence": 0.3-0.9 }
   ],
+  "briefing_updates": [
+    { "action": "add|update|remove", "id": "optional existing id", "title": "headline", "content": "detail", "priority": "high|medium|low" }
+  ],
+  "todo_updates": [
+    { "action": "add|update|remove|complete", "id": "optional existing id", "text": "task text", "done": false }
+  ],
+  "workspace_flags": {
+    "briefing_autonomous": true,
+    "todos_autonomous": true
+  },
   "tone_adjustments": {
-    "warmth": -0.1 to 0.1 or 0,
-    "directness": -0.1 to 0.1 or 0,
-    "formality": -0.1 to 0.1 or 0,
-    "humor": -0.1 to 0.1 or 0,
+    "warmth": 0,
+    "directness": 0,
+    "formality": 0,
+    "humor": 0,
     "learned_pattern": "optional one-line pattern",
     "preferred_phrase": "optional phrase operator liked",
     "avoid_phrase": "optional phrase to avoid"
@@ -139,7 +176,7 @@ Return JSON:
     const text = await callHaiku(apiKey, system, [{ role: 'user', content: user }]);
     parsed = extractJson(text);
   } catch {
-    return;
+    return currentWorkspace;
   }
 
   for (const sig of parsed.signals || []) {
@@ -158,6 +195,24 @@ Return JSON:
       content: mem.content,
       memory_type: mem.memory_type,
       confidence: mem.confidence,
+    });
+  }
+
+  let workspace = currentWorkspace;
+
+  if (parsed.briefing_updates?.length) {
+    workspace = await applyBriefingUpdates(parsed.briefing_updates);
+  }
+
+  if (parsed.todo_updates?.length) {
+    workspace = await applyTodoUpdates(parsed.todo_updates);
+  }
+
+  const flags = parsed.workspace_flags;
+  if (flags && (flags.briefing_autonomous !== undefined || flags.todos_autonomous !== undefined)) {
+    workspace = await setWorkspaceFlags({
+      briefing_autonomous: flags.briefing_autonomous,
+      todos_autonomous: flags.todos_autonomous,
     });
   }
 
@@ -187,6 +242,8 @@ Return JSON:
 
     await updateOperatorProfile('default', { tone_preset: next });
   }
+
+  return workspace;
 }
 
 /** Background job: re-synthesize tone preset from top signals (fast pattern infusion) */

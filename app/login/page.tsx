@@ -53,7 +53,7 @@ function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-axon-gold px-4 py-3 text-sm font-medium text-black transition hover:bg-axon-gold/90 disabled:opacity-50"
+        className="w-full rounded-lg bg-gradient-to-r from-axon-purple to-axon-violet px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
       >
         {loading ? 'Signing in…' : 'Enter Command Center'}
       </button>
@@ -65,9 +65,11 @@ export default function LoginPage() {
   return (
     <div className="axon-grid-bg flex min-h-screen items-center justify-center bg-axon-bg px-4">
       <div className="w-full max-w-md rounded-2xl border border-axon-border bg-axon-surface p-8 axon-glow">
-        <p className="text-xs uppercase tracking-[0.3em] text-axon-gold">NORTHSiDE</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-axon-purple-glow">Northside Intelligence</p>
         <h1 className="mt-2 text-2xl font-semibold">AXON</h1>
-        <p className="mt-2 text-sm text-axon-muted">Operator access for JB. Phase 1 outreach dashboard.</p>
+        <p className="mt-2 text-sm text-axon-muted">
+          State of the Art Personalized Agentic Assistant
+        </p>
         <div className="mt-8">
           <Suspense>
             <LoginForm />

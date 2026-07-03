@@ -10,9 +10,9 @@ interface ToolPanelProps {
 
 export function ToolPanel({ tools, metrics = {} }: ToolPanelProps) {
   return (
-    <section className="rounded-xl border border-axon-border bg-axon-surface/80 backdrop-blur-sm">
-      <div className="border-b border-axon-border px-4 py-3">
-        <h2 className="text-xs uppercase tracking-[0.2em] text-axon-gold">Autonomous Tasks</h2>
+    <section className="axon-card-3d rounded-2xl border border-axon-border/50 bg-axon-surface/70 axon-glass backdrop-blur-sm">
+      <div className="border-b border-axon-border/60 px-4 py-3">
+        <h2 className="text-xs uppercase tracking-[0.2em] text-axon-purple-glow">Autonomous Tasks</h2>
         <p className="mt-0.5 text-xs text-axon-muted">Each engine runs independently — tap to open</p>
       </div>
       <div className="grid gap-2 p-3 sm:grid-cols-2">
@@ -32,14 +32,14 @@ function ToolCard({ tool, metric }: { tool: AxonTool; metric?: string | number }
       className={`group rounded-lg border p-4 transition ${
         disabled
           ? 'border-axon-border/50 opacity-60'
-          : 'border-axon-border hover:border-axon-gold/40 hover:bg-axon-elevated/50 cursor-pointer'
+          : 'border-axon-border/50 hover:border-axon-purple-glow/40 hover:bg-axon-elevated/50 cursor-pointer'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-lg opacity-70">{tool.icon}</span>
         <StatusPill status={tool.status} />
       </div>
-      <h3 className="mt-2 text-sm font-medium group-hover:text-axon-gold">{tool.name}</h3>
+      <h3 className="mt-2 text-sm font-medium group-hover:text-axon-purple-glow">{tool.name}</h3>
       <p className="mt-1 line-clamp-2 text-xs text-axon-muted">{tool.description}</p>
       {metric != null && tool.status === 'active' && (
         <p className="mt-2 font-mono text-xs text-axon-teal">{metric} pending</p>

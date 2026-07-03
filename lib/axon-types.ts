@@ -102,6 +102,44 @@ export interface AxonTool {
   metric?: string;
 }
 
+export type BriefingPriority = 'high' | 'medium' | 'low';
+
+export interface BriefingItem {
+  id: string;
+  title: string;
+  content: string;
+  priority: BriefingPriority;
+  source: 'user' | 'axon';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodoItem {
+  id: string;
+  text: string;
+  done: boolean;
+  source: 'user' | 'axon';
+  due?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AxonWorkspace {
+  briefing: BriefingItem[];
+  todos: TodoItem[];
+  briefing_autonomous: boolean;
+  todos_autonomous: boolean;
+  last_briefing_refresh?: string;
+  last_todo_refresh?: string;
+}
+
+export const DEFAULT_WORKSPACE: AxonWorkspace = {
+  briefing: [],
+  todos: [],
+  briefing_autonomous: false,
+  todos_autonomous: false,
+};
+
 export const AXON_TOOLS: AxonTool[] = [
   {
     slug: 'ni-services-outreach',
