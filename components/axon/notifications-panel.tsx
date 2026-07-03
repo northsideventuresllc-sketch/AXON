@@ -40,27 +40,11 @@ export function NotificationsPanel({
     timers.current.push(t);
   }, []);
 
-  const playTwoBeeps = useCallback(() => {
+  const playUrgentSiren = useCallback(() => {
     if (!settings.urgencySound || typeof window === 'undefined') return;
     try {
       const ctx = new AudioContext();
-      const vol = settings.urgencyVolume * 0.12;
-
-      function beep(freq: number, startAt: number, duration: number) {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'square';
-        osc.frequency.value = freq;
-        gain.gain.value = vol;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + startAt);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startAt + duration);
-        osc.stop(ctx.currentTime + startAt + duration + 0.05);
-      }
-
-      beep(880, 0, 0.35);
-      beep(660, 0.55, 0.35);
+      playFogHornSiren(ctx, settings.urgencyVolume);
     } catch {
       /* audio optional */
     }
@@ -95,9 +79,9 @@ export function NotificationsPanel({
         setPhase('urgent_flash');
         setUrgentRed(true);
         onUrgentStart?.();
-        playTwoBeeps();
+        playUrgentSiren();
 
-        const flashMs = Math.max(1200, settings.urgencyFlashSeconds * 1000);
+        const flashMs = Math.max(2800, settings.urgencyFlashSeconds * 1000);
         schedule(() => {
           setUrgentRed(false);
           onUrgentEnd?.();
@@ -112,7 +96,7 @@ export function NotificationsPanel({
       clearTimers,
       onUrgentEnd,
       onUrgentStart,
-      playTwoBeeps,
+      playUrgentSiren,
       runStandardChain,
       schedule,
       settings.enabled,
@@ -295,17 +279,67 @@ function HeartbeatMonitor() {
   );
 }
 
+function playFogHornBlast(
+  ctx: AudioContext,
+  startAt: number,
+  duration: number,
+  volume: number
+) {
+  const t0 = ctx.currentTime + startAt;
+  const t1 = t0 + duration;
+  const peakVol = volume * 0.22;
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, t0);
+  master.gain.exponentialRampToValueAtTime(peakVol, t0 + 0.1);
+  master.gain.setValueAtTime(peakVol * 0.88, t1 - 0.18);
+  master.gain.exponentialRampToValueAtTime(0.0001, t1);
+  master.connect(ctx.destination);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(360, t0);
+  filter.frequency.linearRampToValueAtTime(260, t1);
+  filter.Q.value = 0.8;
+  filter.connect(master);
+
+  const layers: { baseHz: number; type: OscillatorType; mix: number }[] = [
+    { baseHz: 58, type: 'sine', mix: 0.5 },
+    { baseHz: 74, type: 'sine', mix: 0.35 },
+    { baseHz: 92, type: 'triangle', mix: 0.15 },
+  ];
+
+  for (const { baseHz, type, mix } of layers) {
+    const osc = ctx.createOscillator();
+    const layerGain = ctx.createGain();
+    osc.type = type;
+
+    osc.frequency.setValueAtTime(baseHz * 1.15, t0);
+    osc.frequency.exponentialRampToValueAtTime(baseHz * 0.72, t0 + duration * 0.38);
+    osc.frequency.exponentialRampToValueAtTime(baseHz * 1.42, t0 + duration * 0.72);
+    osc.frequency.exponentialRampToValueAtTime(baseHz * 0.95, t1);
+
+    layerGain.gain.value = mix;
+    osc.connect(layerGain);
+    layerGain.connect(filter);
+    osc.start(t0);
+    osc.stop(t1 + 0.08);
+  }
+}
+
+function playFogHornSiren(ctx: AudioContext, volume: number, blasts = 2) {
+  const blastDuration = 1.15;
+  const gap = 0.5;
+
+  for (let i = 0; i < blasts; i++) {
+    playFogHornBlast(ctx, i * (blastDuration + gap), blastDuration, volume);
+  }
+}
+
 export function playUrgentAlarmSound(volume = 0.35) {
   try {
     const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = 880;
-    gain.gain.value = volume * 0.12;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.35);
+    playFogHornSiren(ctx, volume);
   } catch {
     /* optional */
   }
