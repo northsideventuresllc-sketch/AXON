@@ -36,6 +36,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          AXON_GEMINI_DELAY_MS: '2500'
         run: node scripts/axon-ni-outreach.mjs
 
       - name: Report failure
