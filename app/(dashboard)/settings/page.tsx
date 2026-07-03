@@ -1,6 +1,9 @@
 import { MAX_DRAFTS_PER_DAY } from '@/lib/constants.mjs';
 import { AxonResetSettings } from '@/components/axon/axon-reset-settings';
+import { AxonHomeSettings } from '@/components/axon/axon-home-settings';
+import { AxonNotificationSettings } from '@/components/axon/axon-notification-settings';
 import { fetchTopSignals, fetchMemories, getOperatorProfile } from '@/lib/axon-profile';
+import { getPreferences } from '@/lib/axon-preferences';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,20 +15,24 @@ const GUARDRAILS = [
 ];
 
 export default async function SettingsPage() {
-  const [profile, signals, memories] = await Promise.all([
+  const [profile, signals, memories, preferences] = await Promise.all([
     getOperatorProfile(),
     fetchTopSignals(undefined, 8),
     fetchMemories(undefined, 5),
+    getPreferences(),
   ]);
 
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="mt-1 text-sm text-axon-muted">Voice, learning, guardrails, and reset controls.</p>
+        <h1 className="text-2xl font-semibold axon-gradient-text">Settings</h1>
+        <p className="mt-1 text-sm text-axon-muted">Customize your home page, notifications, voice, and learning.</p>
       </header>
 
-      <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+      <AxonHomeSettings initial={preferences.homeLayout} />
+      <AxonNotificationSettings initial={preferences.notifications} />
+
+      <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
         <h2 className="text-sm font-medium">Communication Profile</h2>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div>
@@ -51,7 +58,7 @@ export default async function SettingsPage() {
       </section>
 
       {signals.length > 0 && (
-        <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+        <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
           <h2 className="text-sm font-medium">Top Communication Learnings</h2>
           <div className="mt-4 space-y-2">
             {signals.map((s) => (
@@ -59,7 +66,7 @@ export default async function SettingsPage() {
                 <span className="text-axon-muted">
                   [{s.signal_type}] {s.signal_key}
                 </span>
-                <span className="font-mono text-axon-gold">w{s.weight.toFixed(1)} · n{s.evidence_count}</span>
+                <span className="font-mono text-axon-cyan">w{s.weight.toFixed(1)} · n{s.evidence_count}</span>
               </div>
             ))}
           </div>
@@ -67,12 +74,12 @@ export default async function SettingsPage() {
       )}
 
       {memories.length > 0 && (
-        <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+        <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
           <h2 className="text-sm font-medium">Recent Memories</h2>
           <ul className="mt-4 space-y-2 text-sm text-axon-muted">
             {memories.map((m) => (
               <li key={m.id}>
-                <span className="text-[10px] uppercase text-axon-gold">{m.memory_type}</span> — {m.content}
+                <span className="text-[10px] uppercase text-axon-blue-glow">{m.memory_type}</span> — {m.content}
               </li>
             ))}
           </ul>
@@ -81,11 +88,11 @@ export default async function SettingsPage() {
 
       <AxonResetSettings />
 
-      <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
+      <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
         <h2 className="text-sm font-medium">Guardrails</h2>
         <div className="mt-4 space-y-4">
           {GUARDRAILS.map((g) => (
-            <div key={g.label} className="border-l-2 border-axon-gold/40 pl-4">
+            <div key={g.label} className="border-l-2 border-axon-blue/40 pl-4">
               <p className="text-sm font-medium">{g.label}</p>
               <p className="text-xs text-axon-muted">{g.detail}</p>
             </div>

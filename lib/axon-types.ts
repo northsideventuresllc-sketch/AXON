@@ -140,6 +140,112 @@ export const DEFAULT_WORKSPACE: AxonWorkspace = {
   todos_autonomous: false,
 };
 
+export type HomeWidgetId =
+  | 'test_buttons'
+  | 'briefing'
+  | 'chat'
+  | 'todo'
+  | 'notifications'
+  | 'orb'
+  | 'controls';
+
+export interface HomeLayoutPrefs {
+  left: HomeWidgetId[];
+  center: HomeWidgetId[];
+  right: HomeWidgetId[];
+  hidden: HomeWidgetId[];
+}
+
+export interface NotificationSettings {
+  enabled: boolean;
+  urgencyEnabled: boolean;
+  urgencyFlashSeconds: number;
+  urgencySound: boolean;
+  urgencyVolume: number;
+  integrations: {
+    outreach: boolean;
+    telegram: boolean;
+    pipeline: boolean;
+    hermes: boolean;
+  };
+  urgencyRules: {
+    pipelineApproval: boolean;
+    dealWon: boolean;
+    systemError: boolean;
+    outreachReply: boolean;
+  };
+  customNotUrgent: string[];
+}
+
+export interface AxonNotification {
+  id: string;
+  source: string;
+  title: string;
+  body?: string;
+  urgent: boolean;
+  href?: string;
+  read: boolean;
+  created_at: string;
+}
+
+export interface AxonPreferences {
+  homeLayout: HomeLayoutPrefs;
+  notifications: NotificationSettings;
+  notificationsInbox: AxonNotification[];
+}
+
+export const DEFAULT_HOME_LAYOUT: HomeLayoutPrefs = {
+  left: ['test_buttons'],
+  center: ['chat', 'orb', 'controls'],
+  right: ['todo', 'notifications'],
+  hidden: ['briefing'],
+};
+
+/** Default visible layout — briefing on left column */
+export const DEFAULT_HOME_LAYOUT_VISIBLE: HomeLayoutPrefs = {
+  left: ['test_buttons', 'briefing'],
+  center: ['chat', 'orb', 'controls'],
+  right: ['todo', 'notifications'],
+  hidden: [],
+};
+
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  enabled: true,
+  urgencyEnabled: true,
+  urgencyFlashSeconds: 4,
+  urgencySound: true,
+  urgencyVolume: 0.35,
+  integrations: {
+    outreach: true,
+    telegram: true,
+    pipeline: true,
+    hermes: true,
+  },
+  urgencyRules: {
+    pipelineApproval: true,
+    dealWon: true,
+    systemError: true,
+    outreachReply: false,
+  },
+  customNotUrgent: [],
+};
+
+export const DEFAULT_PREFERENCES: AxonPreferences = {
+  homeLayout: DEFAULT_HOME_LAYOUT_VISIBLE,
+  notifications: DEFAULT_NOTIFICATION_SETTINGS,
+  notificationsInbox: [],
+};
+
+export const HOME_WIDGET_LABELS: Record<HomeWidgetId, string> = {
+  test_buttons: 'Test Controls',
+  briefing: 'Briefing',
+  chat: 'Command Chat',
+  todo: 'To-Do List',
+  notifications: 'Notifications',
+  orb: 'AXON Orb',
+  controls: 'Voice & Chat Controls',
+};
+
 export const AXON_TOOLS: AxonTool[] = [
   {
     slug: 'ni-services-outreach',

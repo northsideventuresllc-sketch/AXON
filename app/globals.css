@@ -244,3 +244,96 @@
 .animate-arc-spin {
   animation: arc-spin 48s linear infinite;
 }
+
+/* AXON locked color scheme — navy + electric blue + cyan + indigo/purple */
+
+@keyframes notif-slide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-notif-slide {
+  animation: notif-slide 0.45s ease-out;
+}
+
+.axon-notif-urgent-flash {
+  animation: urgent-flash 0.45s ease-in-out infinite;
+}
+
+@keyframes urgent-flash {
+  0%,
+  100% {
+    background-color: rgba(127, 29, 29, 0.35);
+  }
+  50% {
+    background-color: rgba(220, 38, 38, 0.55);
+  }
+}
+
+.axon-heartbeat-line {
+  stroke-dasharray: 400;
+  animation: heartbeat 2.4s linear infinite;
+}
+
+@keyframes heartbeat {
+  0% {
+    stroke-dashoffset: 400;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes axon-orb-pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.axon-orb-spin-ring {
+  animation: orb-spin 3s linear infinite;
+}
+
+@keyframes orb-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.axon-panel-focus-center {
+  animation: panel-focus-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform-origin: center center;
+}
+
+@keyframes panel-focus-in {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateY(-18deg) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(900px) rotateY(0deg) scale(1.06);
+  }
+}
+
+.axon-panel-ghost-left {
+  transform: perspective(800px) rotateY(14deg) scale(0.88);
+}
+
+.axon-panel-ghost-right {
+  transform: perspective(800px) rotateY(-14deg) scale(0.88);
+}

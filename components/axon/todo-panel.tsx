@@ -7,9 +7,12 @@ interface TodoPanelProps {
   items: TodoItem[];
   autonomous: boolean;
   onRefresh: () => void;
+  onTitleClick?: () => void;
+  compact?: boolean;
+  className?: string;
 }
 
-export function TodoPanel({ items, autonomous, onRefresh }: TodoPanelProps) {
+export function TodoPanel({ items, autonomous, onRefresh, onTitleClick, compact, className = '' }: TodoPanelProps) {
   const open = items.filter((t) => !t.done);
   const done = items.filter((t) => t.done);
 
@@ -32,10 +35,16 @@ export function TodoPanel({ items, autonomous, onRefresh }: TodoPanelProps) {
   }
 
   return (
-    <section className="axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden">
+    <section className={`axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden h-full ${className}`}>
       <header className="border-b border-axon-border/60 px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">To-Do</h2>
+          <button
+            type="button"
+            onClick={onTitleClick}
+            className={`text-left text-xs uppercase tracking-[0.2em] text-axon-blue-glow transition hover:text-axon-cyan ${onTitleClick ? 'cursor-pointer hover:underline' : ''}`}
+          >
+            To-Do
+          </button>
           {autonomous && (
             <span className="rounded-full bg-axon-blue/20 px-2 py-0.5 text-[10px] text-axon-cyan animate-pulse-glow">
               Autonomous
@@ -47,7 +56,7 @@ export function TodoPanel({ items, autonomous, onRefresh }: TodoPanelProps) {
         </p>
       </header>
 
-      <div className="flex-1 space-y-1 overflow-y-auto p-3 max-h-[280px]">
+      <div className={`flex-1 space-y-1 overflow-y-auto p-3 ${compact ? 'max-h-[240px]' : 'min-h-[360px] max-h-[420px]'}`}>
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <span className="text-2xl text-axon-blue/50 animate-float">☐</span>
