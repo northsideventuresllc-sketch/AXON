@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { AxonNotification, NotificationSettings } from '@/lib/axon-types';
 
 type ScreenPhase = 'idle' | 'new' | 'from' | 'click' | 'urgent_flash';
@@ -152,7 +152,7 @@ export function NotificationsPanel({
         <span className="absolute right-2 top-2 z-10 h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
       )}
 
-      <header className="border-b border-axon-border/60 px-4 py-2 shrink-0">
+      <header className="shrink-0 border-b border-axon-border/60 px-4 py-2">
         <h2 className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">Notifications</h2>
       </header>
 
@@ -161,17 +161,17 @@ export function NotificationsPanel({
         onClick={handlePanelClick}
         onMouseEnter={() => setHoverIdle(true)}
         onMouseLeave={() => setHoverIdle(false)}
-        className="relative flex min-h-[100px] flex-1 cursor-pointer items-stretch justify-center overflow-hidden p-0 text-center"
+        className="relative flex min-h-[100px] w-full flex-1 cursor-pointer self-stretch overflow-hidden p-0 text-center"
       >
         {phase === 'idle' && (
-          <div className="relative h-full min-h-[100px] w-full">
+          <>
             <HeartbeatMonitor />
             {hoverIdle && (
               <p className="absolute inset-0 z-10 flex items-center justify-center bg-axon-bg/50 text-xs uppercase tracking-[0.2em] text-axon-cyan">
                 Click to open
               </p>
             )}
-          </div>
+          </>
         )}
 
         {phase === 'urgent_flash' && (
@@ -214,12 +214,67 @@ export function NotificationsPanel({
   );
 }
 
+function buildHeartbeatPath(width: number, midY = 50): string {
+  const beatWidth = 180;
+  const segments = Math.max(2, Math.ceil(width / beatWidth) + 1);
+  let d = `M0,${midY}`;
+
+  for (let i = 0; i < segments; i++) {
+    const x = i * beatWidth;
+    if (x > width) break;
+    const peak = i % 2 === 0;
+    d += peak
+      ? ` L${x + 60},${midY} L${x + 78},${midY - 26} L${x + 96},${midY + 26} L${x + 114},${midY} L${Math.min(x + beatWidth, width)},${midY}`
+      : ` L${x + 60},${midY} L${x + 78},${midY - 14} L${x + 96},${midY + 18} L${x + 114},${midY} L${Math.min(x + beatWidth, width)},${midY}`;
+  }
+
+  d += ` L${width},${midY}`;
+  return d;
+}
+
 function HeartbeatMonitor() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pathRef = useRef<SVGPathElement>(null);
+  const [width, setWidth] = useState(400);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const update = () => {
+      setWidth(Math.max(node.clientWidth, 120));
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(node);
+    window.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, []);
+
+  const pathD = useMemo(() => buildHeartbeatPath(width), [width]);
+
+  useEffect(() => {
+    const path = pathRef.current;
+    if (!path) return;
+    const len = path.getTotalLength();
+    path.style.setProperty('--hb-length', String(len));
+  }, [pathD, width]);
+
+  const gradId = useId().replace(/:/g, '');
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <svg viewBox="0 0 400 80" className="h-full w-full" preserveAspectRatio="none">
+    <div ref={containerRef} className="axon-heartbeat-wrap" aria-hidden>
+      <svg
+        className="axon-heartbeat-svg"
+        viewBox={`0 0 ${width} 100`}
+        preserveAspectRatio="none"
+      >
         <defs>
-          <linearGradient id="hbGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#2563eb" stopOpacity="0.15" />
             <stop offset="35%" stopColor="#22d3ee" stopOpacity="0.85" />
             <stop offset="65%" stopColor="#60a5fa" stopOpacity="0.9" />
@@ -227,10 +282,11 @@ function HeartbeatMonitor() {
           </linearGradient>
         </defs>
         <path
+          ref={pathRef}
           className="axon-heartbeat-line"
-          d="M0,40 L60,40 L78,14 L96,66 L114,40 L180,40 L198,22 L216,58 L234,40 L400,40"
+          d={pathD}
           fill="none"
-          stroke="url(#hbGrad)"
+          stroke={`url(#${gradId})`}
           strokeWidth="2.5"
           vectorEffect="non-scaling-stroke"
         />

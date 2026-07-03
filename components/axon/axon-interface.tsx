@@ -425,37 +425,38 @@ export function AxonInterface({
     return id === 'todo' || id === 'notifications' ? 'right-wing' : 'none';
   }
 
-  const mobileOrder: HomeWidgetId[] = [
-    ...narrowLeft,
-    ...sideLeft,
-    ...centerWidgets,
-    ...rightWidgets,
-  ];
-
   return (
     <>
       <div className="axon-lab-stage relative min-h-[920px] overflow-visible pb-8">
         <AxonLabFloor />
 
-        {/* Mobile / tablet stack */}
-        <div className="relative z-20 mx-auto flex max-w-[1520px] flex-col gap-5 px-1 xl:hidden">
-          {mobileOrder.map((id) => renderWidget(id))}
-        </div>
+        {narrowLeft.length > 0 && (
+          <div className="relative z-30 mx-auto max-w-[1520px] px-2 md:absolute md:left-3 md:top-3 md:mx-0 md:max-w-[110px] lg:left-5 lg:top-5">
+            <div className="flex flex-row flex-wrap gap-2 md:flex-col">
+              {narrowLeft.map((id) => renderWidget(id))}
+            </div>
+          </div>
+        )}
 
-        {/* Desktop: 3D semicircle arc */}
-        <div className="axon-lab-arc relative z-20 mx-auto hidden max-w-[1520px] grid-cols-[110px_minmax(280px,1fr)_minmax(420px,1.35fr)_minmax(280px,1fr)] items-start gap-5 px-1 xl:grid">
-          <div className="flex flex-col gap-3 pt-2">
-            {narrowLeft.map((id) => renderWidget(id))}
-          </div>
-          <div className="flex flex-col gap-4 lg:mb-8">
-            {sideLeft.map((id) => renderWidget(id, 'left-wing'))}
-          </div>
-          <div className="flex flex-col lg:mb-4">
-            {centerWidgets.map((id) => renderWidget(id, arcWrapForCenter(id)))}
-          </div>
-          <div className="flex flex-col gap-4 lg:mb-8">
-            {rightWidgets.map((id) => renderWidget(id, arcWrapForRight(id)))}
-          </div>
+        {/* Curved semicircle arc — wings low, chat + orb + controls at center peak */}
+        <div className="axon-lab-arc relative z-20 mx-auto mt-2 flex max-w-[1520px] flex-col gap-5 px-2 md:mt-4 md:flex-row md:items-end md:justify-center md:gap-5 lg:gap-6">
+          {sideLeft.length > 0 && (
+            <div className="flex w-full flex-col gap-4 md:mb-14 md:w-[min(300px,28%)] md:shrink-0 lg:mb-20">
+              {sideLeft.map((id) => renderWidget(id, 'left-wing'))}
+            </div>
+          )}
+
+          {centerWidgets.length > 0 && (
+            <div className="axon-lab-spine flex w-full flex-col items-stretch md:mb-5 md:w-[min(560px,44%)] md:shrink-0 lg:mb-8">
+              {centerWidgets.map((id) => renderWidget(id, arcWrapForCenter(id)))}
+            </div>
+          )}
+
+          {rightWidgets.length > 0 && (
+            <div className="flex w-full flex-col gap-4 md:mb-14 md:w-[min(300px,28%)] md:shrink-0 lg:mb-20">
+              {rightWidgets.map((id) => renderWidget(id, arcWrapForRight(id)))}
+            </div>
+          )}
         </div>
 
         <p className="relative z-10 mx-auto mt-6 max-w-lg text-center text-[10px] leading-relaxed text-axon-muted/80">

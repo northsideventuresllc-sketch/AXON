@@ -90,8 +90,8 @@
 
   /* Iron Man lab — semicircle stage */
   .axon-lab-stage {
-    perspective: 1400px;
-    perspective-origin: 50% 35%;
+    perspective: 1600px;
+    perspective-origin: 50% 28%;
     transform-style: preserve-3d;
   }
 
@@ -99,59 +99,68 @@
     transform-style: preserve-3d;
   }
 
+  .axon-lab-spine {
+    transform: translateZ(72px) scale(1.03);
+    transform-origin: center bottom;
+    transform-style: preserve-3d;
+  }
+
   .axon-lab-wing-left {
-    transform: rotateY(26deg) translateZ(-72px) translateX(12px) scale(0.94);
-    transform-origin: right center;
+    transform: rotateY(36deg) translateZ(-96px) translateX(20px) scale(0.9);
+    transform-origin: right bottom;
   }
 
   .axon-lab-wing-right {
-    transform: rotateY(-26deg) translateZ(-72px) translateX(-12px) scale(0.94);
-    transform-origin: left center;
+    transform: rotateY(-36deg) translateZ(-96px) translateX(-20px) scale(0.9);
+    transform-origin: left bottom;
   }
 
   .axon-lab-center {
-    transform: translateZ(48px) scale(1);
+    transform: translateZ(32px);
   }
 
   .axon-lab-controls {
-    transform: translateZ(24px) scale(0.98);
+    transform: translateZ(40px) scale(0.99);
   }
 
   .axon-orb-zone {
     display: flex;
-    min-height: 260px;
+    min-height: 220px;
     align-items: center;
     justify-content: center;
-    margin-top: 2.5rem;
-    margin-bottom: 2rem;
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
     position: relative;
     z-index: 15;
-    transform: translateZ(32px);
+    transform: translateZ(48px);
     isolation: isolate;
   }
 
   .axon-center-chat {
-    transform: translateZ(48px) scale(1);
-    margin-bottom: 0.5rem;
+    transform: translateZ(36px);
+    margin-bottom: 0.25rem;
   }
 
   .axon-lab-wing-left.axon-card-3d:hover {
-    transform: rotateY(22deg) translateZ(-48px) translateX(8px) scale(0.96) translateY(-4px);
+    transform: rotateY(30deg) translateZ(-64px) translateX(14px) scale(0.92) translateY(-4px);
   }
 
   .axon-lab-wing-right.axon-card-3d:hover {
-    transform: rotateY(-22deg) translateZ(-48px) translateX(-8px) scale(0.96) translateY(-4px);
+    transform: rotateY(-30deg) translateZ(-64px) translateX(-14px) scale(0.92) translateY(-4px);
   }
 
   .axon-lab-center.axon-card-3d:hover {
-    transform: translateZ(56px) scale(1.01) translateY(-4px);
+    transform: translateZ(44px) translateY(-4px);
   }
 
-  @media (max-width: 1279px) {
+  /* Flatten only on small screens — keep arc on tablet+ */
+  @media (max-width: 767px) {
+    .axon-lab-spine,
     .axon-lab-wing-left,
     .axon-lab-wing-right,
     .axon-lab-center,
-    .axon-lab-controls {
+    .axon-lab-controls,
+    .axon-orb-zone {
       transform: none;
     }
 
@@ -295,17 +304,31 @@
 }
 
 .axon-heartbeat-line {
-  stroke-dasharray: 400;
+  stroke-dasharray: var(--hb-length, 1000);
   animation: heartbeat 2.4s linear infinite;
 }
 
 @keyframes heartbeat {
   0% {
-    stroke-dashoffset: 400;
+    stroke-dashoffset: var(--hb-length, 1000);
   }
   100% {
     stroke-dashoffset: 0;
   }
+}
+
+.axon-heartbeat-wrap {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.axon-heartbeat-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes axon-orb-pulse-ring {
