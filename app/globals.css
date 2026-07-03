@@ -88,87 +88,159 @@
     @apply bg-gradient-to-r from-axon-blue via-axon-violet to-axon-purple;
   }
 
-  /* Iron Man lab — semicircle stage */
-  .axon-lab-stage {
-    perspective: 1600px;
-    perspective-origin: 50% 28%;
+  /* Holographic 3-monitor command rig */
+  .axon-holo-stage {
+    perspective: 1800px;
+    perspective-origin: 50% 42%;
     transform-style: preserve-3d;
   }
 
-  .axon-lab-arc {
+  .axon-holo-rig {
     transform-style: preserve-3d;
   }
 
-  .axon-lab-spine {
-    transform: translateZ(72px) scale(1.03);
+  .axon-holo-monitors {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) minmax(380px, 1.2fr) minmax(320px, 1fr);
+    gap: 2rem;
+    align-items: stretch;
+    min-height: 560px;
+    transform-style: preserve-3d;
+  }
+
+  .axon-holo-screen {
+    position: relative;
+    transform-style: preserve-3d;
+    min-height: 520px;
+  }
+
+  .axon-holo-screen::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    z-index: 1;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(96, 165, 250, 0.22);
+    box-shadow:
+      0 0 48px rgba(37, 99, 235, 0.12),
+      inset 0 0 80px rgba(34, 211, 238, 0.04);
+    pointer-events: none;
+  }
+
+  .axon-holo-screen::after {
+    content: '';
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    bottom: -18px;
+    height: 24px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(37, 99, 235, 0.35) 0%, transparent 70%);
+    filter: blur(8px);
+    pointer-events: none;
+  }
+
+  .axon-holo-panel {
+    width: 100%;
+    height: 100%;
+  }
+
+  .axon-holo-monitors-no-left {
+    grid-template-columns: minmax(400px, 1.35fr) minmax(340px, 1fr);
+  }
+
+  .axon-holo-monitors-no-right {
+    grid-template-columns: minmax(340px, 1fr) minmax(400px, 1.35fr);
+  }
+
+  .axon-holo-monitors-single {
+    grid-template-columns: minmax(400px, 1fr);
+    max-width: 720px;
+    margin-inline: auto;
+  }
+
+  .axon-holo-screen-left {
+    transform: rotateY(24deg) translateZ(-32px);
+    transform-origin: right center;
+  }
+
+  .axon-holo-screen-center {
+    transform: translateZ(64px) scale(1.02);
     transform-origin: center bottom;
+  }
+
+  .axon-holo-screen-right {
+    transform: rotateY(-24deg) translateZ(-32px);
+    transform-origin: left center;
+  }
+
+  .axon-holo-orb-deck {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 2.5rem;
+    padding-bottom: 1.5rem;
+    transform: translateZ(96px);
     transform-style: preserve-3d;
   }
 
-  .axon-lab-wing-left {
-    transform: rotateY(36deg) translateZ(-96px) translateX(20px) scale(0.9);
-    transform-origin: right bottom;
-  }
-
-  .axon-lab-wing-right {
-    transform: rotateY(-36deg) translateZ(-96px) translateX(-20px) scale(0.9);
-    transform-origin: left bottom;
-  }
-
-  .axon-lab-center {
-    transform: translateZ(32px);
-  }
-
-  .axon-lab-controls {
-    transform: translateZ(40px) scale(0.99);
-  }
-
-  .axon-orb-zone {
+  .axon-holo-orb-zone {
     display: flex;
-    min-height: 220px;
+    min-height: 240px;
     align-items: center;
     justify-content: center;
-    margin-top: 1.25rem;
-    margin-bottom: 1.25rem;
     position: relative;
-    z-index: 15;
-    transform: translateZ(48px);
-    isolation: isolate;
+    z-index: 20;
   }
 
-  .axon-center-chat {
-    transform: translateZ(36px);
-    margin-bottom: 0.25rem;
+  .axon-holo-controls {
+    transform: translateZ(24px);
   }
 
-  .axon-lab-wing-left.axon-card-3d:hover {
-    transform: rotateY(30deg) translateZ(-64px) translateX(14px) scale(0.92) translateY(-4px);
+  .axon-holo-screen-left.axon-card-3d:hover {
+    transform: rotateY(20deg) translateZ(-16px) translateY(-4px);
   }
 
-  .axon-lab-wing-right.axon-card-3d:hover {
-    transform: rotateY(-30deg) translateZ(-64px) translateX(-14px) scale(0.92) translateY(-4px);
+  .axon-holo-screen-center.axon-card-3d:hover {
+    transform: translateZ(72px) scale(1.02) translateY(-4px);
   }
 
-  .axon-lab-center.axon-card-3d:hover {
-    transform: translateZ(44px) translateY(-4px);
+  .axon-holo-screen-right.axon-card-3d:hover {
+    transform: rotateY(-20deg) translateZ(-16px) translateY(-4px);
   }
 
-  /* Flatten only on small screens — keep arc on tablet+ */
-  @media (max-width: 767px) {
-    .axon-lab-spine,
-    .axon-lab-wing-left,
-    .axon-lab-wing-right,
-    .axon-lab-center,
-    .axon-lab-controls,
-    .axon-orb-zone {
+  @media (max-width: 1023px) {
+    .axon-holo-monitors {
+      grid-template-columns: 1fr;
+      min-height: auto;
+      gap: 1.5rem;
+    }
+
+    .axon-holo-screen {
+      min-height: 420px;
+    }
+
+    .axon-holo-screen-left,
+    .axon-holo-screen-center,
+    .axon-holo-screen-right,
+    .axon-holo-orb-deck,
+    .axon-holo-controls {
       transform: none;
     }
 
-    .axon-lab-wing-left.axon-card-3d:hover,
-    .axon-lab-wing-right.axon-card-3d:hover,
-    .axon-lab-center.axon-card-3d:hover {
+    .axon-holo-screen-left.axon-card-3d:hover,
+    .axon-holo-screen-center.axon-card-3d:hover,
+    .axon-holo-screen-right.axon-card-3d:hover {
       transform: translateY(-4px);
     }
+  }
+
+  /* Legacy lab classes — kept for panel focus view */
+  .axon-lab-stage {
+    perspective: 1800px;
+    perspective-origin: 50% 42%;
+    transform-style: preserve-3d;
   }
 }
 

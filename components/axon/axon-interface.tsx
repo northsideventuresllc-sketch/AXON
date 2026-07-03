@@ -196,7 +196,7 @@ export function AxonInterface({
   );
 
   const chatPanel = (
-    <div className="axon-card-3d relative flex min-h-[300px] flex-col rounded-2xl border border-axon-border/50 axon-glass">
+    <div className="axon-card-3d relative flex min-h-[480px] flex-col rounded-2xl border border-axon-border/50 axon-glass">
       {urgentChatOverlay && (
         <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-red-950/90 animate-pulse">
           <p className="text-lg font-bold uppercase tracking-[0.3em] text-red-400">Urgent notification</p>
@@ -205,7 +205,7 @@ export function AxonInterface({
       <div className="border-b border-axon-border/50 px-4 py-2.5">
         <p className="text-[10px] uppercase tracking-[0.25em] text-axon-blue-glow">Command Interface</p>
       </div>
-      <div ref={scrollRef} className="min-h-[200px] flex-1 space-y-3 overflow-y-auto p-4">
+      <div ref={scrollRef} className="min-h-[320px] flex-1 space-y-3 overflow-y-auto p-5">
         {messages.length === 0 && !loading && (
           <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
             <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
@@ -279,7 +279,10 @@ export function AxonInterface({
     </div>
   );
 
-  function renderWidget(id: HomeWidgetId, arc?: 'left-wing' | 'right-wing' | 'center-chat' | 'orb-zone' | 'controls' | 'none') {
+  function renderWidget(
+    id: HomeWidgetId,
+    zone?: 'holo-left' | 'holo-center' | 'holo-right' | 'orb-deck' | 'none'
+  ) {
     if (!isVisible(id)) return null;
 
     const wrap = (node: ReactNode, className = '') => (
@@ -311,17 +314,17 @@ export function AxonInterface({
       case 'briefing':
         return wrap(
           briefingPanel,
-          arc === 'left-wing' ? 'axon-lab-wing-left axon-card-3d min-h-[400px]' : 'min-h-[400px]'
+          zone === 'holo-left' ? 'axon-holo-panel h-full min-h-[520px]' : 'min-h-[480px]'
         );
       case 'chat':
         return wrap(
           chatPanel,
-          arc === 'center-chat' ? 'axon-lab-center axon-center-chat w-full' : ''
+          zone === 'holo-center' ? 'axon-holo-panel h-full w-full' : 'w-full'
         );
       case 'todo':
         return wrap(
           todoPanel,
-          arc === 'right-wing' ? 'axon-lab-wing-right axon-card-3d min-h-[400px]' : 'min-h-[400px]'
+          zone === 'holo-right' ? 'axon-holo-panel h-full min-h-[520px]' : 'min-h-[480px]'
         );
       case 'notifications':
         return wrap(
@@ -341,7 +344,7 @@ export function AxonInterface({
                 .then((d) => d.preferences && setPreferences(d.preferences));
             }}
           />,
-          arc === 'right-wing' ? 'axon-lab-wing-right w-full' : 'w-full'
+          zone === 'holo-right' ? 'axon-holo-panel w-full shrink-0' : 'w-full'
         );
       case 'orb':
         return wrap(
@@ -352,11 +355,11 @@ export function AxonInterface({
             processing={loading}
             size="large"
           />,
-          arc === 'orb-zone' ? 'axon-orb-zone w-full' : 'flex justify-center py-6'
+          zone === 'orb-deck' ? 'axon-holo-orb-zone w-full' : 'flex justify-center py-6'
         );
       case 'controls':
         return wrap(
-          <div className="relative z-40 flex flex-col items-center gap-3 overflow-visible pb-2">
+          <div className="axon-holo-controls relative z-40 flex flex-col items-center gap-3 overflow-visible">
             <div className="flex rounded-full border border-axon-blue/30 bg-axon-elevated/90 p-1 axon-glass shadow-lg">
               <ModeButton
                 active={inputMode === 'chat'}
@@ -407,59 +410,83 @@ export function AxonInterface({
               </label>
             </div>
           </div>,
-          arc === 'controls' ? 'axon-lab-controls w-full pt-2' : 'relative z-40 pb-4'
+          zone === 'orb-deck' ? 'w-full' : 'relative z-40 pb-4'
         );
       default:
         return null;
     }
   }
 
-  function arcWrapForCenter(id: HomeWidgetId): 'center-chat' | 'orb-zone' | 'controls' | 'none' {
-    if (id === 'chat') return 'center-chat';
-    if (id === 'orb') return 'orb-zone';
-    if (id === 'controls') return 'controls';
-    return 'none';
-  }
+  const centerChat = centerWidgets.filter((id) => id === 'chat');
+  const orbDeckWidgets = centerWidgets.filter((id) => id === 'controls' || id === 'orb');
+  const centerOther = centerWidgets.filter((id) => id !== 'chat' && id !== 'orb' && id !== 'controls');
 
-  function arcWrapForRight(id: HomeWidgetId): 'right-wing' | 'none' {
-    return id === 'todo' || id === 'notifications' ? 'right-wing' : 'none';
-  }
+  const mobileStack: HomeWidgetId[] = [
+    ...narrowLeft,
+    ...sideLeft,
+    ...centerChat,
+    ...centerOther,
+    ...rightWidgets,
+    ...orbDeckWidgets.filter((id) => id === 'controls'),
+    ...orbDeckWidgets.filter((id) => id === 'orb'),
+  ];
 
   return (
     <>
-      <div className="axon-lab-stage relative min-h-[920px] overflow-visible pb-8">
+      <div className="axon-holo-stage axon-lab-stage relative min-h-[980px] overflow-visible pb-10">
         <AxonLabFloor />
 
         {narrowLeft.length > 0 && (
-          <div className="relative z-30 mx-auto max-w-[1520px] px-2 md:absolute md:left-3 md:top-3 md:mx-0 md:max-w-[110px] lg:left-5 lg:top-5">
-            <div className="flex flex-row flex-wrap gap-2 md:flex-col">
+          <div className="relative z-30 mx-auto max-w-[1720px] px-3 lg:absolute lg:left-6 lg:top-6 lg:mx-0 lg:max-w-[140px]">
+            <div className="flex flex-row flex-wrap gap-2 lg:flex-col">
               {narrowLeft.map((id) => renderWidget(id))}
             </div>
           </div>
         )}
 
-        {/* Curved semicircle arc — wings low, chat + orb + controls at center peak */}
-        <div className="axon-lab-arc relative z-20 mx-auto mt-2 flex max-w-[1520px] flex-col gap-5 px-2 md:mt-4 md:flex-row md:items-end md:justify-center md:gap-5 lg:gap-6">
-          {sideLeft.length > 0 && (
-            <div className="flex w-full flex-col gap-4 md:mb-14 md:w-[min(300px,28%)] md:shrink-0 lg:mb-20">
-              {sideLeft.map((id) => renderWidget(id, 'left-wing'))}
-            </div>
-          )}
+        {/* Desktop: 3 holographic monitors + orb deck */}
+        <div className="axon-holo-rig relative z-20 mx-auto hidden max-w-[1720px] px-4 lg:block">
+          <div
+            className={`axon-holo-monitors ${
+              sideLeft.length === 0 ? 'axon-holo-monitors-no-left' : ''
+            } ${rightWidgets.length === 0 ? 'axon-holo-monitors-no-right' : ''} ${
+              sideLeft.length === 0 && rightWidgets.length === 0 ? 'axon-holo-monitors-single' : ''
+            }`}
+          >
+            {sideLeft.length > 0 && (
+              <div className="axon-holo-screen axon-holo-screen-left flex flex-col">
+                {sideLeft.map((id) => renderWidget(id, 'holo-left'))}
+              </div>
+            )}
 
-          {centerWidgets.length > 0 && (
-            <div className="axon-lab-spine flex w-full flex-col items-stretch md:mb-5 md:w-[min(560px,44%)] md:shrink-0 lg:mb-8">
-              {centerWidgets.map((id) => renderWidget(id, arcWrapForCenter(id)))}
+            <div className="axon-holo-screen axon-holo-screen-center flex flex-col">
+              {centerChat.map((id) => renderWidget(id, 'holo-center'))}
+              {centerOther.map((id) => renderWidget(id, 'holo-center'))}
             </div>
-          )}
 
-          {rightWidgets.length > 0 && (
-            <div className="flex w-full flex-col gap-4 md:mb-14 md:w-[min(300px,28%)] md:shrink-0 lg:mb-20">
-              {rightWidgets.map((id) => renderWidget(id, arcWrapForRight(id)))}
-            </div>
-          )}
+            {rightWidgets.length > 0 && (
+              <div className="axon-holo-screen axon-holo-screen-right flex flex-col gap-5">
+                {rightWidgets.map((id) => renderWidget(id, 'holo-right'))}
+              </div>
+            )}
+          </div>
+
+          <div className="axon-holo-orb-deck">
+            {orbDeckWidgets
+              .filter((id) => id === 'controls')
+              .map((id) => renderWidget(id, 'orb-deck'))}
+            {orbDeckWidgets
+              .filter((id) => id === 'orb')
+              .map((id) => renderWidget(id, 'orb-deck'))}
+          </div>
         </div>
 
-        <p className="relative z-10 mx-auto mt-6 max-w-lg text-center text-[10px] leading-relaxed text-axon-muted/80">
+        {/* Mobile / tablet stack — orb still at bottom */}
+        <div className="relative z-20 mx-auto flex max-w-[1720px] flex-col gap-5 px-3 lg:hidden">
+          {mobileStack.map((id) => renderWidget(id))}
+        </div>
+
+        <p className="relative z-10 mx-auto mt-8 max-w-lg text-center text-[10px] leading-relaxed text-axon-muted/80">
           {initialProfile.tone_preset.summary ||
             'Default tone — AXON adapts from every message you send.'}
         </p>

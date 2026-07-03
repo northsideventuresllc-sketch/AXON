@@ -7,7 +7,7 @@ export function AxonLabFloor() {
       aria-hidden
     >
       {/* Semicircle holographic floor ring */}
-      <div className="relative h-[280px] w-[min(920px,95%)]">
+      <div className="relative h-[320px] w-[min(1200px,96%)]">
         <div
           className="absolute inset-x-[8%] bottom-0 h-[220px] rounded-[50%] border border-axon-blue/25 animate-pulse-glow"
           style={{

@@ -30,7 +30,7 @@ export function BriefingPanel({ items, autonomous, onRefresh, onTitleClick, comp
 
   return (
     <section className={`axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden h-full ${className}`}>
-      <header className="border-b border-axon-border/60 px-4 py-3">
+      <header className="border-b border-axon-border/60 px-5 py-4">
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
@@ -50,7 +50,7 @@ export function BriefingPanel({ items, autonomous, onRefresh, onTitleClick, comp
         </p>
       </header>
 
-      <div className={`flex-1 space-y-2 overflow-y-auto p-3 ${compact ? 'max-h-[240px]' : 'min-h-[360px] max-h-[420px]'}`}>
+      <div className={`flex-1 space-y-3 overflow-y-auto p-4 md:p-5 ${compact ? 'max-h-[280px]' : 'min-h-[440px]'}`}>
         {items.length === 0 ? (
           <EmptyState
             icon="◈"
@@ -60,7 +60,7 @@ export function BriefingPanel({ items, autonomous, onRefresh, onTitleClick, comp
           items.map((item, i) => (
             <article
               key={item.id}
-              className="group rounded-xl border border-axon-border/50 bg-axon-elevated/40 p-3 transition hover:border-axon-blue/40"
+              className="group rounded-xl border border-axon-border/50 bg-axon-elevated/40 p-4 transition hover:border-axon-blue/40"
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <div className="flex items-start justify-between gap-2">
