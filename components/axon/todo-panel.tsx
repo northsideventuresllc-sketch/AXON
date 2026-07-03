@@ -35,9 +35,9 @@ export function TodoPanel({ items, autonomous, onRefresh }: TodoPanelProps) {
     <section className="axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden">
       <header className="border-b border-axon-border/60 px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs uppercase tracking-[0.2em] text-axon-purple-glow">To-Do</h2>
+          <h2 className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">To-Do</h2>
           {autonomous && (
-            <span className="rounded-full bg-axon-purple/25 px-2 py-0.5 text-[10px] text-axon-purple-glow animate-pulse-glow">
+            <span className="rounded-full bg-axon-blue/20 px-2 py-0.5 text-[10px] text-axon-cyan animate-pulse-glow">
               Autonomous
             </span>
           )}
@@ -50,7 +50,7 @@ export function TodoPanel({ items, autonomous, onRefresh }: TodoPanelProps) {
       <div className="flex-1 space-y-1 overflow-y-auto p-3 max-h-[280px]">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <span className="text-2xl text-axon-purple/50 animate-float">☐</span>
+            <span className="text-2xl text-axon-blue/50 animate-float">☐</span>
             <p className="mt-3 max-w-[220px] text-xs leading-relaxed text-axon-muted">
               Try: “Add a to-do to follow up with Acme Corp by Friday.”
             </p>
@@ -88,7 +88,7 @@ function TodoRow({
 }) {
   return (
     <div
-      className={`group flex items-start gap-2 rounded-lg border px-2 py-2 transition hover:border-axon-purple/30 ${
+      className={`group flex items-start gap-2 rounded-lg border px-2 py-2 transition hover:border-axon-blue/30 ${
         done
           ? 'border-axon-border/30 bg-axon-elevated/20 opacity-60'
           : 'border-axon-border/50 bg-axon-elevated/40'
@@ -99,8 +99,8 @@ function TodoRow({
         onClick={() => onToggle(item.id)}
         className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] transition ${
           item.done
-            ? 'border-axon-purple bg-axon-purple/40 text-axon-text'
-            : 'border-axon-muted/50 hover:border-axon-purple-glow'
+            ? 'border-axon-blue bg-axon-blue/40 text-axon-text'
+            : 'border-axon-muted/50 hover:border-axon-blue-glow'
         }`}
         aria-label={item.done ? 'Mark incomplete' : 'Mark complete'}
       >

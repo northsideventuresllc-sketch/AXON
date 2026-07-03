@@ -10,9 +10,9 @@ interface BriefingPanelProps {
 }
 
 const PRIORITY_STYLES = {
-  high: 'border-axon-purple-glow/50 bg-axon-purple/20 text-axon-purple-glow',
-  medium: 'border-axon-gold/30 bg-axon-gold/10 text-axon-gold',
-  low: 'border-axon-border bg-axon-elevated/60 text-axon-muted',
+  high: 'border border-axon-cyan/40 bg-axon-blue/20 text-axon-cyan',
+  medium: 'border border-axon-blue-glow/35 bg-axon-blue/10 text-axon-blue-glow',
+  low: 'border border-axon-border bg-axon-elevated/60 text-axon-muted',
 };
 
 export function BriefingPanel({ items, autonomous, onRefresh }: BriefingPanelProps) {
@@ -29,9 +29,9 @@ export function BriefingPanel({ items, autonomous, onRefresh }: BriefingPanelPro
     <section className="axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden">
       <header className="border-b border-axon-border/60 px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs uppercase tracking-[0.2em] text-axon-purple-glow">Briefing</h2>
+          <h2 className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">Briefing</h2>
           {autonomous && (
-            <span className="rounded-full bg-axon-purple/25 px-2 py-0.5 text-[10px] text-axon-purple-glow animate-pulse-glow">
+            <span className="rounded-full bg-axon-blue/20 px-2 py-0.5 text-[10px] text-axon-cyan animate-pulse-glow">
               Autonomous
             </span>
           )}
@@ -51,14 +51,14 @@ export function BriefingPanel({ items, autonomous, onRefresh }: BriefingPanelPro
           items.map((item, i) => (
             <article
               key={item.id}
-              className="group rounded-xl border border-axon-border/50 bg-axon-elevated/40 p-3 transition hover:border-axon-purple/40"
+              className="group rounded-xl border border-axon-border/50 bg-axon-elevated/40 p-3 transition hover:border-axon-blue/40"
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`rounded px-1.5 py-0.5 text-[9px] uppercase tracking-wider border ${PRIORITY_STYLES[item.priority]}`}
+                      className={`rounded px-1.5 py-0.5 text-[9px] uppercase tracking-wider ${PRIORITY_STYLES[item.priority]}`}
                     >
                       {item.priority}
                     </span>
@@ -93,7 +93,7 @@ export function BriefingPanel({ items, autonomous, onRefresh }: BriefingPanelPro
 function EmptyState({ icon, text }: { icon: string; text: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-8 text-center">
-      <span className="text-2xl text-axon-purple/50 animate-float">{icon}</span>
+      <span className="text-2xl text-axon-blue/50 animate-float">{icon}</span>
       <p className="mt-3 max-w-[220px] text-xs leading-relaxed text-axon-muted">{text}</p>
     </div>
   );

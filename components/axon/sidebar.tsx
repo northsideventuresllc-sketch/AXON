@@ -36,7 +36,7 @@ export function Sidebar() {
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-axon-border bg-axon-surface">
       <div className="border-b border-axon-border px-6 py-5">
         <div className="flex items-center gap-2">
-          <span className="text-xl font-semibold tracking-[0.2em] text-axon-purple-glow">AXON</span>
+          <span className="text-xl font-semibold tracking-[0.2em] text-axon-blue-glow">AXON</span>
         </div>
         <p className="mt-1 text-xs text-axon-muted">Personalized Agentic Assistant</p>
       </div>
@@ -53,7 +53,7 @@ export function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                 active
-                  ? 'bg-axon-purple/20 text-axon-purple-glow'
+                  ? 'bg-axon-blue/15 text-axon-cyan'
                   : 'text-axon-muted hover:bg-axon-elevated/50 hover:text-axon-text'
               }`}
             >

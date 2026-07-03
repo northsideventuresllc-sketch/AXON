@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { JarvisOrb } from './jarvis-orb';
 import { BriefingPanel } from './briefing-panel';
 import { TodoPanel } from './todo-panel';
+import { AxonLabFloor } from './axon-lab-floor';
 import {
   AXON_VOICES,
   type AxonWorkspace,
@@ -143,140 +144,150 @@ export function AxonInterface({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(240px,280px)_1fr_minmax(260px,320px)]">
-      {/* Jarvis core */}
-      <div className="flex shrink-0 flex-col items-center gap-4">
+    <div className="axon-lab-stage relative min-h-[820px] pb-6">
+      <AxonLabFloor />
+
+      {/* Core intelligence — center of the arc */}
+      <div className="relative z-30 flex flex-col items-center pt-2">
         <JarvisOrb active={!loading} listening={voice.listening} speaking={speaking} />
 
-        <div className="flex rounded-full border border-axon-border/60 bg-axon-elevated/80 p-1 axon-glass">
-          <ModeButton
-            active={inputMode === 'chat'}
-            onClick={() => toggleInputMode('chat')}
-            label="Chat"
-          />
-          <ModeButton
-            active={inputMode === 'voice'}
-            onClick={() => toggleInputMode('voice')}
-            label="Voice"
-            disabled={!voice.voiceSupported}
-          />
-        </div>
+        <div className="axon-lab-controls mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="flex rounded-full border border-axon-blue/30 bg-axon-elevated/80 p-1 axon-glass">
+            <ModeButton
+              active={inputMode === 'chat'}
+              onClick={() => toggleInputMode('chat')}
+              label="Chat"
+            />
+            <ModeButton
+              active={inputMode === 'voice'}
+              onClick={() => toggleInputMode('voice')}
+              label="Voice"
+              disabled={!voice.voiceSupported}
+            />
+          </div>
 
-        <div className="axon-card-3d w-full space-y-3 rounded-2xl border border-axon-border/50 bg-axon-surface/80 p-4 axon-glass">
-          <Toggle
-            label="Read aloud"
-            checked={readAloud}
-            onChange={(v) => {
-              setReadAloud(v);
-              savePrefs({ read_aloud: v });
-              if (!v) voice.stopSpeaking();
-            }}
-            disabled={!voice.ttsSupported}
-          />
-
-          <label className="block text-xs text-axon-muted">
-            Voice
-            <select
-              value={voiceId}
-              onChange={(e) => {
-                setVoiceId(e.target.value);
-                savePrefs({ voice_id: e.target.value });
+          <div className="axon-card-3d flex flex-wrap items-center gap-4 rounded-2xl border border-axon-border/50 px-4 py-2.5 axon-glass">
+            <Toggle
+              label="Read aloud"
+              checked={readAloud}
+              onChange={(v) => {
+                setReadAloud(v);
+                savePrefs({ read_aloud: v });
+                if (!v) voice.stopSpeaking();
               }}
-              className="mt-1 w-full rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm outline-none focus:border-axon-purple-glow/50"
-            >
-              {AXON_VOICES.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <p className="text-[10px] leading-relaxed text-axon-muted">
-            {initialProfile.tone_preset.summary ||
-              'Default tone — AXON adapts from every message you send.'}
-          </p>
+              disabled={!voice.ttsSupported}
+            />
+            <label className="flex items-center gap-2 text-xs text-axon-muted">
+              Voice
+              <select
+                value={voiceId}
+                onChange={(e) => {
+                  setVoiceId(e.target.value);
+                  savePrefs({ voice_id: e.target.value });
+                }}
+                className="rounded-lg border border-axon-border bg-axon-elevated px-2 py-1.5 text-xs outline-none focus:border-axon-blue-glow/50"
+              >
+                {AXON_VOICES.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
       </div>
 
-      {/* Chat panel */}
-      <div className="axon-card-3d flex min-h-[480px] flex-col rounded-2xl border border-axon-border/50 bg-axon-surface/70 axon-glass backdrop-blur-md">
-        <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
-          {messages.length === 0 && (
-            <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
-              <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
-              <p className="mt-2 text-xs">
-                Ask about outreach, set up your briefing, or add tasks to your to-do list.
-              </p>
-            </div>
-          )}
-          {messages.map((m) => (
-            <MessageBubble key={m.id} role={m.role} content={m.content} channel={m.channel} />
-          ))}
-          {loading && (
-            <div className="flex items-center gap-2 text-xs text-axon-muted">
-              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-axon-purple-glow" />
-              AXON is thinking…
-            </div>
-          )}
+      {/* Semicircle arc — panels curve around the core with depth */}
+      <div className="axon-lab-arc relative z-20 mx-auto mt-4 flex max-w-[1340px] flex-col items-stretch gap-4 px-2 lg:mt-2 lg:flex-row lg:items-end lg:justify-center lg:gap-5">
+        <div className="axon-lab-wing-left axon-card-3d w-full lg:mb-12 lg:w-[min(300px,28%)]">
+          <BriefingPanel
+            items={workspace.briefing}
+            autonomous={workspace.briefing_autonomous}
+            onRefresh={refreshWorkspace}
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="border-t border-axon-border/60 p-4">
-          {inputMode === 'voice' ? (
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={voice.listening ? voice.stopListening : voice.startListening}
-                className={`rounded-xl border px-4 py-4 text-sm font-medium transition ${
-                  voice.listening
-                    ? 'border-axon-teal bg-axon-teal/10 text-axon-teal'
-                    : 'border-axon-border hover:border-axon-purple-glow/40'
-                }`}
-              >
-                {voice.listening ? 'Stop listening' : 'Hold to speak — tap to start'}
-              </button>
-              {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
-              <button
-                type="submit"
-                disabled={!input.trim() || loading}
-                className="rounded-lg bg-gradient-to-r from-axon-purple to-axon-violet px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-              >
-                Send voice message
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Talk to AXON…"
-                className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-purple-glow/50"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || loading}
-                className="rounded-lg bg-gradient-to-r from-axon-purple to-axon-violet px-5 py-3 text-sm font-medium text-white disabled:opacity-40"
-              >
-                Send
-              </button>
-            </div>
-          )}
-        </form>
+        <div className="axon-lab-center axon-card-3d flex min-h-[460px] w-full flex-col rounded-2xl border border-axon-border/50 axon-glass lg:mb-4 lg:w-[min(560px,44%)]">
+          <div className="border-b border-axon-border/50 px-4 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-axon-blue-glow">Command Interface</p>
+          </div>
+          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+            {messages.length === 0 && (
+              <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
+                <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
+                <p className="mt-2 text-xs">
+                  Ask about outreach, set up your briefing, or add tasks to your to-do list.
+                </p>
+              </div>
+            )}
+            {messages.map((m) => (
+              <MessageBubble key={m.id} role={m.role} content={m.content} channel={m.channel} />
+            ))}
+            {loading && (
+              <div className="flex items-center gap-2 text-xs text-axon-muted">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-axon-cyan" />
+                AXON is thinking…
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={handleSubmit} className="border-t border-axon-border/60 p-4">
+            {inputMode === 'voice' ? (
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={voice.listening ? voice.stopListening : voice.startListening}
+                  className={`rounded-xl border px-4 py-4 text-sm font-medium transition ${
+                    voice.listening
+                      ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
+                      : 'border-axon-border hover:border-axon-blue-glow/40'
+                  }`}
+                >
+                  {voice.listening ? 'Stop listening' : 'Hold to speak — tap to start'}
+                </button>
+                {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
+                <button
+                  type="submit"
+                  disabled={!input.trim() || loading}
+                  className="rounded-lg axon-gradient-btn px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+                >
+                  Send voice message
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Talk to AXON…"
+                  className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-blue-glow/50"
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || loading}
+                  className="rounded-lg axon-gradient-btn px-5 py-3 text-sm font-medium text-white disabled:opacity-40"
+                >
+                  Send
+                </button>
+              </div>
+            )}
+          </form>
+        </div>
+
+        <div className="axon-lab-wing-right axon-card-3d w-full lg:mb-12 lg:w-[min(300px,28%)]">
+          <TodoPanel
+            items={workspace.todos}
+            autonomous={workspace.todos_autonomous}
+            onRefresh={refreshWorkspace}
+          />
+        </div>
       </div>
 
-      {/* Briefing + To-Do */}
-      <div className="flex flex-col gap-4">
-        <BriefingPanel
-          items={workspace.briefing}
-          autonomous={workspace.briefing_autonomous}
-          onRefresh={refreshWorkspace}
-        />
-        <TodoPanel
-          items={workspace.todos}
-          autonomous={workspace.todos_autonomous}
-          onRefresh={refreshWorkspace}
-        />
-      </div>
+      <p className="relative z-10 mx-auto mt-4 max-w-lg text-center text-[10px] leading-relaxed text-axon-muted/80">
+        {initialProfile.tone_preset.summary ||
+          'Default tone — AXON adapts from every message you send.'}
+      </p>
     </div>
   );
 }
@@ -299,7 +310,7 @@ function ModeButton({
       disabled={disabled}
       className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
         active
-          ? 'bg-gradient-to-r from-axon-purple to-axon-violet text-white'
+          ? 'axon-gradient-btn text-white'
           : 'text-axon-muted hover:text-axon-text disabled:opacity-40'
       }`}
     >
@@ -320,7 +331,7 @@ function Toggle({
   disabled?: boolean;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between text-xs text-axon-muted">
+    <label className="flex cursor-pointer items-center gap-2 text-xs text-axon-muted">
       {label}
       <button
         type="button"
@@ -328,7 +339,7 @@ function Toggle({
         aria-checked={checked}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative h-5 w-9 rounded-full transition ${checked ? 'bg-axon-purple' : 'bg-axon-border'} disabled:opacity-40`}
+        className={`relative h-5 w-9 rounded-full transition ${checked ? 'bg-axon-blue' : 'bg-axon-border'} disabled:opacity-40`}
       >
         <span
           className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${checked ? 'left-4' : 'left-0.5'}`}
@@ -353,12 +364,12 @@ function MessageBubble({
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
           isUser
-            ? 'bg-axon-purple/20 text-axon-text border border-axon-purple/30'
+            ? 'border border-axon-blue/35 bg-axon-blue/15 text-axon-text'
             : 'border border-axon-border/60 bg-axon-elevated/80 text-axon-text/90'
         }`}
       >
         {!isUser && (
-          <span className="mb-1 block text-[10px] uppercase tracking-wider text-axon-purple-glow">
+          <span className="mb-1 block text-[10px] uppercase tracking-wider text-axon-cyan">
             AXON {channel === 'voice' ? '· voice' : ''}
           </span>
         )}
