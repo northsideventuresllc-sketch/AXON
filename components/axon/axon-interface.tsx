@@ -179,8 +179,85 @@ export function AxonInterface({
     />
   );
 
+  const desktopChatShell = (
+    <div className="axon-holo-chat-shell axon-card-3d relative rounded-2xl border border-axon-border/50 axon-glass">
+      {urgentChatOverlay && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-red-950/90 animate-pulse">
+          <p className="text-lg font-bold uppercase tracking-[0.3em] text-red-400">Urgent notification</p>
+        </div>
+      )}
+      <div className="relative shrink-0 border-b border-axon-border/50 px-4 py-2.5">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-axon-blue-glow">Command Interface</p>
+      </div>
+      <div ref={scrollRef} className="axon-holo-messages space-y-3 overflow-y-auto p-4 sm:p-5">
+        {messages.length === 0 && !loading && (
+          <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
+            <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
+            <p className="mt-2 text-xs">Ask about outreach, briefing, or to-dos.</p>
+          </div>
+        )}
+        {messages.map((m) => (
+          <MessageBubble key={m.id} role={m.role} content={m.content} channel={m.channel} />
+        ))}
+        {loading && (
+          <div className="flex items-center gap-2 text-xs text-axon-muted">
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-axon-cyan" />
+            AXON is thinking…
+          </div>
+        )}
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          sendMessage(input);
+        }}
+        className="axon-holo-input-region shrink-0 border-t border-axon-border/60 p-4"
+      >
+        {inputMode === 'voice' ? (
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={voice.listening ? voice.stopListening : voice.startListening}
+              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+                voice.listening
+                  ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
+                  : 'border-axon-border hover:border-axon-blue-glow/40'
+              }`}
+            >
+              {voice.listening ? 'Stop listening' : 'Tap to speak'}
+            </button>
+            {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+              className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
+            >
+              Send voice message
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Talk to AXON…"
+              className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-blue-glow/50"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+              className="rounded-lg axon-gradient-btn px-5 py-3 text-sm text-white disabled:opacity-40"
+            >
+              Send
+            </button>
+          </div>
+        )}
+      </form>
+    </div>
+  );
+
   const chatMessagesBlock = (
-    <div className="axon-holo-chat-card axon-card-3d relative flex flex-col rounded-t-2xl border border-axon-border/50 border-b-0 axon-glass">
+    <div className="axon-holo-chat-card axon-card-3d relative flex flex-col rounded-t-2xl border border-axon-border/50 axon-glass">
       {urgentChatOverlay && (
         <div className="absolute inset-0 z-20 flex items-center justify-center rounded-t-2xl bg-red-950/90 animate-pulse">
           <p className="text-lg font-bold uppercase tracking-[0.3em] text-red-400">Urgent notification</p>
@@ -215,7 +292,7 @@ export function AxonInterface({
         e.preventDefault();
         sendMessage(input);
       }}
-      className="axon-card-3d rounded-b-2xl rounded-t-none border border-axon-border/50 border-t-axon-border/60 axon-glass p-4"
+      className="axon-holo-input-region axon-card-3d rounded-b-2xl border border-axon-border/50 border-t border-axon-border/60 axon-glass p-4"
     >
       {inputMode === 'voice' ? (
         <div className="flex flex-col gap-3">
@@ -428,10 +505,7 @@ export function AxonInterface({
             )}
 
             {centerChat.length > 0 && (
-              <>
-                <div className="axon-holo-cell axon-holo-cell-center-top">{chatMessagesBlock}</div>
-                <div className="axon-holo-cell axon-holo-cell-center-input">{chatInputBlock}</div>
-              </>
+              <div className="axon-holo-cell axon-holo-cell-center">{desktopChatShell}</div>
             )}
 
             {centerOther.length > 0 && (

@@ -36,15 +36,24 @@ export function TodoPanel({ items, autonomous, onRefresh, onTitleClick, compact,
 
   return (
     <section className={`axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden h-full ${className}`}>
-      <header className="border-b border-axon-border/60 px-5 py-4">
+      <header
+        className={`relative z-10 border-b border-axon-border/60 px-5 py-4 ${onTitleClick ? 'cursor-pointer hover:bg-axon-blue/5' : ''}`}
+        onClick={onTitleClick}
+        onKeyDown={(e) => {
+          if (onTitleClick && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onTitleClick();
+          }
+        }}
+        role={onTitleClick ? 'button' : undefined}
+        tabIndex={onTitleClick ? 0 : undefined}
+      >
         <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={onTitleClick}
-            className={`text-left text-xs uppercase tracking-[0.2em] text-axon-blue-glow transition hover:text-axon-cyan ${onTitleClick ? 'cursor-pointer hover:underline' : ''}`}
+          <span
+            className={`text-left text-xs uppercase tracking-[0.2em] text-axon-blue-glow transition hover:text-axon-cyan ${onTitleClick ? 'hover:underline' : ''}`}
           >
             To-Do
-          </button>
+          </span>
           {autonomous && (
             <span className="rounded-full bg-axon-blue/20 px-2 py-0.5 text-[10px] text-axon-cyan animate-pulse-glow">
               Autonomous
