@@ -244,6 +244,7 @@
   .axon-orb-root {
     transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
     transform-style: preserve-3d;
+    overflow: visible;
   }
 
   .axon-orb-root.axon-orb-hovered {
@@ -251,15 +252,84 @@
   }
 
   .axon-orb-root.axon-orb-processing-state {
-    filter: saturate(1.08);
+    filter: saturate(1.06);
   }
 
   .axon-orb-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.32em;
+    text-indent: 0.32em;
+    background: linear-gradient(
+      120deg,
+      rgba(186, 230, 253, 0.95) 0%,
+      rgba(34, 211, 238, 0.9) 45%,
+      rgba(129, 140, 248, 0.95) 100%
+    );
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: axon-orb-title-shimmer 6s ease-in-out infinite;
     transform-origin: center center;
+    transition: letter-spacing 0.4s ease, transform 0.4s ease, filter 0.4s ease;
+    filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.25));
   }
 
-  .axon-orb-root.axon-orb-hovered .axon-orb-title {
-    letter-spacing: 0.48em;
+  .axon-orb-title-active {
+    letter-spacing: 0.38em;
+    text-indent: 0.38em;
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.55));
+    animation-duration: 3s;
+  }
+
+  .axon-orb-status-text {
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: rgba(122, 143, 168, 0.85);
+    transition: color 0.35s ease, opacity 0.35s ease;
+  }
+
+  .axon-orb-status-text-active {
+    color: rgba(186, 230, 253, 0.95);
+  }
+
+  .axon-orb-pulse-dot {
+    display: inline-block;
+    height: 5px;
+    width: 5px;
+    border-radius: 9999px;
+    background: rgba(34, 211, 238, 0.85);
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.7);
+    animation: axon-orb-dot-pulse 2.4s ease-in-out infinite;
+  }
+
+  .axon-orb-pulse-dot-fast {
+    animation-duration: 0.9s;
+  }
+
+  @keyframes axon-orb-title-shimmer {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  @keyframes axon-orb-dot-pulse {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.85);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.15);
+    }
   }
 
   .axon-holo-controls {
