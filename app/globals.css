@@ -226,6 +226,27 @@
     z-index: 20;
   }
 
+  .axon-orb-root {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    transform-style: preserve-3d;
+  }
+
+  .axon-orb-root.axon-orb-hovered {
+    transform: translateY(-6px) scale(1.02);
+  }
+
+  .axon-orb-root.axon-orb-processing-state {
+    filter: saturate(1.08);
+  }
+
+  .axon-orb-title {
+    transform-origin: center center;
+  }
+
+  .axon-orb-root.axon-orb-hovered .axon-orb-title {
+    letter-spacing: 0.48em;
+  }
+
   .axon-holo-controls {
     transform: translateZ(16px);
   }
