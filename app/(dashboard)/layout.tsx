@@ -6,8 +6,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="relative flex min-h-screen bg-axon-bg">
       <AxonAmbientBg />
       <Sidebar />
-      <main className="axon-grid-bg relative z-10 flex-1 overflow-auto">
-        <div className="mx-auto max-w-[1600px] px-6 py-8">{children}</div>
+      <main className="axon-grid-bg relative z-10 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="mx-auto max-w-[1720px] px-4 py-6 sm:px-6 sm:py-8">{children}</div>
       </main>
     </div>
   );

@@ -3,6 +3,7 @@
 import { apiUrl } from '@/lib/api-base';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { AxonTestNotificationButtons } from './axon-test-notification-buttons';
 
 const NAV = [
   { href: '/', label: 'AXON', icon: '◈' },
@@ -48,18 +49,24 @@ export function Sidebar() {
               ? pathname === '/'
               : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                active
-                  ? 'bg-axon-blue/15 text-axon-cyan'
-                  : 'text-axon-muted hover:bg-axon-elevated/50 hover:text-axon-text'
-              }`}
-            >
-              <span className="text-base opacity-70">{item.icon}</span>
-              {item.label}
-            </Link>
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                  active
+                    ? 'bg-axon-blue/15 text-axon-cyan'
+                    : 'text-axon-muted hover:bg-axon-elevated/50 hover:text-axon-text'
+                }`}
+              >
+                <span className="text-base opacity-70">{item.icon}</span>
+                {item.label}
+              </Link>
+              {item.href === '/settings' && (
+                <div className="mt-3 border-t border-axon-border/60 pt-3">
+                  <AxonTestNotificationButtons />
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>

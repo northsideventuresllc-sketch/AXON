@@ -56,7 +56,7 @@ export function TodoPanel({ items, autonomous, onRefresh, onTitleClick, compact,
         </p>
       </header>
 
-      <div className={`flex-1 space-y-2 overflow-y-auto p-4 md:p-5 ${compact ? 'max-h-[280px]' : 'min-h-[440px]'}`}>
+      <div className={`flex-1 min-h-0 space-y-2 overflow-y-auto p-4 md:p-5 ${compact ? 'max-h-[280px]' : ''}`}>
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <span className="text-2xl text-axon-blue/50 animate-float">☐</span>

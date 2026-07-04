@@ -16,7 +16,6 @@ import {
   type HomeWidgetId,
   type InputMode,
 } from '@/lib/axon-types';
-import { classifyUrgency } from '@/lib/axon-preferences';
 import { useAxonVoice } from '@/lib/use-axon-voice';
 import { apiUrl } from '@/lib/api-base';
 
@@ -56,10 +55,12 @@ export function AxonInterface({
   const layout = preferences.homeLayout;
   const isVisible = (id: HomeWidgetId) => !layout.hidden.includes(id);
 
-  const narrowLeft = layout.left.filter((id) => id === 'test_buttons' && isVisible(id));
   const sideLeft = layout.left.filter((id) => id !== 'test_buttons' && isVisible(id));
   const centerWidgets = layout.center.filter(isVisible);
   const rightWidgets = layout.right.filter(isVisible);
+
+  const rightTopWidgets = rightWidgets.filter((id) => id === 'todo');
+  const rightLowerWidgets = rightWidgets.filter((id) => id !== 'todo');
 
   const refreshWorkspace = useCallback(async () => {
     const res = await fetch(apiUrl('/api/axon/workspace'));
@@ -76,6 +77,19 @@ export function AxonInterface({
   useEffect(() => {
     if (voice.transcript && !loading) setInput(voice.transcript);
   }, [voice.transcript, loading]);
+
+  useEffect(() => {
+    function onTestNotification(e: Event) {
+      const detail = (e as CustomEvent<{ notification: AxonNotification }>).detail;
+      if (!detail?.notification) return;
+      setNotifTrigger({ notification: detail.notification, key: Date.now() });
+      fetch(apiUrl('/api/axon/preferences'))
+        .then((r) => r.json())
+        .then((d) => d.preferences && setPreferences(d.preferences));
+    }
+    window.addEventListener('axon:test-notification', onTestNotification);
+    return () => window.removeEventListener('axon:test-notification', onTestNotification);
+  }, []);
 
   const savePrefs = useCallback(
     async (patch: Partial<{ input_mode: InputMode; read_aloud: boolean; voice_id: string }>) => {
@@ -147,36 +161,6 @@ export function AxonInterface({
     }
   }
 
-  async function fireTestNotification(urgent: boolean) {
-    const source = urgent ? 'Pipeline Alert' : 'NI Outreach';
-    const title = urgent ? 'Lead approval required NOW' : 'New draft ready for review';
-    const notification: AxonNotification = {
-      id: `test-${Date.now()}`,
-      source,
-      title,
-      body: urgent ? 'High-priority lead waiting in queue.' : 'A new outreach draft was generated.',
-      urgent:
-        urgent &&
-        preferences.notifications.urgencyEnabled &&
-        (classifyUrgency(source, title, preferences.notifications) || urgent),
-      read: false,
-      created_at: new Date().toISOString(),
-    };
-
-    const res = await fetch(apiUrl('/api/axon/preferences'), {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ addNotification: notification }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setPreferences(data.preferences);
-      setNotifTrigger({ notification: data.preferences.notificationsInbox[0], key: Date.now() });
-    } else {
-      setNotifTrigger({ notification, key: Date.now() });
-    }
-  }
-
   const briefingPanel = (
     <BriefingPanel
       items={workspace.briefing}
@@ -195,17 +179,17 @@ export function AxonInterface({
     />
   );
 
-  const chatPanel = (
-    <div className="axon-card-3d relative flex min-h-[480px] flex-col rounded-2xl border border-axon-border/50 axon-glass">
+  const chatMessagesBlock = (
+    <div className="axon-holo-chat-card axon-card-3d relative flex flex-col rounded-t-2xl border border-axon-border/50 border-b-0 axon-glass">
       {urgentChatOverlay && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-red-950/90 animate-pulse">
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-t-2xl bg-red-950/90 animate-pulse">
           <p className="text-lg font-bold uppercase tracking-[0.3em] text-red-400">Urgent notification</p>
         </div>
       )}
-      <div className="border-b border-axon-border/50 px-4 py-2.5">
+      <div className="shrink-0 border-b border-axon-border/50 px-4 py-2.5">
         <p className="text-[10px] uppercase tracking-[0.25em] text-axon-blue-glow">Command Interface</p>
       </div>
-      <div ref={scrollRef} className="min-h-[320px] flex-1 space-y-3 overflow-y-auto p-5">
+      <div ref={scrollRef} className="axon-holo-messages flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
         {messages.length === 0 && !loading && (
           <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
             <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
@@ -222,53 +206,63 @@ export function AxonInterface({
           </div>
         )}
       </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          sendMessage(input);
-        }}
-        className="border-t border-axon-border/60 p-4"
-      >
-        {inputMode === 'voice' ? (
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={voice.listening ? voice.stopListening : voice.startListening}
-              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
-                voice.listening
-                  ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
-                  : 'border-axon-border hover:border-axon-blue-glow/40'
-              }`}
-            >
-              {voice.listening ? 'Stop listening' : 'Tap to speak'}
-            </button>
-            {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
-            >
-              Send voice message
-            </button>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Talk to AXON…"
-              className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-blue-glow/50"
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="rounded-lg axon-gradient-btn px-5 py-3 text-sm text-white disabled:opacity-40"
-            >
-              Send
-            </button>
-          </div>
-        )}
-      </form>
+    </div>
+  );
+
+  const chatInputBlock = (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        sendMessage(input);
+      }}
+      className="axon-card-3d rounded-b-2xl rounded-t-none border border-axon-border/50 border-t-axon-border/60 axon-glass p-4"
+    >
+      {inputMode === 'voice' ? (
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={voice.listening ? voice.stopListening : voice.startListening}
+            className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+              voice.listening
+                ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
+                : 'border-axon-border hover:border-axon-blue-glow/40'
+            }`}
+          >
+            {voice.listening ? 'Stop listening' : 'Tap to speak'}
+          </button>
+          {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
+          >
+            Send voice message
+          </button>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Talk to AXON…"
+            className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-blue-glow/50"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            className="rounded-lg axon-gradient-btn px-5 py-3 text-sm text-white disabled:opacity-40"
+          >
+            Send
+          </button>
+        </div>
+      )}
+    </form>
+  );
+
+  const chatPanel = (
+    <div className="flex flex-col">
+      {chatMessagesBlock}
+      {chatInputBlock}
     </div>
   );
 
@@ -281,7 +275,7 @@ export function AxonInterface({
 
   function renderWidget(
     id: HomeWidgetId,
-    zone?: 'holo-left' | 'holo-center' | 'holo-right' | 'orb-deck' | 'none'
+    zone?: 'holo-left' | 'holo-right-top' | 'holo-right-lower' | 'holo-left-lower' | 'orb-deck' | 'stack'
   ) {
     if (!isVisible(id)) return null;
 
@@ -293,38 +287,18 @@ export function AxonInterface({
 
     switch (id) {
       case 'test_buttons':
-        return wrap(
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => fireTestNotification(false)}
-              className="rounded-lg border border-axon-border/60 bg-axon-elevated/80 px-2 py-2.5 text-[10px] leading-snug text-axon-muted transition hover:border-axon-blue/40 hover:text-axon-cyan"
-            >
-              Test Normal Notification
-            </button>
-            <button
-              type="button"
-              onClick={() => fireTestNotification(true)}
-              className="rounded-lg border border-red-500/30 bg-red-950/20 px-2 py-2.5 text-[10px] leading-snug text-red-300 transition hover:border-red-400/50"
-            >
-              Test Urgent Notification
-            </button>
-          </div>
-        );
+        return null;
       case 'briefing':
         return wrap(
           briefingPanel,
-          zone === 'holo-left' ? 'axon-holo-panel h-full min-h-[520px]' : 'min-h-[480px]'
+          zone === 'holo-left' ? 'axon-holo-panel axon-holo-side-panel min-h-0 overflow-hidden' : 'min-h-[360px]'
         );
       case 'chat':
-        return wrap(
-          chatPanel,
-          zone === 'holo-center' ? 'axon-holo-panel h-full w-full' : 'w-full'
-        );
+        return wrap(chatPanel, zone === 'stack' ? 'w-full' : 'w-full');
       case 'todo':
         return wrap(
           todoPanel,
-          zone === 'holo-right' ? 'axon-holo-panel h-full min-h-[520px]' : 'min-h-[480px]'
+          zone === 'holo-right-top' ? 'axon-holo-panel axon-holo-side-panel min-h-0 overflow-hidden' : 'min-h-[360px]'
         );
       case 'notifications':
         return wrap(
@@ -344,7 +318,7 @@ export function AxonInterface({
                 .then((d) => d.preferences && setPreferences(d.preferences));
             }}
           />,
-          zone === 'holo-right' ? 'axon-holo-panel w-full shrink-0' : 'w-full'
+          zone === 'holo-right-lower' ? 'axon-holo-panel w-full' : 'w-full'
         );
       case 'orb':
         return wrap(
@@ -421,72 +395,82 @@ export function AxonInterface({
   const orbDeckWidgets = centerWidgets.filter((id) => id === 'controls' || id === 'orb');
   const centerOther = centerWidgets.filter((id) => id !== 'chat' && id !== 'orb' && id !== 'controls');
 
+  const gridModifiers = [
+    sideLeft.length === 0 ? 'axon-holo-grid-no-left' : '',
+    rightWidgets.length === 0 ? 'axon-holo-grid-no-right' : '',
+    sideLeft.length === 0 && rightWidgets.length === 0 ? 'axon-holo-grid-single' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   const mobileStack: HomeWidgetId[] = [
-    ...narrowLeft,
     ...sideLeft,
     ...centerChat,
     ...centerOther,
-    ...rightWidgets,
+    ...rightTopWidgets,
+    ...rightLowerWidgets,
     ...orbDeckWidgets.filter((id) => id === 'controls'),
     ...orbDeckWidgets.filter((id) => id === 'orb'),
   ];
 
   return (
     <>
-      <div className="axon-holo-stage axon-lab-stage relative min-h-[980px] overflow-visible pb-10">
+      <div className="axon-holo-stage axon-lab-stage relative min-h-0 overflow-visible pb-8">
         <AxonLabFloor />
 
-        {narrowLeft.length > 0 && (
-          <div className="relative z-30 mx-auto max-w-[1720px] px-3 lg:absolute lg:left-6 lg:top-6 lg:mx-0 lg:max-w-[140px]">
-            <div className="flex flex-row flex-wrap gap-2 lg:flex-col">
-              {narrowLeft.map((id) => renderWidget(id))}
-            </div>
-          </div>
-        )}
-
-        {/* Desktop: 3 holographic monitors + orb deck */}
-        <div className="axon-holo-rig relative z-20 mx-auto hidden max-w-[1720px] px-4 lg:block">
-          <div
-            className={`axon-holo-monitors ${
-              sideLeft.length === 0 ? 'axon-holo-monitors-no-left' : ''
-            } ${rightWidgets.length === 0 ? 'axon-holo-monitors-no-right' : ''} ${
-              sideLeft.length === 0 && rightWidgets.length === 0 ? 'axon-holo-monitors-single' : ''
-            }`}
-          >
+        {/* Desktop: aligned holo grid */}
+        <div className="axon-holo-rig relative z-20 mx-auto hidden max-w-[1720px] px-1 lg:block">
+          <div className={`axon-holo-grid ${gridModifiers}`}>
             {sideLeft.length > 0 && (
-              <div className="axon-holo-screen axon-holo-screen-left flex flex-col">
+              <div className="axon-holo-cell axon-holo-cell-left">
                 {sideLeft.map((id) => renderWidget(id, 'holo-left'))}
               </div>
             )}
 
-            <div className="axon-holo-screen axon-holo-screen-center flex flex-col">
-              {centerChat.map((id) => renderWidget(id, 'holo-center'))}
-              {centerOther.map((id) => renderWidget(id, 'holo-center'))}
-            </div>
+            {centerChat.length > 0 && (
+              <>
+                <div className="axon-holo-cell axon-holo-cell-center-top">{chatMessagesBlock}</div>
+                <div className="axon-holo-cell axon-holo-cell-center-input">{chatInputBlock}</div>
+              </>
+            )}
 
-            {rightWidgets.length > 0 && (
-              <div className="axon-holo-screen axon-holo-screen-right flex flex-col gap-5">
-                {rightWidgets.map((id) => renderWidget(id, 'holo-right'))}
+            {centerOther.length > 0 && (
+              <div className="axon-holo-cell axon-holo-cell-left-lower flex flex-col gap-4">
+                {centerOther.map((id) => renderWidget(id, 'holo-left-lower'))}
               </div>
             )}
-          </div>
 
-          <div className="axon-holo-orb-deck">
-            {orbDeckWidgets
-              .filter((id) => id === 'controls')
-              .map((id) => renderWidget(id, 'orb-deck'))}
-            {orbDeckWidgets
-              .filter((id) => id === 'orb')
-              .map((id) => renderWidget(id, 'orb-deck'))}
+            {rightTopWidgets.length > 0 && (
+              <div className="axon-holo-cell axon-holo-cell-right-top">
+                {rightTopWidgets.map((id) => renderWidget(id, 'holo-right-top'))}
+              </div>
+            )}
+
+            {rightLowerWidgets.length > 0 && (
+              <div className="axon-holo-cell axon-holo-cell-right-lower flex flex-col gap-4">
+                {rightLowerWidgets.map((id) => renderWidget(id, 'holo-right-lower'))}
+              </div>
+            )}
+
+            <div className="axon-holo-cell axon-holo-cell-orb">
+              <div className="axon-holo-orb-deck">
+                {orbDeckWidgets
+                  .filter((id) => id === 'controls')
+                  .map((id) => renderWidget(id, 'orb-deck'))}
+                {orbDeckWidgets
+                  .filter((id) => id === 'orb')
+                  .map((id) => renderWidget(id, 'orb-deck'))}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Mobile / tablet stack — orb still at bottom */}
-        <div className="relative z-20 mx-auto flex max-w-[1720px] flex-col gap-5 px-3 lg:hidden">
-          {mobileStack.map((id) => renderWidget(id))}
+        {/* Mobile / tablet stack */}
+        <div className="relative z-20 mx-auto flex max-w-[1720px] flex-col gap-5 px-1 lg:hidden">
+          {mobileStack.map((id) => renderWidget(id, 'stack'))}
         </div>
 
-        <p className="relative z-10 mx-auto mt-8 max-w-lg text-center text-[10px] leading-relaxed text-axon-muted/80">
+        <p className="relative z-10 mx-auto mt-6 max-w-lg px-2 text-center text-[10px] leading-relaxed text-axon-muted/80">
           {initialProfile.tone_preset.summary ||
             'Default tone — AXON adapts from every message you send.'}
         </p>

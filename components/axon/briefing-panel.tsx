@@ -50,7 +50,7 @@ export function BriefingPanel({ items, autonomous, onRefresh, onTitleClick, comp
         </p>
       </header>
 
-      <div className={`flex-1 space-y-3 overflow-y-auto p-4 md:p-5 ${compact ? 'max-h-[280px]' : 'min-h-[440px]'}`}>
+      <div className={`flex-1 min-h-0 space-y-3 overflow-y-auto p-4 md:p-5 ${compact ? 'max-h-[280px]' : ''}`}>
         {items.length === 0 ? (
           <EmptyState
             icon="◈"

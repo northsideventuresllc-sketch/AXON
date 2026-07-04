@@ -21,22 +21,35 @@ export function PanelFocusView({
 }: PanelFocusViewProps) {
   if (!active) return null;
 
-  const leftGhost = active === 'briefing' ? chatGhost : briefing;
-  const center = active === 'briefing' ? briefing : todo;
-  const rightGhost = active === 'briefing' ? todo : chatGhost;
+  const fromLeft = active === 'briefing';
+  const leftGhost = fromLeft ? chatGhost : briefing;
+  const center = fromLeft ? briefing : todo;
+  const rightGhost = fromLeft ? todo : chatGhost;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-axon-bg/75 backdrop-blur-md p-4">
       <div className="flex w-full max-w-6xl items-center justify-center gap-4 perspective-[1200px]">
-        <div className="hidden w-[22%] shrink-0 opacity-30 blur-[1px] transition-all lg:block axon-panel-ghost-left">
+        <div
+          className={`hidden w-[22%] shrink-0 opacity-30 blur-[1px] transition-all lg:block ${
+            fromLeft ? 'axon-panel-ghost-left' : 'axon-panel-ghost-left-subtle'
+          }`}
+        >
           {leftGhost}
         </div>
 
-        <div className="axon-panel-focus-center w-full max-w-2xl lg:w-[52%] min-h-[480px]">
+        <div
+          className={`w-full max-w-2xl lg:w-[52%] min-h-[480px] ${
+            fromLeft ? 'axon-panel-focus-from-left' : 'axon-panel-focus-from-right'
+          }`}
+        >
           {center}
         </div>
 
-        <div className="hidden w-[22%] shrink-0 opacity-30 blur-[1px] transition-all lg:block axon-panel-ghost-right">
+        <div
+          className={`hidden w-[22%] shrink-0 opacity-30 blur-[1px] transition-all lg:block ${
+            fromLeft ? 'axon-panel-ghost-right-subtle' : 'axon-panel-ghost-right'
+          }`}
+        >
           {rightGhost}
         </div>
       </div>
