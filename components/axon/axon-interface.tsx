@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { JarvisOrb } from './jarvis-orb';
+import { AxonOrbStatus } from './axon-orb-status';
 import { BriefingPanel } from './briefing-panel';
 import { TodoPanel } from './todo-panel';
 import { AxonLabFloor } from './axon-lab-floor';
@@ -410,25 +411,33 @@ export function AxonInterface({
         );
       case 'controls':
         return wrap(
-          <div className="axon-holo-controls relative z-40 flex flex-col items-center gap-3 overflow-visible">
-            <div className="flex rounded-full border border-axon-blue/30 bg-axon-elevated/90 p-1 axon-glass shadow-lg">
-              <ModeButton
-                active={inputMode === 'chat'}
-                onClick={() => {
-                  setInputMode('chat');
-                  savePrefs({ input_mode: 'chat' });
-                  voice.stopListening();
-                }}
-                label="Chat"
-              />
-              <ModeButton
-                active={inputMode === 'voice'}
-                onClick={() => {
-                  setInputMode('voice');
-                  savePrefs({ input_mode: 'voice' });
-                }}
-                label="Voice"
-                disabled={!voice.voiceSupported}
+          <div className="axon-holo-controls relative z-40 flex w-full flex-col items-center gap-3 overflow-visible">
+            <div className="flex w-full flex-wrap items-center justify-center gap-2.5">
+              <div className="flex rounded-full border border-axon-blue/30 bg-axon-elevated/90 p-1 axon-glass shadow-lg">
+                <ModeButton
+                  active={inputMode === 'chat'}
+                  onClick={() => {
+                    setInputMode('chat');
+                    savePrefs({ input_mode: 'chat' });
+                    voice.stopListening();
+                  }}
+                  label="Chat"
+                />
+                <ModeButton
+                  active={inputMode === 'voice'}
+                  onClick={() => {
+                    setInputMode('voice');
+                    savePrefs({ input_mode: 'voice' });
+                  }}
+                  label="Voice"
+                  disabled={!voice.voiceSupported}
+                />
+              </div>
+              <AxonOrbStatus
+                active={!loading}
+                listening={voice.listening}
+                speaking={speaking}
+                processing={loading}
               />
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-axon-border/50 px-4 py-3 axon-glass">

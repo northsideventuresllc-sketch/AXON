@@ -5,7 +5,8 @@ import { useMemo } from 'react';
 import {
   AXON_ORB_PALETTE,
   AXON_ORB_STATES,
-  type AxonOrbVisualState,
+  AXON_ORB_STATUS,
+  resolveAxonOrbState,
 } from '@/lib/axon-orb-theme';
 
 interface JarvisOrbProps {
@@ -16,33 +17,6 @@ interface JarvisOrbProps {
   size?: 'default' | 'large';
 }
 
-interface StatusMeta {
-  label: string;
-  dotClass: string;
-  pulseFast?: boolean;
-}
-
-const STATUS_META: Record<AxonOrbVisualState, StatusMeta> = {
-  standby: { label: 'Idle', dotClass: 'axon-orb-status-dot--idle' },
-  online: { label: 'Active', dotClass: 'axon-orb-status-dot--active' },
-  listening: { label: 'Listening', dotClass: 'axon-orb-status-dot--listening' },
-  speaking: { label: 'Speaking', dotClass: 'axon-orb-status-dot--speaking' },
-  processing: { label: 'Thinking', dotClass: 'axon-orb-status-dot--thinking', pulseFast: true },
-};
-
-function resolveState(
-  active: boolean,
-  listening?: boolean,
-  speaking?: boolean,
-  processing?: boolean
-): AxonOrbVisualState {
-  if (processing) return 'processing';
-  if (listening) return 'listening';
-  if (speaking) return 'speaking';
-  if (active) return 'online';
-  return 'standby';
-}
-
 export function JarvisOrb({
   active,
   listening,
@@ -50,8 +24,8 @@ export function JarvisOrb({
   processing,
   size = 'large',
 }: JarvisOrbProps) {
-  const state = resolveState(active, listening, speaking, processing);
-  const status = STATUS_META[state];
+  const state = resolveAxonOrbState(active, listening, speaking, processing);
+  const status = AXON_ORB_STATUS[state];
   const isLive = state !== 'standby';
   const orbState = useMemo(() => AXON_ORB_STATES[state], [state]);
 
@@ -81,25 +55,17 @@ export function JarvisOrb({
             className="axon-orb-webgl"
           />
         </div>
-
-        <div className="axon-orb-status-corner pointer-events-none absolute bottom-2 left-1 z-10 sm:bottom-3 sm:left-2">
-          <div className="axon-orb-status-pill flex items-center gap-2 rounded-full border border-white/8 bg-black/35 px-2.5 py-1 backdrop-blur-md">
-            <span
-              className={`axon-orb-status-dot ${status.dotClass} ${
-                status.pulseFast ? 'axon-orb-status-dot--fast' : ''
-              }`}
-              aria-hidden
-            />
-            <span className="axon-orb-status-text">{status.label}</span>
-          </div>
-        </div>
       </div>
 
       <div className="axon-orb-brand pointer-events-none mt-3 text-center sm:mt-4">
         <div className="axon-orb-brand-rule mx-auto mb-2 h-px w-16 bg-gradient-to-r from-transparent via-axon-blue/50 to-transparent" />
         <h2 className={`axon-orb-wordmark ${isLive ? 'axon-orb-wordmark-live' : ''}`} aria-hidden>
           {'AXON'.split('').map((letter, i) => (
-            <span key={letter + i} className="axon-orb-wordmark-letter" style={{ animationDelay: `${i * 0.12}s` }}>
+            <span
+              key={letter + i}
+              className="axon-orb-wordmark-letter"
+              style={{ animationDelay: `${i * 0.12}s` }}
+            >
               {letter}
             </span>
           ))}
