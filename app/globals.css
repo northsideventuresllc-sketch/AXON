@@ -241,11 +241,14 @@
     z-index: 20;
   }
 
+  .axon-orb-stack {
+    position: relative;
+  }
+
   .axon-orb-root {
     transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     transform-style: preserve-3d;
     overflow: visible;
-    min-height: 200px;
   }
 
   .axon-orb-canvas {
@@ -262,8 +265,114 @@
   }
 
   .axon-orb-root.axon-orb-processing-state {
-    filter: drop-shadow(0 0 36px rgba(139, 92, 246, 0.22))
-      saturate(1.06);
+    filter: drop-shadow(0 0 36px rgba(139, 92, 246, 0.22)) saturate(1.06);
+  }
+
+  .axon-orb-status-corner {
+    transform: translateZ(12px);
+  }
+
+  .axon-orb-status-pill {
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  }
+
+  .axon-orb-status-text {
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(199, 210, 254, 0.88);
+  }
+
+  .axon-orb-status-dot {
+    display: inline-block;
+    height: 7px;
+    width: 7px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+    animation: axon-orb-dot-pulse 2.6s ease-in-out infinite;
+  }
+
+  .axon-orb-status-dot--fast {
+    animation-duration: 0.85s;
+  }
+
+  .axon-orb-status-dot--idle {
+    background: rgba(100, 116, 139, 0.85);
+    box-shadow: 0 0 6px rgba(100, 116, 139, 0.35);
+  }
+
+  .axon-orb-status-dot--active {
+    background: rgba(52, 211, 153, 0.95);
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.65);
+  }
+
+  .axon-orb-status-dot--listening {
+    background: rgba(56, 189, 248, 0.95);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  }
+
+  .axon-orb-status-dot--speaking {
+    background: rgba(139, 92, 246, 0.95);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+  }
+
+  .axon-orb-status-dot--thinking {
+    background: rgba(251, 191, 36, 0.95);
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.55);
+  }
+
+  .axon-orb-wordmark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.22em;
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+
+  .axon-orb-wordmark-letter {
+    display: inline-block;
+    background: linear-gradient(
+      160deg,
+      rgba(224, 232, 255, 0.98) 0%,
+      rgba(79, 125, 255, 0.95) 48%,
+      rgba(139, 92, 246, 0.98) 100%
+    );
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: axon-orb-letter-shimmer 5s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(79, 125, 255, 0.22));
+    transition: transform 0.35s ease, filter 0.35s ease;
+  }
+
+  .axon-orb-wordmark-live .axon-orb-wordmark-letter {
+    filter: drop-shadow(0 0 16px rgba(139, 92, 246, 0.38));
+  }
+
+  .axon-orb-tagline {
+    font-size: 0.58rem;
+    font-weight: 400;
+    letter-spacing: 0.38em;
+    text-indent: 0.38em;
+    text-transform: uppercase;
+    color: rgba(122, 143, 168, 0.75);
+  }
+
+  @keyframes axon-orb-letter-shimmer {
+    0%,
+    100% {
+      background-position: 0% 50%;
+      transform: translateY(0);
+    }
+    50% {
+      background-position: 100% 50%;
+      transform: translateY(-1px);
+    }
   }
 
   .axon-orb-static-fallback {
@@ -287,80 +396,15 @@
       inset 0 0 20px rgba(148, 178, 205, 0.12);
   }
 
-  .axon-orb-title {
-    font-size: 0.9rem;
-    font-weight: 500;
-    letter-spacing: 0.28em;
-    text-indent: 0.28em;
-    background: linear-gradient(
-      125deg,
-      rgba(224, 232, 255, 0.95) 0%,
-      rgba(79, 125, 255, 0.92) 42%,
-      rgba(139, 92, 246, 0.95) 100%
-    );
-    background-size: 200% 200%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: axon-orb-title-shimmer 6s ease-in-out infinite;
-    transform-origin: center center;
-    transition: letter-spacing 0.4s ease, transform 0.4s ease, filter 0.4s ease;
-    filter: drop-shadow(0 0 10px rgba(79, 125, 255, 0.28));
-  }
-
-  .axon-orb-title-active {
-    letter-spacing: 0.34em;
-    text-indent: 0.34em;
-    transform: scale(1.03);
-    filter: drop-shadow(0 0 16px rgba(139, 92, 246, 0.45));
-    animation-duration: 3s;
-  }
-
-  .axon-orb-status-text {
-    font-size: 0.68rem;
-    font-weight: 400;
-    letter-spacing: 0.06em;
-    color: rgba(122, 143, 168, 0.85);
-    transition: color 0.35s ease, opacity 0.35s ease;
-  }
-
-  .axon-orb-status-text-active {
-    color: rgba(199, 210, 254, 0.95);
-  }
-
-  .axon-orb-pulse-dot {
-    display: inline-block;
-    height: 4px;
-    width: 4px;
-    border-radius: 9999px;
-    background: rgba(96, 165, 250, 0.9);
-    box-shadow: 0 0 8px rgba(139, 92, 246, 0.55);
-    animation: axon-orb-dot-pulse 2.4s ease-in-out infinite;
-  }
-
-  .axon-orb-pulse-dot-fast {
-    animation-duration: 0.9s;
-  }
-
-  @keyframes axon-orb-title-shimmer {
-    0%,
-    100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-  }
-
   @keyframes axon-orb-dot-pulse {
     0%,
     100% {
-      opacity: 0.45;
-      transform: scale(0.85);
+      opacity: 0.5;
+      transform: scale(0.88);
     }
     50% {
       opacity: 1;
-      transform: scale(1.15);
+      transform: scale(1.12);
     }
   }
 
