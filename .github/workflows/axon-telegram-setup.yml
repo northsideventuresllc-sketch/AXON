@@ -6,14 +6,15 @@ on:
       mode:
         description: 'Setup mode'
         required: true
-        default: 'commands'
+        default: 'webhook'
         type: choice
         options:
           - commands
           - webhook
+          - auto
           - polling
       webhook_url:
-        description: 'Webhook URL (required for webhook mode, e.g. https://your-domain/api/telegram-webhook)'
+        description: 'Webhook URL (webhook/auto mode; default = AXON Vercel deployment)'
         required: false
         type: string
 
@@ -40,12 +41,27 @@ jobs:
         run: node scripts/axon-telegram-setup.mjs
 
       - name: Set webhook (real-time chat)
-        if: inputs.mode == 'webhook' && inputs.webhook_url != ''
+        if: inputs.mode == 'webhook'
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: node scripts/axon-telegram-setup.mjs --webhook "${{ inputs.webhook_url }}"
+          AXON_WEBHOOK_URL: ${{ inputs.webhook_url || secrets.AXON_WEBHOOK_URL }}
+        run: |
+          if [ -n "$AXON_WEBHOOK_URL" ]; then
+            node scripts/axon-telegram-setup.mjs --webhook "$AXON_WEBHOOK_URL"
+          else
+            node scripts/axon-telegram-setup.mjs --auto
+          fi
+
+      - name: Auto webhook (default Vercel URL)
+        if: inputs.mode == 'auto'
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AXON_WEBHOOK_URL: ${{ secrets.AXON_WEBHOOK_URL }}
+        run: node scripts/axon-telegram-setup.mjs --auto
 
       - name: Switch to polling mode
         if: inputs.mode == 'polling'

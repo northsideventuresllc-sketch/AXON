@@ -1,0 +1,34 @@
+name: AXON Telegram Webhook Register
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/telegram-webhook.js'
+      - 'lib/telegram-handler.mjs'
+      - 'lib/telegram.mjs'
+      - 'scripts/axon-telegram-setup.mjs'
+      - '.github/workflows/axon-telegram-webhook-on-deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  register:
+    name: AXON — Register Telegram webhook on Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Register webhook + slash commands
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          AXON_WEBHOOK_URL: ${{ secrets.AXON_WEBHOOK_URL }}
+        run: node scripts/axon-telegram-setup.mjs --auto

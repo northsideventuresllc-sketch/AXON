@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE } from '@/lib/auth';
 
-const PUBLIC_PATHS = ['/login', '/api/waitlist'];
+const PUBLIC_PATHS = ['/login', '/api/waitlist', '/api/telegram-webhook'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
+    pathname.endsWith('/api/telegram-webhook') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon')
   ) {
