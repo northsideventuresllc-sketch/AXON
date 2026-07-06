@@ -242,17 +242,28 @@
   }
 
   .axon-orb-root {
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     transform-style: preserve-3d;
     overflow: visible;
+    min-height: 200px;
   }
 
-  .axon-orb-root.axon-orb-hovered {
-    transform: translateY(-4px) scale(1.015);
+  .axon-orb-canvas {
+    inset: -4%;
+  }
+
+  .axon-orb-webgl {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .axon-orb-root.axon-orb-live {
+    filter: drop-shadow(0 0 28px rgba(79, 125, 255, 0.14));
   }
 
   .axon-orb-root.axon-orb-processing-state {
-    filter: saturate(1.04) brightness(1.02);
+    filter: drop-shadow(0 0 36px rgba(139, 92, 246, 0.22))
+      saturate(1.06);
   }
 
   .axon-orb-static-fallback {
@@ -282,10 +293,10 @@
     letter-spacing: 0.28em;
     text-indent: 0.28em;
     background: linear-gradient(
-      120deg,
-      rgba(196, 214, 230, 0.9) 0%,
-      rgba(148, 178, 205, 0.85) 50%,
-      rgba(122, 138, 176, 0.9) 100%
+      125deg,
+      rgba(224, 232, 255, 0.95) 0%,
+      rgba(79, 125, 255, 0.92) 42%,
+      rgba(139, 92, 246, 0.95) 100%
     );
     background-size: 200% 200%;
     -webkit-background-clip: text;
@@ -294,14 +305,14 @@
     animation: axon-orb-title-shimmer 6s ease-in-out infinite;
     transform-origin: center center;
     transition: letter-spacing 0.4s ease, transform 0.4s ease, filter 0.4s ease;
-    filter: drop-shadow(0 0 8px rgba(74, 124, 155, 0.18));
+    filter: drop-shadow(0 0 10px rgba(79, 125, 255, 0.28));
   }
 
   .axon-orb-title-active {
-    letter-spacing: 0.32em;
-    text-indent: 0.32em;
-    transform: scale(1.02);
-    filter: drop-shadow(0 0 12px rgba(91, 140, 168, 0.28));
+    letter-spacing: 0.34em;
+    text-indent: 0.34em;
+    transform: scale(1.03);
+    filter: drop-shadow(0 0 16px rgba(139, 92, 246, 0.45));
     animation-duration: 3s;
   }
 
@@ -314,7 +325,7 @@
   }
 
   .axon-orb-status-text-active {
-    color: rgba(196, 214, 230, 0.92);
+    color: rgba(199, 210, 254, 0.95);
   }
 
   .axon-orb-pulse-dot {
@@ -322,8 +333,8 @@
     height: 4px;
     width: 4px;
     border-radius: 9999px;
-    background: rgba(91, 140, 168, 0.75);
-    box-shadow: 0 0 6px rgba(91, 140, 168, 0.4);
+    background: rgba(96, 165, 250, 0.9);
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.55);
     animation: axon-orb-dot-pulse 2.4s ease-in-out infinite;
   }
 
