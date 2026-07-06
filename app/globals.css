@@ -248,48 +248,44 @@
   }
 
   .axon-orb-root.axon-orb-hovered {
-    transform: translateY(-6px) scale(1.02);
+    transform: translateY(-4px) scale(1.015);
   }
 
   .axon-orb-root.axon-orb-processing-state {
-    filter: saturate(1.12) brightness(1.04);
-  }
-
-  .axon-orb-root.axon-orb-live {
-    animation: axon-orb-alive-glow 4.5s ease-in-out infinite;
+    filter: saturate(1.04) brightness(1.02);
   }
 
   .axon-orb-static-fallback {
     background: radial-gradient(
-      circle at 50% 42%,
-      rgba(34, 211, 238, 0.18) 0%,
-      rgba(37, 99, 235, 0.08) 42%,
-      transparent 70%
+      circle at 50% 44%,
+      rgba(74, 124, 155, 0.1) 0%,
+      rgba(30, 48, 72, 0.05) 45%,
+      transparent 72%
     );
   }
 
   .axon-orb-static-core {
     background: radial-gradient(
-      circle at 35% 32%,
-      rgba(224, 242, 254, 0.95) 0%,
-      rgba(59, 130, 246, 0.88) 38%,
-      rgba(8, 18, 38, 0.98) 100%
+      circle at 36% 30%,
+      rgba(195, 210, 230, 0.75) 0%,
+      rgba(58, 98, 132, 0.82) 36%,
+      rgba(6, 12, 22, 0.98) 100%
     );
     box-shadow:
-      0 0 40px rgba(34, 211, 238, 0.35),
-      inset 0 0 24px rgba(186, 230, 253, 0.2);
+      0 0 32px rgba(74, 124, 155, 0.18),
+      inset 0 0 20px rgba(148, 178, 205, 0.12);
   }
 
   .axon-orb-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    letter-spacing: 0.32em;
-    text-indent: 0.32em;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.28em;
+    text-indent: 0.28em;
     background: linear-gradient(
       120deg,
-      rgba(186, 230, 253, 0.95) 0%,
-      rgba(34, 211, 238, 0.9) 45%,
-      rgba(129, 140, 248, 0.95) 100%
+      rgba(196, 214, 230, 0.9) 0%,
+      rgba(148, 178, 205, 0.85) 50%,
+      rgba(122, 138, 176, 0.9) 100%
     );
     background-size: 200% 200%;
     -webkit-background-clip: text;
@@ -298,14 +294,14 @@
     animation: axon-orb-title-shimmer 6s ease-in-out infinite;
     transform-origin: center center;
     transition: letter-spacing 0.4s ease, transform 0.4s ease, filter 0.4s ease;
-    filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.25));
+    filter: drop-shadow(0 0 8px rgba(74, 124, 155, 0.18));
   }
 
   .axon-orb-title-active {
-    letter-spacing: 0.38em;
-    text-indent: 0.38em;
-    transform: scale(1.04);
-    filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.55));
+    letter-spacing: 0.32em;
+    text-indent: 0.32em;
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 12px rgba(91, 140, 168, 0.28));
     animation-duration: 3s;
   }
 
@@ -318,16 +314,16 @@
   }
 
   .axon-orb-status-text-active {
-    color: rgba(186, 230, 253, 0.95);
+    color: rgba(196, 214, 230, 0.92);
   }
 
   .axon-orb-pulse-dot {
     display: inline-block;
-    height: 5px;
-    width: 5px;
+    height: 4px;
+    width: 4px;
     border-radius: 9999px;
-    background: rgba(34, 211, 238, 0.85);
-    box-shadow: 0 0 8px rgba(34, 211, 238, 0.7);
+    background: rgba(91, 140, 168, 0.75);
+    box-shadow: 0 0 6px rgba(91, 140, 168, 0.4);
     animation: axon-orb-dot-pulse 2.4s ease-in-out infinite;
   }
 
@@ -354,16 +350,6 @@
     50% {
       opacity: 1;
       transform: scale(1.15);
-    }
-  }
-
-  @keyframes axon-orb-alive-glow {
-    0%,
-    100% {
-      filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.12));
-    }
-    50% {
-      filter: drop-shadow(0 0 28px rgba(59, 130, 246, 0.22));
     }
   }
 

@@ -166,22 +166,15 @@ export function JarvisOrb({
     pointerRef.current.y = 0.42;
   }
 
-  function handlePointerDown() {
-    engineRef.current?.pulse(1);
-  }
-
   return (
     <div
       ref={rootRef}
       className={`axon-orb-root group relative mx-auto aspect-square w-full max-w-[280px] cursor-pointer select-none touch-none ${
-        size === 'large' ? 'max-w-[300px] sm:max-w-[340px]' : 'max-w-[220px]'
-      } ${hovered ? 'axon-orb-hovered' : ''} ${processing ? 'axon-orb-processing-state' : ''} ${
-        isLive ? 'axon-orb-live' : ''
-      }`}
+        size === 'large' ? 'max-w-[300px] sm:max-w-[320px]' : 'max-w-[220px]'
+      } ${hovered ? 'axon-orb-hovered' : ''} ${processing ? 'axon-orb-processing-state' : ''}`}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onPointerMove={handlePointerMove}
-      onPointerDown={handlePointerDown}
       role="img"
       aria-label={`AXON — ${label}`}
     >
@@ -194,7 +187,7 @@ export function JarvisOrb({
       )}
 
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`axon-orb-title ${hovered || isLive ? 'axon-orb-title-active' : ''}`}>AXON</span>
+        <span className={`axon-orb-title ${hovered ? 'axon-orb-title-active' : ''}`}>AXON</span>
 
         <div className="axon-orb-status mt-2 flex items-center gap-2">
           {isLive && (
@@ -204,7 +197,7 @@ export function JarvisOrb({
             />
           )}
           <span
-            className={`axon-orb-status-text ${hovered || isLive ? 'axon-orb-status-text-active' : ''}`}
+            className={`axon-orb-status-text ${hovered ? 'axon-orb-status-text-active' : ''}`}
           >
             {label}
           </span>

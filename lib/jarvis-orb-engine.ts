@@ -1,191 +1,127 @@
-/** Canvas particle + filament engine for the AXON living orb */
+/**
+ * AXON orb — restrained glass-sphere renderer.
+ *
+ * Design refs: Apple Intelligence glow (soft metaball interior),
+ * Jarvis Orb v3 (desaturated palette, minimal motion), visionOS Siri orb.
+ * Avoids: particle storms, neural filaments, dashed rings, neon overload.
+ */
 
 export type OrbState = 'standby' | 'online' | 'listening' | 'speaking' | 'processing';
 
-export interface OrbPalette {
+interface OrbTheme {
+  /** RGB strings for blooms, e.g. "74, 124, 155" */
+  glow: string;
+  accent: string;
   core: string;
   mid: string;
   deep: string;
-  rim: string;
+  glass: string;
   specular: string;
-  aura: string;
-  auraSecondary: string;
 }
 
-export const ORB_PALETTES: Record<OrbState, OrbPalette> = {
+const THEMES: Record<OrbState, OrbTheme> = {
   standby: {
-    core: 'rgba(186, 230, 253, 0.55)',
-    mid: 'rgba(37, 99, 235, 0.92)',
-    deep: 'rgba(8, 18, 38, 0.98)',
-    rim: 'rgba(96, 165, 250, 0.35)',
-    specular: 'rgba(224, 242, 254, 0.9)',
-    aura: '59, 130, 246',
-    auraSecondary: '99, 102, 241',
+    glow: '58, 78, 108',
+    accent: '74, 124, 155',
+    core: 'rgba(148, 178, 205, 0.42)',
+    mid: 'rgba(52, 88, 118, 0.88)',
+    deep: 'rgba(6, 12, 22, 0.98)',
+    glass: 'rgba(186, 210, 230, 0.12)',
+    specular: 'rgba(220, 232, 245, 0.55)',
   },
   online: {
-    core: 'rgba(165, 243, 252, 0.72)',
-    mid: 'rgba(59, 130, 246, 0.95)',
-    deep: 'rgba(10, 22, 45, 0.98)',
-    rim: 'rgba(34, 211, 238, 0.42)',
-    specular: 'rgba(255, 255, 255, 0.92)',
-    aura: '59, 130, 246',
-    auraSecondary: '34, 211, 238',
+    glow: '64, 104, 138',
+    accent: '82, 138, 168',
+    core: 'rgba(165, 198, 220, 0.52)',
+    mid: 'rgba(58, 98, 132, 0.9)',
+    deep: 'rgba(8, 14, 26, 0.98)',
+    glass: 'rgba(196, 218, 235, 0.14)',
+    specular: 'rgba(235, 244, 252, 0.62)',
   },
   listening: {
-    core: 'rgba(103, 232, 249, 0.85)',
-    mid: 'rgba(34, 211, 238, 0.95)',
-    deep: 'rgba(6, 24, 40, 0.98)',
-    rim: 'rgba(45, 212, 191, 0.5)',
-    specular: 'rgba(236, 254, 255, 0.95)',
-    aura: '34, 211, 238',
-    auraSecondary: '45, 212, 191',
+    glow: '70, 130, 158',
+    accent: '91, 184, 212',
+    core: 'rgba(175, 220, 235, 0.58)',
+    mid: 'rgba(62, 128, 152, 0.92)',
+    deep: 'rgba(6, 16, 28, 0.98)',
+    glass: 'rgba(200, 232, 242, 0.16)',
+    specular: 'rgba(240, 250, 255, 0.7)',
   },
   speaking: {
-    core: 'rgba(191, 219, 254, 0.8)',
-    mid: 'rgba(96, 165, 250, 0.95)',
-    deep: 'rgba(12, 20, 42, 0.98)',
-    rim: 'rgba(129, 140, 248, 0.48)',
-    specular: 'rgba(248, 250, 252, 0.9)',
-    aura: '96, 165, 250',
-    auraSecondary: '129, 140, 248',
+    glow: '88, 108, 148',
+    accent: '122, 138, 176',
+    core: 'rgba(188, 198, 225, 0.5)',
+    mid: 'rgba(78, 92, 128, 0.9)',
+    deep: 'rgba(10, 12, 24, 0.98)',
+    glass: 'rgba(210, 216, 235, 0.14)',
+    specular: 'rgba(245, 246, 252, 0.65)',
   },
   processing: {
-    core: 'rgba(224, 242, 254, 0.9)',
-    mid: 'rgba(34, 211, 238, 0.98)',
-    deep: 'rgba(5, 16, 36, 0.98)',
-    rim: 'rgba(99, 102, 241, 0.55)',
-    specular: 'rgba(255, 255, 255, 0.98)',
-    aura: '34, 211, 238',
-    auraSecondary: '99, 102, 241',
+    glow: '82, 118, 168',
+    accent: '107, 95, 160',
+    core: 'rgba(195, 210, 240, 0.62)',
+    mid: 'rgba(72, 98, 145, 0.92)',
+    deep: 'rgba(6, 10, 22, 0.98)',
+    glass: 'rgba(210, 218, 240, 0.17)',
+    specular: 'rgba(248, 250, 255, 0.75)',
   },
 };
 
-function activityForState(state: OrbState): number {
+function targetEnergy(state: OrbState): number {
   switch (state) {
     case 'processing':
       return 1;
     case 'listening':
-      return 0.82;
+      return 0.72;
     case 'speaking':
-      return 0.68;
+      return 0.58;
     case 'online':
-      return 0.48;
+      return 0.38;
     default:
-      return 0.28;
+      return 0.18;
   }
 }
 
-function seeded(seed: number): number {
-  const v = Math.sin(seed * 12.9898) * 43758.5453;
-  return v - Math.floor(v);
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
 }
 
-interface Vec3 {
-  x: number;
-  y: number;
-  z: number;
+function smoothNoise(x: number, y: number, t: number): number {
+  return (
+    Math.sin(x * 1.4 + t * 0.00028) * 0.45 +
+    Math.sin(y * 1.7 - t * 0.00022) * 0.35 +
+    Math.cos((x + y) * 0.9 + t * 0.00018) * 0.2
+  );
 }
 
-interface AmbientParticle {
-  theta: number;
-  phi: number;
+interface SmokeBlob {
+  phase: number;
   radius: number;
+  tilt: number;
   speed: number;
-  size: number;
-  hueShift: number;
-  absorb: number;
-  absorbVel: number;
-}
-
-interface SpiralParticle {
-  x: number;
-  y: number;
-  z: number;
-  vx: number;
-  vy: number;
-  vz: number;
-  life: number;
+  alpha: number;
+  rgb: string;
 }
 
 export interface OrbEngine {
   setState: (state: OrbState) => void;
   setPointer: (x: number, y: number, hover: number) => void;
-  pulse: (amount?: number) => void;
   draw: (ctx: CanvasRenderingContext2D, size: number, dpr: number, time: number) => void;
 }
 
 export function createOrbEngine(initialState: OrbState = 'standby'): OrbEngine {
-  const ambientCount = 72;
-  const ambient: AmbientParticle[] = Array.from({ length: ambientCount }, (_, i) => {
-    const s = seeded(i * 17.3 + 4.1);
-    const s2 = seeded(i * 31.7 + 9.2);
-    const s3 = seeded(i * 7.1 + 2.8);
-    return {
-      theta: s * Math.PI * 2,
-      phi: Math.acos(2 * s2 - 1),
-      radius: 1.12 + s3 * 0.55,
-      speed: 0.12 + s * 0.35,
-      size: 0.8 + s2 * 1.4,
-      hueShift: s3,
-      absorb: 0,
-      absorbVel: 0,
-    };
-  });
+  let state = initialState;
+  let energy = targetEnergy(initialState);
+  let pointer = { x: 0.5, y: 0.38, hover: 0 };
 
-  const spirals: SpiralParticle[] = [];
-  let state: OrbState = initialState;
-  let pointer = { x: 0.5, y: 0.42, hover: 0 };
-  let pulseEnergy = 0;
-  let spinY = 0;
-  let lastEmit = 0;
+  const blobs: SmokeBlob[] = [
+    { phase: 0, radius: 0.22, tilt: 0.3, speed: 0.00038, alpha: 0.14, rgb: '91, 140, 168' },
+    { phase: 2.1, radius: 0.28, tilt: -0.45, speed: 0.00032, alpha: 0.11, rgb: '107, 95, 160' },
+    { phase: 4.2, radius: 0.18, tilt: 0.65, speed: 0.00044, alpha: 0.1, rgb: '74, 124, 155' },
+    { phase: 1.4, radius: 0.15, tilt: -0.2, speed: 0.0005, alpha: 0.08, rgb: '122, 138, 176' },
+  ];
 
-  function emitSpiral(count: number) {
-    for (let i = 0; i < count; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = 1.65 + Math.random() * 0.45;
-      const x = r * Math.sin(phi) * Math.cos(theta);
-      const y = r * Math.sin(phi) * Math.sin(theta);
-      const z = r * Math.cos(phi);
-      spirals.push({
-        x,
-        y,
-        z,
-        vx: -x * (1.4 + Math.random() * 0.6),
-        vy: -y * (1.4 + Math.random() * 0.6),
-        vz: -z * (1.4 + Math.random() * 0.6),
-        life: 1,
-      });
-    }
-  }
-
-  function project(
-    v: Vec3,
-    cx: number,
-    cy: number,
-    r: number,
-    tiltX: number,
-    tiltY: number
-  ): { x: number; y: number; depth: number; scale: number } {
-    const cosX = Math.cos(tiltX);
-    const sinX = Math.sin(tiltX);
-    const cosY = Math.cos(tiltY);
-    const sinY = Math.sin(tiltY);
-
-    let x = v.x;
-    let y = v.y * cosX - v.z * sinX;
-    let z = v.y * sinX + v.z * cosX;
-    const x2 = x * cosY + z * sinY;
-    const z2 = -x * sinY + z * cosY;
-    x = x2;
-    z = z2;
-
-    const depth = (z + 2) / 3;
-    const scale = 0.55 + depth * 0.55;
-    return { x: cx + x * r * scale, y: cy + y * r * scale, depth, scale };
-  }
-
-  function drawBloom(
+  function bloom(
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
@@ -196,10 +132,9 @@ export function createOrbEngine(initialState: OrbState = 'standby'): OrbEngine {
   ) {
     ctx.save();
     if (blur > 0) ctx.filter = `blur(${blur}px)`;
-    const g = ctx.createRadialGradient(x, y, radius * 0.04, x, y, radius);
+    const g = ctx.createRadialGradient(x, y, radius * 0.05, x, y, radius);
     g.addColorStop(0, `rgba(${rgb}, ${alpha})`);
-    g.addColorStop(0.42, `rgba(${rgb}, ${alpha * 0.38})`);
-    g.addColorStop(0.76, `rgba(${rgb}, ${alpha * 0.07})`);
+    g.addColorStop(0.5, `rgba(${rgb}, ${alpha * 0.28})`);
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -208,29 +143,36 @@ export function createOrbEngine(initialState: OrbState = 'standby'): OrbEngine {
     ctx.restore();
   }
 
-  function simplexNoise(x: number, y: number, z: number): number {
-    return (
-      Math.sin(x * 1.8 + z * 0.7) * 0.5 +
-      Math.sin(y * 2.1 - x * 0.9) * 0.3 +
-      Math.cos(z * 1.5 + y * 0.6) * 0.2
-    );
+  function drawSpherePath(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    cy: number,
+    r: number,
+    time: number,
+    wobble: number
+  ) {
+    const segments = 80;
+    ctx.beginPath();
+    for (let i = 0; i <= segments; i++) {
+      const a = (i / segments) * Math.PI * 2;
+      const nx = Math.cos(a);
+      const ny = Math.sin(a);
+      const n = smoothNoise(nx * 1.6, ny * 1.6, time) * wobble;
+      const px = cx + nx * r * (1 + n);
+      const py = cy + ny * r * (1 + n);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
   }
 
   return {
     setState(next) {
-      if (next !== state && (next === 'processing' || next === 'listening')) {
-        emitSpiral(next === 'processing' ? 18 : 10);
-      }
       state = next;
     },
 
     setPointer(x, y, hover) {
       pointer = { x, y, hover };
-    },
-
-    pulse(amount = 1) {
-      pulseEnergy = Math.min(1.4, pulseEnergy + amount * 0.35);
-      emitSpiral(8);
     },
 
     draw(ctx, size, dpr, time) {
@@ -239,287 +181,149 @@ export function createOrbEngine(initialState: OrbState = 'standby'): OrbEngine {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
+      energy = lerp(energy, targetEnergy(state), 0.045);
+      const theme = THEMES[state];
+
       const cx = w / 2;
       const cy = h / 2;
-      const palette = ORB_PALETTES[state];
-      const activity = activityForState(state);
+      const breathe = 1 + Math.sin(time * 0.00135) * (0.008 + energy * 0.006);
+      const speak =
+        state === 'speaking' ? Math.sin(time * 0.0055) * 0.006 : 0;
+      const baseR = size * 0.34 * dpr;
+      const r = baseR * breathe * (1 + speak) * (1 + pointer.hover * 0.018);
 
-      pulseEnergy *= 0.94;
-      spinY += 0.00035 + activity * 0.00055;
+      const lightX = cx + (pointer.x - 0.38) * r * (0.35 + pointer.hover * 0.45);
+      const lightY = cy + (pointer.y - 0.35) * r * (0.35 + pointer.hover * 0.45);
 
-      const breathe = 1 + Math.sin(time * 0.0016) * (0.014 + activity * 0.012);
-      const speakWave =
-        state === 'speaking' ? Math.sin(time * 0.008) * 0.018 : 0;
-      const baseR = size * 0.36 * dpr;
-      const r = baseR * breathe * (1 + speakWave) * (1 + pointer.hover * 0.04 + pulseEnergy * 0.05);
-
-      const tiltX = -0.38 + (pointer.y - 0.5) * 0.18 * pointer.hover;
-      const tiltY = spinY + (pointer.x - 0.5) * 0.22 * pointer.hover;
-
-      const lightX = cx + (-0.28 + (pointer.x - 0.5) * 0.3 * pointer.hover) * r;
-      const lightY = cy + (-0.32 + (pointer.y - 0.5) * 0.3 * pointer.hover) * r;
-
-      // Floor pool
+      // Floor reflection
       ctx.save();
-      ctx.translate(cx, cy + r * 0.94);
-      ctx.scale(1.8, 0.36);
-      drawBloom(ctx, 0, 0, r * 1.4, 0.2 + activity * 0.14, palette.aura, 16 * dpr);
+      ctx.translate(cx, cy + r * 0.95);
+      ctx.scale(1.55, 0.28);
+      bloom(ctx, 0, 0, r * 1.1, 0.06 + energy * 0.05, theme.glow, 18 * dpr);
       ctx.restore();
 
-      // Ambient particles — orbit + occasional absorb
-      const projectedAmbient: Array<{ x: number; y: number; depth: number; alpha: number; size: number }> =
-        [];
+      // Single ambient halo
+      bloom(ctx, cx, cy, r * 1.55, 0.05 + energy * 0.06, theme.glow, 28 * dpr);
 
-      const orbitSpeed = 0.00022 + activity * 0.00038;
-      for (let i = 0; i < ambient.length; i++) {
-        const p = ambient[i];
-        p.theta += p.speed * orbitSpeed * (1 + activity * 0.8);
-
-        if (state === 'processing' && Math.random() < 0.002) {
-          p.absorb = 1;
-          p.absorbVel = 0.018 + Math.random() * 0.01;
-        }
-
-        let rad = p.radius;
-        if (p.absorb > 0) {
-          rad = Math.max(0.55, rad - p.absorbVel);
-          p.absorb *= 0.985;
-          if (rad <= 0.58) {
-            p.absorb = 0;
-            p.radius = 1.12 + seeded(i + time * 0.001) * 0.55;
-            p.theta += 0.5;
-          }
-        }
-
-        const x3 = rad * Math.sin(p.phi) * Math.cos(p.theta);
-        const y3 = rad * Math.sin(p.phi) * Math.sin(p.theta);
-        const z3 = rad * Math.cos(p.phi);
-        const proj = project({ x: x3, y: y3, z: z3 }, cx, cy, r, tiltX, tiltY);
-        const alpha = (0.18 + activity * 0.35 + p.absorb * 0.4) * proj.depth;
-        projectedAmbient.push({ x: proj.x, y: proj.y, depth: proj.depth, alpha, size: p.size * proj.scale });
-
-        ctx.fillStyle = `rgba(${palette.aura}, ${alpha * 0.85})`;
+      // Apple-style soft outer band (very subtle)
+      if (energy > 0.25) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        const band = ctx.createRadialGradient(cx, cy, r * 0.92, cx, cy, r * 1.08);
+        band.addColorStop(0, 'rgba(0,0,0,0)');
+        band.addColorStop(0.55, `rgba(${theme.accent}, ${0.04 + energy * 0.06})`);
+        band.addColorStop(0.85, `rgba(${theme.accent}, ${0.02 + energy * 0.03})`);
+        band.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = band;
         ctx.beginPath();
-        ctx.arc(proj.x, proj.y, p.size * dpr * proj.scale * 0.55, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r * 1.08, 0, Math.PI * 2);
         ctx.fill();
-      }
-
-      // Neural filaments between nearby particles
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      const filamentDist = r * 0.42;
-      for (let i = 0; i < projectedAmbient.length; i++) {
-        for (let j = i + 1; j < projectedAmbient.length; j++) {
-          const a = projectedAmbient[i];
-          const b = projectedAmbient[j];
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist > filamentDist) continue;
-          const t = 1 - dist / filamentDist;
-          const alpha = t * t * (0.04 + activity * 0.08) * Math.min(a.depth, b.depth);
-          ctx.strokeStyle = `rgba(${palette.auraSecondary}, ${alpha})`;
-          ctx.lineWidth = 0.6 * dpr;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
-        }
-      }
-      ctx.restore();
-
-      // Spiral absorb particles
-      for (let i = spirals.length - 1; i >= 0; i--) {
-        const s = spirals[i];
-        s.x += s.vx * 0.016;
-        s.y += s.vy * 0.016;
-        s.z += s.vz * 0.016;
-        s.life *= 0.975;
-        if (s.life < 0.05) {
-          spirals.splice(i, 1);
-          continue;
-        }
-        const proj = project(s, cx, cy, r, tiltX, tiltY);
-        const alpha = s.life * (0.35 + activity * 0.4);
-        drawBloom(ctx, proj.x, proj.y, 4 * dpr * proj.scale, alpha, palette.aura, 2 * dpr);
-      }
-
-      // Periodic emit while active
-      if (activity > 0.5 && time - lastEmit > 900) {
-        emitSpiral(4);
-        lastEmit = time;
-      }
-
-      // Outer aura shells
-      const pulse = 0.5 + Math.sin(time * 0.0024) * 0.5;
-      for (const layer of [
-        { scale: 1.78 + pulse * 0.07, alpha: 0.12 + activity * 0.1, blur: 24 * dpr },
-        { scale: 1.52 + pulse * 0.05, alpha: 0.16 + activity * 0.12, blur: 14 * dpr },
-        { scale: 1.3 + pulse * 0.03, alpha: 0.1 + pointer.hover * 0.08, blur: 7 * dpr },
-      ]) {
-        drawBloom(ctx, cx, cy, r * layer.scale, layer.alpha, palette.aura, layer.blur);
-      }
-
-      // Tilted energy rings
-      ctx.save();
-      ctx.translate(cx, cy);
-      for (let ring = 0; ring < 3; ring++) {
-        const ringTilt = tiltX + ring * 0.55 + Math.sin(time * 0.0006 + ring) * 0.08;
-        const ringSpin = time * (0.0008 + ring * 0.00025) * (ring % 2 === 0 ? 1 : -1);
-        ctx.save();
-        ctx.rotate(ringSpin);
-        ctx.scale(1, Math.cos(ringTilt) * 0.38 + 0.12);
-        ctx.strokeStyle = `rgba(${palette.auraSecondary}, ${0.08 + activity * 0.14 + ring * 0.02})`;
-        ctx.lineWidth = (1 + ring * 0.3) * dpr;
-        ctx.setLineDash([6 * dpr, 10 * dpr]);
-        ctx.lineDashOffset = -time * 0.04 * (ring + 1);
-        ctx.beginPath();
-        ctx.arc(0, 0, r * (1.18 + ring * 0.14), 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-      ctx.restore();
-
-      // Processing orbit arcs
-      if (state === 'processing') {
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(time * 0.0014);
-        ctx.strokeStyle = 'rgba(34, 211, 238, 0.28)';
-        ctx.lineWidth = 1.4 * dpr;
-        ctx.beginPath();
-        ctx.arc(0, 0, r * 1.26, 0.15, Math.PI * 1.4);
-        ctx.stroke();
-        ctx.rotate(Math.PI * 0.85);
-        ctx.strokeStyle = 'rgba(99, 102, 241, 0.22)';
-        ctx.beginPath();
-        ctx.arc(0, 0, r * 1.32, -0.3, Math.PI * 1.1);
-        ctx.stroke();
         ctx.restore();
       }
 
-      // Organic sphere body with noise-displaced silhouette
-      const bodyGrad = ctx.createRadialGradient(lightX, lightY, r * 0.04, cx, cy, r * 1.02);
-      bodyGrad.addColorStop(0, palette.core);
-      bodyGrad.addColorStop(0.2, palette.mid);
-      bodyGrad.addColorStop(0.55, 'rgba(30, 58, 95, 0.96)');
-      bodyGrad.addColorStop(0.88, palette.deep);
-      bodyGrad.addColorStop(1, 'rgba(2, 8, 18, 1)');
+      // Sphere body — dark glass
+      const body = ctx.createRadialGradient(lightX, lightY, r * 0.03, cx, cy, r);
+      body.addColorStop(0, theme.core);
+      body.addColorStop(0.28, theme.mid);
+      body.addColorStop(0.62, theme.deep);
+      body.addColorStop(0.9, 'rgba(2, 6, 14, 1)');
+      body.addColorStop(1, 'rgba(0, 0, 0, 1)');
 
-      ctx.beginPath();
-      const segments = 96;
-      for (let i = 0; i <= segments; i++) {
-        const angle = (i / segments) * Math.PI * 2;
-        const nx = Math.cos(angle);
-        const ny = Math.sin(angle);
-        const nz = 0;
-        const noise =
-          simplexNoise(nx * 2 + time * 0.00035, ny * 2, time * 0.00025) *
-          (0.04 + activity * 0.05);
-        const dispR = r * (1 + noise);
-        const px = cx + nx * dispR;
-        const py = cy + ny * dispR * (0.92 + Math.sin(tiltX) * 0.08);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.fillStyle = bodyGrad;
+      drawSpherePath(ctx, cx, cy, r, time, 0.012 + energy * 0.01);
+      ctx.fillStyle = body;
       ctx.fill();
 
-      // Holographic iridescence overlay
+      // Internal smoke blobs (clipped)
       ctx.save();
+      drawSpherePath(ctx, cx, cy, r * 0.97, time, 0.008);
+      ctx.clip();
       ctx.globalCompositeOperation = 'screen';
-      ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.98, 0, Math.PI * 2);
-      ctx.clip();
-      for (let band = 0; band < 4; band++) {
-        const phase = time * 0.0009 + band * 1.6;
-        const bx = cx + Math.cos(phase) * r * 0.25;
-        const by = cy + Math.sin(phase * 0.85) * r * 0.2;
-        const iri = ctx.createRadialGradient(bx, by, 0, bx, by, r * 0.55);
-        const hue = band % 3;
-        const c =
-          hue === 0
-            ? `rgba(34, 211, 238, ${0.04 + activity * 0.05})`
-            : hue === 1
-              ? `rgba(129, 140, 248, ${0.035 + activity * 0.04})`
-              : `rgba(59, 130, 246, ${0.03 + activity * 0.035})`;
-        iri.addColorStop(0, c);
-        iri.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = iri;
-        ctx.beginPath();
-        ctx.arc(bx, by, r * 0.55, 0, Math.PI * 2);
-        ctx.fill();
+      for (const blob of blobs) {
+        const speed = blob.speed * (1 + energy * 1.8);
+        const t = time * speed + blob.phase;
+        const bx = cx + Math.cos(t) * r * blob.radius;
+        const by = cy + Math.sin(t * 0.85 + blob.tilt) * r * blob.radius * 0.75;
+        const br = r * (0.34 + blob.radius * 0.5);
+        const alpha = blob.alpha * (0.55 + energy * 0.65);
+        bloom(ctx, bx, by, br, alpha, blob.rgb, 10 * dpr);
       }
       ctx.restore();
 
-      // Caustic veins inside sphere
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.97, 0, Math.PI * 2);
-      ctx.clip();
-      for (let i = 0; i < 6; i++) {
-        const angle = time * 0.00042 * (i + 1) + i * 1.2;
-        const nx = cx + Math.cos(angle) * r * 0.38;
-        const ny = cy + Math.sin(angle * 0.88) * r * 0.3;
-        const caustic = ctx.createRadialGradient(nx, ny, 0, nx, ny, r * (0.28 + i * 0.06));
-        caustic.addColorStop(0, `rgba(34, 211, 238, ${0.07 + activity * 0.06})`);
-        caustic.addColorStop(0.65, 'rgba(0,0,0,0)');
-        ctx.fillStyle = caustic;
-        ctx.beginPath();
-        ctx.arc(nx, ny, r * (0.28 + i * 0.06), 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-
-      // Living core
-      const corePulse = 0.58 + Math.sin(time * 0.0032) * 0.14 + pointer.hover * 0.18 + pulseEnergy * 0.25;
-      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.45);
-      core.addColorStop(0, `rgba(186, 230, 253, ${corePulse * (0.5 + activity * 0.5)})`);
-      core.addColorStop(0.4, `rgba(37, 99, 235, ${0.18 + activity * 0.16})`);
+      // Core ember
+      const corePulse = 0.42 + Math.sin(time * 0.0024) * 0.08 + energy * 0.28;
+      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.32);
+      core.addColorStop(0, `rgba(${theme.accent}, ${corePulse * 0.35})`);
+      core.addColorStop(0.55, `rgba(${theme.glow}, ${corePulse * 0.12})`);
       core.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.save();
       ctx.globalCompositeOperation = 'screen';
       ctx.fillStyle = core;
       ctx.beginPath();
-      ctx.arc(cx, cy, r * 0.45, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r * 0.32, 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.restore();
 
-      // Specular
-      const specX = cx + (pointer.x - 0.5) * r * 0.5 * (0.4 + pointer.hover * 0.6);
-      const specY = cy + (pointer.y - 0.5) * r * 0.5 * (0.4 + pointer.hover * 0.6);
-      const specSize = r * (0.24 + pointer.hover * 0.1);
-      const spec = ctx.createRadialGradient(specX, specY, 0, specX, specY, specSize);
-      spec.addColorStop(0, palette.specular);
-      spec.addColorStop(0.32, 'rgba(186, 230, 253, 0.38)');
+      // Glass shell — frosted edge
+      const glass = ctx.createRadialGradient(cx, cy, r * 0.55, cx, cy, r);
+      glass.addColorStop(0, 'rgba(0,0,0,0)');
+      glass.addColorStop(0.72, theme.glass);
+      glass.addColorStop(0.92, `rgba(${theme.accent}, ${0.1 + energy * 0.08})`);
+      glass.addColorStop(1, `rgba(${theme.accent}, ${0.16 + energy * 0.1})`);
+      ctx.fillStyle = glass;
+      drawSpherePath(ctx, cx, cy, r, time, 0.01);
+      ctx.fill();
+
+      // Specular highlight
+      const specX = cx + (pointer.x - 0.5) * r * 0.42 * (0.5 + pointer.hover * 0.5);
+      const specY = cy + (pointer.y - 0.5) * r * 0.42 * (0.5 + pointer.hover * 0.5);
+      const specR = r * (0.16 + pointer.hover * 0.05);
+      const spec = ctx.createRadialGradient(specX, specY, 0, specX, specY, specR);
+      spec.addColorStop(0, theme.specular);
+      spec.addColorStop(0.4, `rgba(255,255,255,${0.08 + energy * 0.06})`);
       spec.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.save();
       ctx.globalCompositeOperation = 'screen';
       ctx.fillStyle = spec;
       ctx.beginPath();
-      ctx.arc(specX, specY, specSize, 0, Math.PI * 2);
+      ctx.arc(specX, specY, specR, 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.restore();
 
-      // Rim fresnel
-      const rim = ctx.createRadialGradient(cx, cy, r * 0.76, cx, cy, r);
-      rim.addColorStop(0, 'rgba(0,0,0,0)');
-      rim.addColorStop(0.7, palette.rim);
-      rim.addColorStop(1, `rgba(34, 211, 238, ${0.28 + pointer.hover * 0.22 + activity * 0.12})`);
-      ctx.fillStyle = rim;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      // Terminator shadow for depth
+      const shadowX = cx - (lightX - cx) * 0.4;
+      const shadowY = cy - (lightY - cy) * 0.4;
+      const shadow = ctx.createRadialGradient(shadowX, shadowY, r * 0.15, shadowX, shadowY, r * 1.05);
+      shadow.addColorStop(0, 'rgba(0,0,0,0.28)');
+      shadow.addColorStop(0.6, 'rgba(0,0,0,0.08)');
+      shadow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = shadow;
+      drawSpherePath(ctx, cx, cy, r, time, 0.008);
       ctx.fill();
+      ctx.restore();
 
-      // Ripple rings for listen/speak
-      if (state === 'listening' || state === 'speaking') {
-        for (let wave = 0; wave < 2; wave++) {
-          const phase = ((time * 0.0035 + wave * 0.5) % 1);
-          ctx.strokeStyle = `rgba(34, 211, 238, ${0.32 * (1 - phase)})`;
-          ctx.lineWidth = (1.2 + wave * 0.4) * dpr;
-          ctx.beginPath();
-          ctx.arc(cx, cy, r * (1.04 + phase * 0.32), 0, Math.PI * 2);
-          ctx.stroke();
-        }
+      // Listening — single soft ripple only
+      if (state === 'listening') {
+        const phase = (time * 0.0028) % 1;
+        ctx.strokeStyle = `rgba(${theme.accent}, ${0.18 * (1 - phase)})`;
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * (1.02 + phase * 0.14), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Processing — slow inner shimmer arc (no dashed rings)
+      if (state === 'processing' && energy > 0.7) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(time * 0.00055);
+        ctx.strokeStyle = `rgba(${theme.accent}, 0.12)`;
+        ctx.lineWidth = 1.2 * dpr;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.78, 0.4, Math.PI * 1.15);
+        ctx.stroke();
+        ctx.restore();
       }
     },
   };
