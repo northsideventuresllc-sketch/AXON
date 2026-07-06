@@ -10,7 +10,7 @@
  *   src/lib/axon/            ← selected lib/*.ts
  */
 
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { dirname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -92,7 +92,8 @@ function appendCss(niRoot) {
     axonCss = axonCss.split(marker)[0].trimEnd();
   }
 
-  const utilityBlock = globals.match(/@layer utilities \{([\s\S]*)\n\}/)?.[1]?.trim() ?? '';
+  const utilityBlock =
+    globals.match(/@layer utilities \{([\s\S]*?)\n\}/)?.[1]?.trim() ?? '';
   const keyframes = globals.split('@keyframes scan')[1] ?? '';
   const syncedKeyframes = keyframes ? `@keyframes scan${keyframes}` : '';
 
