@@ -5,7 +5,13 @@
 import { loadConfig } from '../lib/config.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { handleTelegramMessage } from '../lib/telegram-handler.mjs';
-import { telegramDeleteWebhook, telegramGetUpdates } from '../lib/telegram.mjs';
+import {
+  EXPECTED_BOT_USERNAME,
+  telegramDeleteWebhook,
+  telegramGetMe,
+  telegramGetUpdates,
+  telegramGetWebhookInfo,
+} from '../lib/telegram.mjs';
 
 const OFFSET_KEY = 'AXON_TELEGRAM_OFFSET';
 
@@ -33,7 +39,26 @@ async function main() {
     return;
   }
 
+  const me = await telegramGetMe(cfg.telegramToken);
+  console.log(`Bot: @${me.username} (chat filter: ${cfg.telegramChatId})`);
+
+  if (me.username !== EXPECTED_BOT_USERNAME) {
+    throw new Error(
+      `Wrong bot token — got @${me.username}, expected @${EXPECTED_BOT_USERNAME}. Fix GitHub secret TELEGRAM_BOT_TOKEN.`
+    );
+  }
+
+  const webhookInfo = await telegramGetWebhookInfo(cfg.telegramToken);
+  if (webhookInfo.url) {
+    console.log(
+      `Webhook active at ${webhookInfo.url} — skipping poll (pending updates: ${webhookInfo.pending_update_count ?? 0})`
+    );
+    return;
+  }
+
   const offset = await loadOffset(sb.sbSelect);
+  console.log(`Polling mode — offset ${offset}, pending from Telegram: ${webhookInfo.pending_update_count ?? 0}`);
+
   await telegramDeleteWebhook(cfg.telegramToken);
   const updates = await telegramGetUpdates(cfg.telegramToken, offset || undefined);
   let nextOffset = offset;
@@ -43,6 +68,12 @@ async function main() {
     nextOffset = Math.max(nextOffset, update.update_id + 1);
     const msg = update.message;
     if (!msg?.text) continue;
+
+    const chatId = String(msg.chat.id);
+    if (chatId !== String(cfg.telegramChatId)) {
+      console.log(`Skipping update from chat ${chatId} (expected ${cfg.telegramChatId})`);
+      continue;
+    }
 
     try {
       const reply = await handleTelegramMessage(cfg, sb, msg);

@@ -5,9 +5,10 @@
  * Usage:
  *   node scripts/axon-telegram-setup.mjs              # register slash commands only
  *   node scripts/axon-telegram-setup.mjs --webhook https://your-domain/api/telegram-webhook
+ *   node scripts/axon-telegram-setup.mjs --auto          # register commands + set default Vercel webhook
  *   node scripts/axon-telegram-setup.mjs --polling     # remove webhook (use GitHub cron poll)
  */
-import { loadConfig } from '../lib/config.mjs';
+import { loadConfig, DEFAULT_WEBHOOK_URL } from '../lib/config.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { BOT_COMMANDS } from '../lib/telegram-commands.mjs';
 import {
@@ -26,21 +27,25 @@ async function main() {
     throw new Error('TELEGRAM_BOT_TOKEN not configured');
   }
 
-  const webhookArg = process.argv.find((a) => a.startsWith('--webhook='))?.split('=')[1]
+  const explicitWebhook = process.argv.find((a) => a.startsWith('--webhook='))?.split('=')[1]
     || (process.argv.includes('--webhook') ? process.argv[process.argv.indexOf('--webhook') + 1] : null);
   const usePolling = process.argv.includes('--polling');
+  const useAuto = process.argv.includes('--auto');
+  const webhookArg = explicitWebhook || (useAuto ? (process.env.AXON_WEBHOOK_URL || DEFAULT_WEBHOOK_URL) : null);
 
   console.log('Registering AXON slash commands with Telegram…');
   await telegramSetCommands(cfg.telegramToken, BOT_COMMANDS);
   console.log('Slash commands registered:', BOT_COMMANDS.map((c) => `/${c.command}`).join(', '));
 
-  if (webhookArg) {
+  if (usePolling) {
+    console.log('Removing webhook — using polling mode');
+    await telegramDeleteWebhook(cfg.telegramToken);
+  } else if (webhookArg) {
     const secret = process.env.TELEGRAM_WEBHOOK_SECRET || null;
     console.log(`Setting webhook: ${webhookArg}`);
     await telegramSetWebhook(cfg.telegramToken, webhookArg, secret);
-  } else if (usePolling) {
-    console.log('Removing webhook — using polling mode');
-    await telegramDeleteWebhook(cfg.telegramToken);
+  } else {
+    console.log('Commands only — webhook unchanged. Use --auto, --webhook <url>, or --polling.');
   }
 
   const info = await telegramGetWebhookInfo(cfg.telegramToken);

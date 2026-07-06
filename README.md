@@ -43,14 +43,18 @@ npm run telegram:setup
 # Or: GitHub Actions → AXON Telegram Setup → mode: commands
 ```
 
-**Real-time chat (recommended)** — deploy to Vercel and set webhook:
+**Real-time chat (recommended)** — Vercel webhook (instant `/status` replies):
 
 ```bash
-npm run telegram:setup -- --webhook https://northsideintelligence.com/api/telegram-webhook
-# Or: GitHub Actions → AXON Telegram Setup → mode: webhook
+npm run telegram:setup -- --auto
+# Or: GitHub Actions → AXON Telegram Setup → mode: webhook (or auto)
 ```
 
-Without webhook, GitHub Actions polls every 2 minutes (fallback).
+Webhook URL (production): `https://workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/api/telegram-webhook`
+
+Do **not** use `northsideintelligence.com/axon/api/...` until NI proxy + middleware are aligned — the root Vercel `/api/telegram-webhook` route is the working endpoint today.
+
+Without webhook, GitHub Actions polls as fallback (best-effort ~hourly on free tier — not every 2 min).
 
 ---
 
@@ -69,6 +73,7 @@ Add in **Settings → Secrets → Actions** on this repo:
 | `RESEND_API_KEY` | For email send | After approve |
 | `RESEND_FROM_EMAIL` | Optional | Default: `Jonny <northside@northsideintelligence.com>` |
 | `TELEGRAM_WEBHOOK_SECRET` | Optional | Webhook auth header |
+| `AXON_WEBHOOK_URL` | Optional | Override default Vercel webhook URL |
 | `AXON_DASHBOARD_SECRET` | **Yes** | Web UI login |
 | `GEMINI_API_KEY_BACKUP` | Optional | Fallback |
 
@@ -95,7 +100,7 @@ npm run telegram:setup # register slash commands
 | Workflow | Cron (UTC) | EST |
 |----------|------------|-----|
 | AXON NI Outreach | `30 7 * * *` | 2:30 AM (after Hermes 2 AM) |
-| AXON Telegram Poll | `*/2 * * * *` | Every 2 min (fallback) |
+| AXON Telegram Poll | `*/15 * * * *` | Every 15 min fallback (skips when webhook active) |
 
 ---
 

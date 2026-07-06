@@ -2,13 +2,15 @@ name: AXON Telegram Poll
 
 on:
   schedule:
-    # Poll JB commands every 2 minutes (fallback when webhook is not set)
-    - cron: '*/2 * * * *'
+    # Fallback poll when webhook is not registered (GitHub cron is best-effort, not every 2 min)
+    - cron: '*/15 * * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [axon-telegram-poll]
 
 concurrency:
   group: axon-telegram-poll
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   poll:
@@ -34,4 +36,5 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          AXON_WEBHOOK_URL: ${{ secrets.AXON_WEBHOOK_URL }}
         run: node scripts/axon-telegram-poll.mjs
