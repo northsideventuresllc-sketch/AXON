@@ -252,7 +252,32 @@
   }
 
   .axon-orb-root.axon-orb-processing-state {
-    filter: saturate(1.06);
+    filter: saturate(1.12) brightness(1.04);
+  }
+
+  .axon-orb-root.axon-orb-live {
+    animation: axon-orb-alive-glow 4.5s ease-in-out infinite;
+  }
+
+  .axon-orb-static-fallback {
+    background: radial-gradient(
+      circle at 50% 42%,
+      rgba(34, 211, 238, 0.18) 0%,
+      rgba(37, 99, 235, 0.08) 42%,
+      transparent 70%
+    );
+  }
+
+  .axon-orb-static-core {
+    background: radial-gradient(
+      circle at 35% 32%,
+      rgba(224, 242, 254, 0.95) 0%,
+      rgba(59, 130, 246, 0.88) 38%,
+      rgba(8, 18, 38, 0.98) 100%
+    );
+    box-shadow:
+      0 0 40px rgba(34, 211, 238, 0.35),
+      inset 0 0 24px rgba(186, 230, 253, 0.2);
   }
 
   .axon-orb-title {
@@ -329,6 +354,16 @@
     50% {
       opacity: 1;
       transform: scale(1.15);
+    }
+  }
+
+  @keyframes axon-orb-alive-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.12));
+    }
+    50% {
+      filter: drop-shadow(0 0 28px rgba(59, 130, 246, 0.22));
     }
   }
 
