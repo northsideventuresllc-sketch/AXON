@@ -15,6 +15,7 @@ import {
   shortId,
   todayUtc,
 } from '../lib/constants.mjs';
+import { jobBoardReason, leadRejectReason, rejectPendingJobBoardLeads } from '../lib/icp-filter.mjs';
 import { searchProspects } from '../lib/serpapi.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { recordDraftNotification } from '../lib/telegram-handler.mjs';
@@ -53,6 +54,16 @@ async function main() {
   );
   const cfg = await loadConfig(sbSelect);
 
+  // ICP sweep: clear job-board noise already sitting in the approval queue
+  try {
+    const swept = await rejectPendingJobBoardLeads({ sbSelect, sbPatch }, SOURCE, {
+      dryRun: cfg.dryRun,
+    });
+    if (swept.length) console.log(`ICP sweep: auto-rejected ${swept.length} job-board lead(s)`);
+  } catch (err) {
+    console.warn(`ICP sweep failed (continuing): ${err.message}`);
+  }
+
   const madeToday = await countTodayDrafts(sbSelect);
   const remaining = MAX_DRAFTS_PER_DAY - madeToday;
   console.log(`Drafts today: ${madeToday}/${MAX_DRAFTS_PER_DAY} (remaining: ${remaining})`);
@@ -85,7 +96,17 @@ async function main() {
     return true;
   });
 
-  console.log(`Prospects from search: ${prospects.length}`);
+  // ICP pre-filter: never scan/draft job-board aggregate posts
+  prospects = prospects.filter((p) => {
+    const reason = jobBoardReason(p);
+    if (reason) {
+      console.log(`ICP drop (${reason})`);
+      return false;
+    }
+    return true;
+  });
+
+  console.log(`Prospects from search (after ICP filter): ${prospects.length}`);
 
   let created = 0;
   const maxPerRun = Math.min(remaining, 5);
@@ -99,6 +120,13 @@ async function main() {
 
     const company = (scan.company || prospect.title || '').trim();
     if (!company || known.has(company.toLowerCase())) continue;
+
+    // ICP post-scan check: scan can resolve the "company" to the job board itself
+    const icpReject = leadRejectReason({ company, sourceLink: prospect.link });
+    if (icpReject) {
+      console.log(`ICP drop post-scan (${icpReject})`);
+      continue;
+    }
 
     let draft;
     try {
