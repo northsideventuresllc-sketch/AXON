@@ -1,8 +1,15 @@
-# Deploy AXON at northsideintelligence.com/axon
+# Deploy AXON with Northside Intelligence portal
 
-AXON deploys from this repo to the Vercel **workspace** project (Git-connected to `northsideventuresllc-sketch/AXON`).
+AXON has **two surfaces**:
 
-## 1. Vercel env vars (workspace project)
+| Surface | Repo | URL |
+|---------|------|-----|
+| **NI portal (master)** | `northside-intelligence` | `northsideintelligence.com/axon-{username}/dashboard` |
+| **Standalone app** | this repo → Vercel **workspace** | `workspace-*.vercel.app/axon` |
+
+Public waitlist lives at `northsideintelligence.com/axon` (NI portal, not this repo).
+
+## 1. Standalone Vercel env (workspace project)
 
 Set in [Vercel → workspace → Settings → Environment Variables](https://vercel.com):
 
@@ -20,34 +27,41 @@ Set in [Vercel → workspace → Settings → Environment Variables](https://ver
 
 Redeploy after adding env vars.
 
-## 2. Proxy /axon on northsideintelligence.com
+## 2. Sync UI into NI portal (required after AXON UI changes)
 
-The **northside-intelligence** Vercel project owns `northsideintelligence.com`. Add rewrites so `/axon/*` proxies to the AXON deployment:
+The portal embeds AXON UI from `northside-intelligence/src/components/axon-ui/`. It does **not** auto-deploy from this repo.
 
-```json
-{
-  "rewrites": [
-    {
-      "source": "/axon",
-      "destination": "https://workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/axon"
-    },
-    {
-      "source": "/axon/:path*",
-      "destination": "https://workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/axon/:path*"
-    }
-  ]
-}
+```bash
+git clone https://github.com/northsideventuresllc-sketch/northside-intelligence.git
+node scripts/sync-portal-ui.mjs ./northside-intelligence
+cd northside-intelligence
+npm install && npm run build
+# commit + merge PR in northside-intelligence
 ```
 
-Merge into `northside-intelligence` project's `vercel.json`, then redeploy that project.
+This copies components, lib modules, API routes, and CSS from AXON → NI portal.
 
-## 3. Deployment protection
+## 3. NI portal env (northside-intelligence Vercel project)
 
-If the workspace deployment requires Vercel login, disable **Deployment Protection** for production in Vercel → workspace → Settings → Deployment Protection (or add JB's team as bypass).
+Required for portal AXON routes:
+
+| Variable | Purpose |
+|----------|---------|
+| `SUPABASE_SERVICE_KEY` | NI-Brain |
+| `ANTHROPIC_API_KEY` | Chat |
+| `AXON_SESSION_SECRET` or `NI_ADMIN_SECRET` | Portal AXON session cookie |
+| `AXON_MASTER_ACCESS_CODE` | Master account access provisioning |
 
 ## 4. Verify
 
-- `https://northsideintelligence.com/axon/login` — AXON login
-- `https://northsideintelligence.com/axon` — Jarvis home (after login)
+| URL | Expected |
+|-----|----------|
+| `https://northsideintelligence.com/axon` | Waitlist landing |
+| `https://northsideintelligence.com/axon-{username}/dashboard` | Latest AXON UI (master, signed in) |
+| `https://workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/axon/login` | Standalone password login |
 
-Production URL (direct): `https://workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/axon`
+Telegram webhook (production): root Vercel URL `/api/telegram-webhook` on the **workspace** project — not the NI portal path.
+
+## 5. Deployment protection
+
+If the workspace deployment requires Vercel login, disable **Deployment Protection** for production in Vercel → workspace → Settings → Deployment Protection.

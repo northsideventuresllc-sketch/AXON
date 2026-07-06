@@ -10,12 +10,15 @@
 
 | Surface | What |
 |---------|------|
-| **Web UI** | `northsideintelligence.com/axon` — Jarvis interface (chat/voice), autonomous task tools, outreach dashboard |
+| **Web UI (portal)** | Sign in at `northsideintelligence.com` → **AXON** in nav → `/axon-{username}/dashboard` (master account). Public waitlist at `/axon`. |
+| **Web UI (standalone)** | `workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/axon` — password login via `AXON_DASHBOARD_SECRET` |
 | **Telegram** | Chat with AXON like a normal AI assistant. Slash commands for pipeline actions. Drafts land nightly. |
 | **NI-Brain** | `ni_brain_outreach` where `source = axon_ni_services` |
 | **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Telegram Poll / AXON Telegram Setup |
 
-Set `NEXT_PUBLIC_BASE_PATH=/axon` in production env.
+Set `NEXT_PUBLIC_BASE_PATH=/axon` on the standalone Vercel **workspace** project.
+
+**Portal sync:** After UI changes in this repo, run `node scripts/sync-portal-ui.mjs ../northside-intelligence` and merge in the NI portal repo so `/axon-{username}/dashboard` stays current.
 
 ---
 
