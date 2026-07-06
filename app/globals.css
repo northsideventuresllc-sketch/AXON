@@ -268,11 +268,11 @@
     filter: drop-shadow(0 0 36px rgba(139, 92, 246, 0.22)) saturate(1.06);
   }
 
-  .axon-orb-status-corner {
-    transform: translateZ(12px);
+  .axon-holo-controls {
+    transform: translateZ(16px);
   }
 
-  .axon-orb-status-pill {
+  .axon-holo-controls .axon-orb-status-pill {
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
   }
 
@@ -406,10 +406,6 @@
       opacity: 1;
       transform: scale(1.12);
     }
-  }
-
-  .axon-holo-controls {
-    transform: translateZ(16px);
   }
 
   .axon-holo-grid-no-left {
