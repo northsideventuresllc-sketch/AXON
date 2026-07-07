@@ -147,7 +147,6 @@ function patchPackageJson(niRoot) {
   pkg.dependencies = pkg.dependencies || {};
   let changed = false;
   for (const [name, version] of Object.entries({
-    'jarvis-ai-web-animation': '^0.1.2',
     three: '^0.185.1',
   })) {
     if (pkg.dependencies[name] !== version) {
@@ -157,7 +156,7 @@ function patchPackageJson(niRoot) {
   }
   if (changed) {
     writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
-    console.log('package.json: added jarvis-ai-web-animation + three');
+    console.log('package.json: added three');
   }
 }
 
