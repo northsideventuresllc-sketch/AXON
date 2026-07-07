@@ -1,26 +1,17 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { SESSION_COOKIE, validatePassword } from '@/lib/auth';
-import { getCookiePath } from '@/lib/paths';
+import { ensureMasterAccount } from '@/lib/axon-security';
 
-export async function POST(req: Request) {
-  try {
-    const { password } = await req.json();
-    if (!validatePassword(password)) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-    }
-
-    const cookieStore = await cookies();
-    cookieStore.set(SESSION_COOKIE, password, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: getCookiePath(),
-      maxAge: 60 * 60 * 24 * 7,
-    });
-
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: 'Login failed' }, { status: 400 });
-  }
+/**
+ * Legacy login endpoint — deprecated in favor of /api/auth/passcode/verify.
+ * Returns 410 with redirect hint for clients still calling the old route.
+ */
+export async function POST() {
+  await ensureMasterAccount();
+  return NextResponse.json(
+    {
+      error: 'Deprecated — use POST /api/auth/passcode/verify',
+      redirect: '/api/auth/passcode/verify',
+    },
+    { status: 410 }
+  );
 }

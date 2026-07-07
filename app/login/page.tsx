@@ -85,7 +85,10 @@ function LoginPasscode() {
 
     if (res.status === 423) {
       const data = (await res.json()) as VerifyErrorResponse;
-      const lockout = data.lockout ?? data;
+      const lockout = data.lockout ?? {
+        locked: true,
+        lockoutUntil: null,
+      };
       setLockoutState(mapLockout(lockout));
       throw new Error('locked');
     }

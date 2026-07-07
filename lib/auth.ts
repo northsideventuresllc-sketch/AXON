@@ -1,20 +1,18 @@
-import { cookies } from 'next/headers';
+import { getSessionFromCookies, isSessionActive } from '@/lib/axon-session';
 
-export const SESSION_COOKIE = 'axon_session';
+export { SESSION_COOKIE } from '@/lib/axon-session';
 
+export async function isAuthenticated(): Promise<boolean> {
+  const session = await getSessionFromCookies();
+  return session !== null && isSessionActive(session);
+}
+
+/** @deprecated Use passcode flow via /api/auth/passcode/verify */
 export function getDashboardSecret() {
   return process.env.AXON_DASHBOARD_SECRET || process.env.SUPABASE_SERVICE_KEY?.slice(0, 32);
 }
 
-export async function isAuthenticated(): Promise<boolean> {
-  const secret = getDashboardSecret();
-  if (!secret) return false;
-  const cookieStore = await cookies();
-  return cookieStore.get(SESSION_COOKIE)?.value === secret;
-}
-
-export function validatePassword(password: string): boolean {
-  const secret = getDashboardSecret();
-  if (!secret) return false;
-  return password === secret;
+/** @deprecated Use passcode flow via /api/auth/passcode/verify */
+export function validatePassword(_password: string): boolean {
+  return false;
 }

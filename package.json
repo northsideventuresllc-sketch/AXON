@@ -13,14 +13,18 @@
     "telegram:setup": "node scripts/axon-telegram-setup.mjs",
     "content:notify": "node scripts/axon-content-batch-notify.mjs",
     "dashboard": "node scripts/axon-dashboard.mjs",
+    "security:seed": "node --experimental-strip-types scripts/axon-security-seed.ts",
     "outreach:dry": "AXON_DRY_RUN=1 node scripts/axon-ni-outreach.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
     "jarvis-ai-web-animation": "^0.1.2",
     "next": "^15.3.3",
+    "otplib": "^13.4.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "three": "^0.185.1"
