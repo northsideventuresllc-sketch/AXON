@@ -12,6 +12,7 @@
  */
 
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { execSync } from 'child_process';
 import { dirname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -218,9 +219,27 @@ function main() {
 
   applyPortalIntegration(niRoot);
   patchPackageJson(niRoot);
+  writeSyncManifest(niRoot);
 
   console.log(`\nSynced AXON UI → ${relative(process.cwd(), niRoot)}`);
   console.log('Next: cd into NI repo, run npm install && npm run build, then merge.');
+}
+
+function writeSyncManifest(niRoot) {
+  let axonSha = 'unknown';
+  try {
+    axonSha = execSync('git rev-parse HEAD', { cwd: AXON_ROOT, encoding: 'utf8' }).trim();
+  } catch {
+    /* not a git checkout */
+  }
+  const manifest = {
+    syncedAt: new Date().toISOString(),
+    axonCommit: axonSha,
+    source: 'northsideventuresllc-sketch/AXON',
+  };
+  const dest = join(niRoot, 'src/lib/axon/.axon-sync-manifest.json');
+  writeFileSync(dest, `${JSON.stringify(manifest, null, 2)}\n`);
+  console.log('manifest: .axon-sync-manifest.json');
 }
 
 main();
