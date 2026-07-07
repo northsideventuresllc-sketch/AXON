@@ -38,6 +38,7 @@ const COMPONENT_FILES = [
   'lead-detail.tsx',
   'notifications-panel.tsx',
   'icp-fit-badge.tsx',
+  'outreach-generate-leads.tsx',
   'outreach-icp-checklist.tsx',
   'outreach-hq-tool.tsx',
   'outreach-training-panel.tsx',
@@ -65,6 +66,8 @@ const LIB_FILES = [
   'outreach-reject.mjs',
   'outreach-learn.ts',
   'outreach-learn.mjs',
+  'outreach-run.ts',
+  'outreach-run.mjs',
   'icp-config.mjs',
   'constants.mjs',
   'axon-quick-links.ts',
@@ -79,6 +82,7 @@ const API_FILES = [
   'preferences/route.ts',
   'reset/route.ts',
   'outreach/[id]/route.ts',
+  'outreach/run/route.ts',
   'quick-links/route.ts',
 ];
 

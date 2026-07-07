@@ -9,6 +9,7 @@ import { LeadCard, LeadRow } from './lead-card';
 import { GoalProgress, PipelineBreakdown, StatsCards } from './stats-cards';
 import { OutreachTrainingPanel } from './outreach-training-panel';
 import { OutreachIcpChecklist } from './outreach-icp-checklist';
+import { OutreachGenerateLeads } from './outreach-generate-leads';
 import { STATUS_ORDER } from '@/lib/types';
 import { appPath } from '@/lib/paths';
 import { consumeToolLaunch } from '@/lib/axon-user-tools';
@@ -119,6 +120,7 @@ export function OutreachHqTool({
 
           {tab === 'overview' && (
             <>
+              <OutreachGenerateLeads stats={stats} />
               <OutreachIcpChecklist
                 minScore={minScore}
                 todayQueries={todayQueries}
