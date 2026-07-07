@@ -1,0 +1,37 @@
+name: AXON Content Batch Notify
+
+on:
+  schedule:
+    # 8 AM EST = 1 PM UTC — after morning Content Machine gen (CM7 target)
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: axon-content-batch-notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    name: AXON — Content Machine Telegram batch preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Notify pending content batches
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node scripts/axon-content-batch-notify.mjs
+
+      - name: Report failure
+        if: failure()
+        run: echo "❌ AXON content batch notify failed — check Actions logs"
