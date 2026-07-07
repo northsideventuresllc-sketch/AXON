@@ -11,7 +11,7 @@
  *   src/lib/axon/            ← selected lib/*.ts
  */
 
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'fs';
 import { execSync } from 'child_process';
 import { dirname, join, relative } from 'path';
 import { fileURLToPath } from 'url';
