@@ -1,6 +1,7 @@
 'use client';
 
 import { apiUrl } from '@/lib/api-base';
+import { IT_QUICK_LINKS } from '@/lib/it-quick-links';
 import { appPath } from '@/lib/paths';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -83,6 +84,24 @@ export function Sidebar({ basePath }: { basePath?: string }) {
             </div>
           );
         })}
+
+        <div className="mt-4 border-t border-axon-border/60 pt-4">
+          <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.2em] text-axon-muted">ITs</p>
+          <div className="space-y-1">
+            {IT_QUICK_LINKS.map((tool) => (
+              <a
+                key={tool.slug}
+                href={tool.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-axon-muted transition hover:bg-axon-elevated/50 hover:text-axon-text"
+              >
+                <span>{tool.name}</span>
+                <span className="shrink-0 font-mono text-[10px] text-axon-blue-glow">{tool.price}</span>
+              </a>
+            ))}
+          </div>
+        </div>
       </nav>
 
       <div className="border-t border-axon-border px-4 py-4">

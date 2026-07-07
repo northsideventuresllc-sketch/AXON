@@ -47,6 +47,7 @@ const LIB_FILES = [
   'axon-profile.ts',
   'axon-types.ts',
   'axon-workspace.ts',
+  'it-quick-links.ts',
   'types.ts',
   'use-axon-voice.ts',
 ];
@@ -63,6 +64,7 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/use-axon-voice'/g, "from '@/lib/axon/use-axon-voice'")
     .replace(/from '@\/lib\/leads'/g, "from '@/lib/axon/leads'")
     .replace(/from '@\/lib\/types'/g, "from '@/lib/axon/types'")
+    .replace(/from '@\/lib\/it-quick-links'/g, "from '@/lib/axon/it-quick-links'")
     .replace(/from '@\/lib\/paths'/g, "from '@/lib/axon/app-path'");
 }
 
