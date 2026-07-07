@@ -21,7 +21,7 @@ export default async function AxonLeadPage({
   return (
     <div className="space-y-6">
       <Link
-        href={appPath('/pipeline', basePath)}
+        href={appPath('/tools/ni-outreach?tab=pipeline', basePath)}
         className="text-sm text-axon-muted hover:text-axon-gold"
       >
         ← Back to pipeline

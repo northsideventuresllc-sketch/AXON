@@ -29,11 +29,15 @@ const COMPONENT_FILES = [
   'axon-orb-status.tsx',
   'axon-reset-settings.tsx',
   'axon-test-notification-buttons.tsx',
+  'axon-tool-launch-overlay.tsx',
+  'axon-tool-name-settings.tsx',
+  'axon-tools-nav.tsx',
   'briefing-panel.tsx',
   'jarvis-orb.tsx',
   'lead-card.tsx',
   'lead-detail.tsx',
   'notifications-panel.tsx',
+  'outreach-hq-tool.tsx',
   'panel-focus-view.tsx',
   'previous-chats-flip.tsx',
   'sidebar.tsx',
@@ -50,9 +54,11 @@ const LIB_FILES = [
   'axon-preferences.ts',
   'axon-profile.ts',
   'axon-types.ts',
+  'axon-user-tools.ts',
   'axon-workspace.ts',
   'it-quick-links.ts',
   'types.ts',
+  'use-axon-tool-display-names.ts',
   'use-axon-voice.ts',
 ];
 
@@ -69,6 +75,8 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/leads'/g, "from '@/lib/axon/leads'")
     .replace(/from '@\/lib\/types'/g, "from '@/lib/axon/types'")
     .replace(/from '@\/lib\/it-quick-links'/g, "from '@/lib/axon/it-quick-links'")
+    .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")
+    .replace(/from '@\/lib\/use-axon-tool-display-names'/g, "from '@/lib/axon/use-axon-tool-display-names'")
     .replace(/from '@\/lib\/paths'/g, "from '@/lib/axon/app-path'");
 }
 
