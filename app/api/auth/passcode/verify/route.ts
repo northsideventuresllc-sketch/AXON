@@ -78,6 +78,7 @@ export async function POST(req: Request) {
       ok: true,
       needsSecuritySetup: result.needsSecuritySetup,
       needsSecurityVerify: result.needsSecurityVerify,
+      needs2FA: refreshed.two_fa_enabled,
       displayName: result.displayName,
       deviceId: deviceId || null,
     });

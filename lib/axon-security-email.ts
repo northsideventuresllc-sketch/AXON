@@ -23,7 +23,7 @@ function securityBaseUrl(): string {
 
 function recoveryUrl(token: string): string {
   const basePath = getBasePath();
-  return `${securityBaseUrl()}${basePath}/login?recovery=${encodeURIComponent(token)}`;
+  return `${securityBaseUrl()}${basePath}/security-recovery/${encodeURIComponent(token)}`;
 }
 
 function securitySettingsUrl(): string {

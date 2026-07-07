@@ -4,7 +4,7 @@ import {
   ensureMasterAccount,
   getUserSecurity,
   needsSecuritySetup,
-  needsSecurityVerify,
+  needsSecurityVerifyForLogin,
 } from '@/lib/axon-security';
 import { verifyPasskeyLogin } from '@/lib/axon-passkey';
 import { createSessionPayload, setSessionCookie } from '@/lib/axon-session';
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
     const session = createSessionPayload(DEFAULT_OPERATOR_ID, result.displayName, {
       deviceId: body.deviceId || 'passkey',
-      securityVerified: !needsSecurityVerify(user),
+      securityVerified: !needsSecurityVerifyForLogin(user, body.deviceId),
       totpVerified: !user.two_fa_enabled,
     });
     await setSessionCookie(session);
@@ -34,7 +34,8 @@ export async function POST(req: Request) {
       ok: true,
       displayName: result.displayName,
       needsSecuritySetup: needsSecuritySetup(user),
-      needsSecurityVerify: needsSecurityVerify(user),
+      needsSecurityVerify: needsSecurityVerifyForLogin(user, body.deviceId),
+      needs2FA: user.two_fa_enabled,
     });
   } catch (err) {
     console.error('passkey/login/verify', err);

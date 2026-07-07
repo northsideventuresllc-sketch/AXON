@@ -2,6 +2,7 @@ import { MAX_DRAFTS_PER_DAY } from '@/lib/constants.mjs';
 import { AxonResetSettings } from '@/components/axon/axon-reset-settings';
 import { AxonHomeSettings } from '@/components/axon/axon-home-settings';
 import { AxonNotificationSettings } from '@/components/axon/axon-notification-settings';
+import { AxonSecuritySettings } from '@/components/axon/axon-security-settings';
 import { fetchTopSignals, fetchMemories, getOperatorProfile } from '@/lib/axon-profile';
 import { getPreferences } from '@/lib/axon-preferences';
 
@@ -31,6 +32,7 @@ export default async function SettingsPage() {
 
       <AxonHomeSettings initial={preferences.homeLayout} />
       <AxonNotificationSettings initial={preferences.notifications} />
+      <AxonSecuritySettings />
 
       <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
         <h2 className="text-sm font-medium">Communication Profile</h2>

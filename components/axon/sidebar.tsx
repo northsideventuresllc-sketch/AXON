@@ -86,6 +86,15 @@ export function Sidebar({ basePath }: { basePath?: string }) {
       </nav>
 
       <div className="border-t border-axon-border px-4 py-4">
+        <a
+          href="https://northsideintelligence.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-axon-muted transition hover:bg-axon-elevated hover:text-axon-cyan"
+        >
+          <span className="text-base opacity-70">⌂</span>
+          AXON Home
+        </a>
         <SignOutButton basePath={basePath} />
       </div>
     </aside>

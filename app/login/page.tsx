@@ -8,6 +8,8 @@ import {
   type PasscodeLockoutState,
 } from '@/components/axon/passcode-gate';
 import { apiUrl } from '@/lib/api-base';
+import { getOrCreateDeviceId } from '@/lib/device-id';
+import { appPath } from '@/lib/paths';
 
 interface PasscodeStatusResponse {
   locked: boolean;
@@ -83,38 +85,62 @@ function LoginPasscode() {
   }, [refreshStatus]);
 
   const handleSuccess = async (passcode: string, turnstileToken?: string | null) => {
+    const deviceId = getOrCreateDeviceId();
     const res = await fetch(apiUrl('/api/auth/passcode/verify'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ passcode, turnstileToken }),
+      body: JSON.stringify({ passcode, turnstileToken, deviceId }),
     });
 
+    const data = (await res.json().catch(() => ({}))) as VerifyErrorResponse & {
+      ok?: boolean;
+      needsSecuritySetup?: boolean;
+      needsSecurityVerify?: boolean;
+      needs2FA?: boolean;
+      displayName?: string;
+    };
+
     if (res.status === 423) {
-      const data = (await res.json()) as VerifyErrorResponse;
-      const lockout = data.lockout ?? {
-        locked: true,
-        lockoutUntil: null,
-      };
+      const lockout = data.lockout ?? { locked: true, lockoutUntil: null };
       setLockoutState(mapLockout(lockout));
       throw new Error('locked');
     }
 
     if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as VerifyErrorResponse;
       if (data.lockout) {
         setLockoutState(mapLockout(data.lockout));
-      } else if (data.lockout === undefined && data.error) {
+      } else {
         await refreshStatus();
       }
       throw new Error('invalid');
     }
 
+    if (data.displayName) setDisplayName(data.displayName);
+
     await new Promise((r) => setTimeout(r, 1400));
+
+    if (data.needsSecuritySetup) {
+      router.push(appPath(`/security-setup?next=${encodeURIComponent(next)}`));
+      router.refresh();
+      return;
+    }
+    if (data.needsSecurityVerify) {
+      router.push(appPath(`/security-verify?next=${encodeURIComponent(next)}`));
+      router.refresh();
+      return;
+    }
+    if (data.needs2FA) {
+      router.push(appPath(`/security-2fa?next=${encodeURIComponent(next)}`));
+      router.refresh();
+      return;
+    }
+
     router.push(next);
     router.refresh();
   };
 
   const handlePasskey = async () => {
+    const deviceId = getOrCreateDeviceId();
     const optionsRes = await fetch(apiUrl('/api/auth/passkey/login/options'), {
       method: 'POST',
     });
@@ -127,12 +153,30 @@ function LoginPasscode() {
     const verifyRes = await fetch(apiUrl('/api/auth/passkey/login/verify'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(authResponse),
+      body: JSON.stringify({ ...authResponse, deviceId }),
     });
 
     if (!verifyRes.ok) throw new Error('verify failed');
 
+    const data = await verifyRes.json();
     await new Promise((r) => setTimeout(r, 1400));
+
+    if (data.needsSecuritySetup) {
+      router.push(appPath(`/security-setup?next=${encodeURIComponent(next)}`));
+      router.refresh();
+      return;
+    }
+    if (data.needsSecurityVerify) {
+      router.push(appPath(`/security-verify?next=${encodeURIComponent(next)}`));
+      router.refresh();
+      return;
+    }
+    if (data.needs2FA) {
+      router.push(appPath(`/security-2fa?next=${encodeURIComponent(next)}`));
+      router.refresh();
+      return;
+    }
+
     router.push(next);
     router.refresh();
   };

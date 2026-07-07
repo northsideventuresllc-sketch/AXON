@@ -6,12 +6,17 @@ import { getBasePath, getCookiePath, stripBasePath } from '@/lib/paths';
 
 const PUBLIC_PATHS = [
   '/login',
+  '/security-setup',
+  '/security-verify',
+  '/security-2fa',
+  '/security-recovery',
   '/api/auth/login',
   '/api/auth/logout',
   '/api/auth/passcode',
   '/api/auth/security-questions',
   '/api/auth/recovery',
   '/api/auth/passkey',
+  '/api/auth/2fa',
   '/api/waitlist',
   '/api/telegram-webhook',
 ];
@@ -54,6 +59,28 @@ export async function middleware(request: NextRequest) {
       res.cookies.set(SESSION_COOKIE, '', { path: getCookiePath(), maxAge: 0 });
     }
     return res;
+  }
+
+  if (
+    session.securityVerified === false &&
+    !pathname.startsWith('/security-verify') &&
+    !pathname.startsWith('/security-setup') &&
+    !pathname.startsWith('/api/auth/security-questions') &&
+    !pathname.startsWith('/api/auth/session')
+  ) {
+    const verifyUrl = new URL(`${basePath}/security-verify`, request.url);
+    verifyUrl.searchParams.set('next', `${basePath}${pathname}`);
+    return NextResponse.redirect(verifyUrl);
+  }
+
+  if (
+    session.totpVerified === false &&
+    !pathname.startsWith('/security-2fa') &&
+    !pathname.startsWith('/api/auth/2fa')
+  ) {
+    const tfaUrl = new URL(`${basePath}/security-2fa`, request.url);
+    tfaUrl.searchParams.set('next', `${basePath}${pathname}`);
+    return NextResponse.redirect(tfaUrl);
   }
 
   return NextResponse.next();

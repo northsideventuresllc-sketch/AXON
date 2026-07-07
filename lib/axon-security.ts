@@ -163,8 +163,22 @@ export function canChangeSecurityQuestions(user: AxonUserSecurity, now = new Dat
   if (!user.security_questions_set_at) return true;
   const daysSinceSet = daysBetween(new Date(user.security_questions_set_at), now);
   if (daysSinceSet < SECURITY_QUESTIONS_GRACE_DAYS) return false;
-  if (daysSinceSet < SECURITY_QUESTIONS_CHANGE_COOLDOWN_DAYS) return false;
-  return true;
+  const lastChange = user.last_security_verify_at || user.security_questions_set_at;
+  if (lastChange === user.security_questions_set_at) {
+    return daysSinceSet >= SECURITY_QUESTIONS_GRACE_DAYS;
+  }
+  return daysBetween(new Date(lastChange), now) >= SECURITY_QUESTIONS_CHANGE_COOLDOWN_DAYS;
+}
+
+/** Periodic (60d) or new-device sign-in requires security question verification. */
+export function needsSecurityVerifyForLogin(
+  user: AxonUserSecurity,
+  deviceId?: string,
+  now = new Date()
+): boolean {
+  if (!user.security_questions_set_at) return false;
+  if (deviceId && isNewDevice(user, deviceId)) return true;
+  return needsPeriodicSecurityVerify(user, now);
 }
 
 export function needsPeriodicSecurityVerify(user: AxonUserSecurity, now = new Date()): boolean {
@@ -256,7 +270,7 @@ export async function initDefaultOperatorSecurity(
   return upsertUserSecurity(operatorId, {
     passcode_hash: passcodeHash,
     display_name: MASTER_DISPLAY_NAME,
-    email: existing?.email ?? null,
+    email: existing?.email ?? process.env.AXON_RECOVERY_EMAIL ?? 'jb@northsideintelligence.com',
     lockout_phase: 0,
     failed_attempts: 0,
     locked_until: null,
@@ -379,10 +393,14 @@ export async function recordSuccessfulLogin(
   });
 }
 
-export function buildAuthStatus(user: AxonUserSecurity, hasPasskeys: boolean): AuthStatus {
+export function buildAuthStatus(
+  user: AxonUserSecurity,
+  hasPasskeys: boolean,
+  deviceId?: string
+): AuthStatus {
   return {
     needsSecuritySetup: needsSecuritySetup(user),
-    needsSecurityVerify: needsPeriodicSecurityVerify(user),
+    needsSecurityVerify: needsSecurityVerifyForLogin(user, deviceId),
     displayName: user.display_name,
     lockout: getLockoutState(user),
     totpEnabled: user.two_fa_enabled,
@@ -423,19 +441,20 @@ export async function verifyPasscode(
     return {
       ok: false,
       needsSecuritySetup: needsSecuritySetup(user),
-      needsSecurityVerify: needsPeriodicSecurityVerify(user),
+      needsSecurityVerify: needsSecurityVerifyForLogin(user, options?.deviceId),
       displayName: user.display_name,
       lockout: newLockout,
       error: 'Invalid passcode',
     };
   }
 
+  const needsVerify = needsSecurityVerifyForLogin(user, options?.deviceId);
   await recordSuccessfulLogin(operatorId, options?.deviceId, options?.userAgent);
   const refreshed = await getUserSecurity(operatorId);
   return {
     ok: true,
     needsSecuritySetup: needsSecuritySetup(refreshed),
-    needsSecurityVerify: needsPeriodicSecurityVerify(refreshed),
+    needsSecurityVerify: needsVerify,
     displayName: refreshed.display_name,
   };
 }
@@ -461,7 +480,8 @@ async function listAnswers(operatorId: string): Promise<AxonSecurityAnswerRow[]>
 
 export async function saveSecurityAnswers(
   operatorId: string,
-  answers: { question_id: string; answer_hash: string }[]
+  answers: { question_id: string; answer_hash: string }[],
+  options?: { isFirstSetup?: boolean }
 ): Promise<void> {
   const now = new Date().toISOString();
   for (const answer of answers) {
@@ -486,7 +506,11 @@ export async function saveSecurityAnswers(
       });
     }
   }
-  await upsertUserSecurity(operatorId, { security_questions_set_at: now });
+  const patch: Partial<AxonUserSecurity> = { last_security_verify_at: now };
+  if (options?.isFirstSetup) {
+    patch.security_questions_set_at = now;
+  }
+  await upsertUserSecurity(operatorId, patch);
 }
 
 export async function saveSecurityQuestions(
@@ -498,7 +522,8 @@ export async function saveSecurityQuestions(
   }
 
   const user = await getUserSecurity(operatorId);
-  if (user.security_questions_set_at && !canChangeSecurityQuestions(user)) {
+  const isFirstSetup = !user.security_questions_set_at;
+  if (!isFirstSetup && !canChangeSecurityQuestions(user)) {
     return { ok: false, error: 'Security questions cannot be changed yet' };
   }
 
@@ -522,8 +547,7 @@ export async function saveSecurityQuestions(
     });
   }
 
-  await saveSecurityAnswers(operatorId, stored);
-  await upsertUserSecurity(operatorId, { last_security_verify_at: new Date().toISOString() });
+  await saveSecurityAnswers(operatorId, stored, { isFirstSetup });
   return { ok: true };
 }
 
