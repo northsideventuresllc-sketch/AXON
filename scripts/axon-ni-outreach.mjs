@@ -123,7 +123,10 @@ async function main() {
   console.log(`Prospects from search (after ICP filter): ${prospects.length}`);
 
   let created = 0;
-  const maxPerRun = Math.min(remaining, 5);
+  const runMax = Number.parseInt(process.env.AXON_OUTREACH_MAX || '5', 10);
+  const perRunCap = Number.isFinite(runMax) && runMax > 0 ? runMax : 5;
+  const maxPerRun = Math.min(remaining, perRunCap);
+  console.log(`Max this run: ${maxPerRun} (cap ${perRunCap}, daily remaining ${remaining})`);
   for (const prospect of prospects) {
     if (created >= maxPerRun) break;
 
