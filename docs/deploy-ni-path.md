@@ -53,6 +53,9 @@ Required for portal AXON routes:
 | `ANTHROPIC_API_KEY` | Chat |
 | `AXON_SESSION_SECRET` or `NI_ADMIN_SECRET` | Portal AXON session cookie |
 | `AXON_MASTER_ACCESS_CODE` | Master account access provisioning |
+| `RESEND_API_KEY` | Email send on approve |
+| `RESEND_FROM_EMAIL` | Optional — default `JB <jb@northsideintelligence.com>` |
+| `RESEND_REPLY_TO_EMAIL` | Optional — default `jb@northsideintelligence.com` |
 
 ## 4. Verify
 
