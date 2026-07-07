@@ -41,6 +41,8 @@ npm install && npm run build
 
 This copies components, lib modules, API routes, and CSS from AXON → NI portal.
 
+**GitHub access:** See [docs/cursor-github-access.md](./cursor-github-access.md) — grant `cursor[bot]` or set `NI_GITHUB_PAT` for automated sync via `.github/workflows/sync-ni-portal.yml`.
+
 ## 3. NI portal env (northside-intelligence Vercel project)
 
 Required for portal AXON routes:
