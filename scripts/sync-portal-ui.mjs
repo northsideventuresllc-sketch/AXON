@@ -58,6 +58,8 @@ const LIB_FILES = [
   'axon-workspace.ts',
   'it-quick-links.ts',
   'outreach-edit.ts',
+  'outreach-reject.ts',
+  'outreach-reject.mjs',
   'axon-quick-links.ts',
   'use-axon-quick-links.ts',
   'types.ts',
@@ -83,6 +85,7 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/types'/g, "from '@/lib/axon/types'")
     .replace(/from '@\/lib\/it-quick-links'/g, "from '@/lib/axon/it-quick-links'")
     .replace(/from '@\/lib\/outreach-edit'/g, "from '@/lib/axon/outreach-edit'")
+    .replace(/from '@\/lib\/outreach-reject'/g, "from '@/lib/axon/outreach-reject'")
     .replace(/from '@\/lib\/axon-quick-links'/g, "from '@/lib/axon/axon-quick-links'")
     .replace(/from '@\/lib\/use-axon-quick-links'/g, "from '@/lib/axon/use-axon-quick-links'")
     .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")

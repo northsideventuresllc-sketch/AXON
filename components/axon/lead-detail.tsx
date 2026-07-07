@@ -54,6 +54,7 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
   const [draft, setDraft] = useState(() => toDraftState(lead));
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => {
     const next = toDraftState(lead);
@@ -210,12 +211,30 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
           />
         )}
         {canReject && (
-          <ActionButton
-            label="Reject"
-            loading={loading === 'reject'}
-            variant="danger"
-            onClick={() => run('reject', () => postAction(apiUrl(`/api/leads/${lead.id}/reject`)))}
-          />
+          <div className="flex w-full flex-col gap-2 sm:w-auto">
+            <label className="block space-y-1.5">
+              <span className="text-xs text-axon-muted">Reject reason (optional — feeds learn loop)</span>
+              <input
+                type="text"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="e.g. wrong ICP, job board, already contacted"
+                className="w-full min-w-[240px] rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm text-axon-text outline-none focus:border-axon-danger/50 sm:min-w-[280px]"
+              />
+            </label>
+            <ActionButton
+              label="Reject"
+              loading={loading === 'reject'}
+              variant="danger"
+              onClick={() =>
+                run('reject', () =>
+                  postAction(apiUrl(`/api/leads/${lead.id}/reject`), {
+                    reason: rejectReason.trim() || undefined,
+                  })
+                )
+              }
+            />
+          </div>
         )}
       </div>
 
@@ -279,6 +298,19 @@ export function LeadDetailView({ lead }: { lead: LeadWithMeta }) {
       </div>
 
       <LeadActions lead={lead} />
+
+      {(lead.status === 'dead' && lead.meta.rejected_reason) && (
+        <section className="rounded-xl border border-axon-danger/30 bg-axon-danger/5 p-5">
+          <h2 className="text-xs uppercase tracking-wider text-axon-danger/80">Reject reason</h2>
+          <p className="mt-2 text-sm leading-relaxed text-axon-text">{lead.meta.rejected_reason}</p>
+          {lead.meta.rejected_via && (
+            <p className="mt-2 text-xs text-axon-muted">
+              via {lead.meta.rejected_via}
+              {lead.meta.rejected_at ? ` · ${new Date(lead.meta.rejected_at).toLocaleString()}` : ''}
+            </p>
+          )}
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <InfoBlock title="Recommended Service" value={lead.meta.recommended_service || '—'} />
