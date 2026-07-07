@@ -1,13 +1,47 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LeadWithMeta } from '@/lib/types';
 import { apiUrl } from '@/lib/api-base';
 import { StatusBadge } from './status-badge';
 
-async function postAction(url: string) {
-  const res = await fetch(url, { method: 'POST' });
+interface DraftState {
+  emailSubject: string;
+  emailBody: string;
+  dmDraft: string;
+}
+
+function toDraftState(lead: LeadWithMeta): DraftState {
+  return {
+    emailSubject: lead.meta.email_subject ?? '',
+    emailBody: lead.comment_draft ?? '',
+    dmDraft: lead.dm_draft ?? '',
+  };
+}
+
+async function patchDraft(id: string, patch: Partial<DraftState>) {
+  const body: Record<string, string | null> = {};
+  if (patch.emailSubject !== undefined) body.email_subject = patch.emailSubject || null;
+  if (patch.emailBody !== undefined) body.comment_draft = patch.emailBody || null;
+  if (patch.dmDraft !== undefined) body.dm_draft = patch.dmDraft || null;
+
+  const res = await fetch(apiUrl(`/api/axon/outreach/${id}`), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Save failed');
+  return data;
+}
+
+async function postAction(url: string, body?: Record<string, unknown>) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Action failed');
   return data;
@@ -15,45 +49,156 @@ async function postAction(url: string) {
 
 export function LeadActions({ lead }: { lead: LeadWithMeta }) {
   const router = useRouter();
+  const channel = lead.meta.channel || 'email';
+  const [saved, setSaved] = useState(() => toDraftState(lead));
+  const [draft, setDraft] = useState(() => toDraftState(lead));
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const channel = lead.meta.channel || 'email';
 
-  async function run(action: string, url: string) {
-    setLoading(action);
-    setMessage(null);
-    try {
-      const data = await postAction(url);
-      setMessage(data.message);
-      router.refresh();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Failed');
-    } finally {
-      setLoading(null);
-    }
-  }
+  useEffect(() => {
+    const next = toDraftState(lead);
+    setSaved(next);
+    setDraft(next);
+  }, [lead]);
 
+  const dirty = useMemo(
+    () =>
+      draft.emailSubject !== saved.emailSubject ||
+      draft.emailBody !== saved.emailBody ||
+      draft.dmDraft !== saved.dmDraft,
+    [draft, saved]
+  );
+
+  const canEdit = ['pending_approval', 'approved'].includes(lead.status);
   const canApprove = lead.status === 'pending_approval';
   const canReject = ['pending_approval', 'approved'].includes(lead.status);
   const canSentLi = channel === 'linkedin' && ['approved', 'pending_approval'].includes(lead.status);
   const canMarkWon = ['sent', 'approved'].includes(lead.status);
 
+  const run = useCallback(
+    async (action: string, fn: () => Promise<{ message?: string }>) => {
+      setLoading(action);
+      setMessage(null);
+      try {
+        const data = await fn();
+        setMessage(data.message ?? 'Done');
+        router.refresh();
+      } catch (err) {
+        setMessage(err instanceof Error ? err.message : 'Failed');
+      } finally {
+        setLoading(null);
+      }
+    },
+    [router]
+  );
+
+  async function saveDraft() {
+    await run('save', async () => {
+      const data = await patchDraft(lead.id, draft);
+      const next = toDraftState(data.lead);
+      setSaved(next);
+      setDraft(next);
+      return data;
+    });
+  }
+
+  function cancelEdits() {
+    setDraft(saved);
+    setMessage(null);
+  }
+
   return (
     <div className="space-y-4">
+      {canEdit && (
+        <div className="space-y-4 rounded-xl border border-axon-border bg-axon-surface p-5">
+          <h2 className="text-xs uppercase tracking-wider text-axon-muted">Edit draft</h2>
+
+          {channel === 'email' && (
+            <>
+              <label className="block space-y-1.5">
+                <span className="text-xs text-axon-muted">Email subject</span>
+                <input
+                  type="text"
+                  value={draft.emailSubject}
+                  onChange={(e) => setDraft((d) => ({ ...d, emailSubject: e.target.value }))}
+                  className="w-full rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm text-axon-text outline-none focus:border-axon-gold/50"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-xs text-axon-muted">Email body</span>
+                <textarea
+                  rows={10}
+                  value={draft.emailBody}
+                  onChange={(e) => setDraft((d) => ({ ...d, emailBody: e.target.value }))}
+                  className="w-full rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm leading-relaxed text-axon-text outline-none focus:border-axon-gold/50"
+                />
+              </label>
+            </>
+          )}
+
+          {(channel === 'linkedin' || draft.dmDraft || lead.dm_draft) && (
+            <label className="block space-y-1.5">
+              <span className="text-xs text-axon-muted">
+                {channel === 'linkedin' ? 'LinkedIn DM' : 'LinkedIn fallback'}
+              </span>
+              <textarea
+                rows={8}
+                value={draft.dmDraft}
+                onChange={(e) => setDraft((d) => ({ ...d, dmDraft: e.target.value }))}
+                className="w-full rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm leading-relaxed text-axon-text outline-none focus:border-axon-gold/50"
+              />
+            </label>
+          )}
+
+          <div className="flex flex-wrap gap-2 border-t border-axon-border/60 pt-4">
+            <ActionButton
+              label="Save Draft"
+              loading={loading === 'save'}
+              variant="primary"
+              disabled={!dirty}
+              onClick={saveDraft}
+            />
+            <ActionButton
+              label="Cancel"
+              loading={false}
+              disabled={!dirty || loading !== null}
+              onClick={cancelEdits}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {canApprove && (
-          <ActionButton
-            label={channel === 'email' ? 'Approve & Send Email' : 'Approve (LinkedIn)'}
-            loading={loading === 'approve'}
-            variant="primary"
-            onClick={() => run('approve', apiUrl(`/api/leads/${lead.id}/approve`))}
-          />
+          <>
+            <ActionButton
+              label="Approve"
+              loading={loading === 'approve'}
+              onClick={() =>
+                run('approve', () =>
+                  postAction(apiUrl(`/api/leads/${lead.id}/approve`), { send: false })
+                )
+              }
+            />
+            {channel === 'email' && (
+              <ActionButton
+                label="Approve & Send"
+                loading={loading === 'approve-send'}
+                variant="primary"
+                onClick={() =>
+                  run('approve-send', () =>
+                    postAction(apiUrl(`/api/leads/${lead.id}/approve`), { send: true })
+                  )
+                }
+              />
+            )}
+          </>
         )}
         {canSentLi && (
           <ActionButton
             label="Mark LinkedIn Sent"
             loading={loading === 'sent-li'}
-            onClick={() => run('sent-li', apiUrl(`/api/leads/${lead.id}/sent-li`))}
+            onClick={() => run('sent-li', () => postAction(apiUrl(`/api/leads/${lead.id}/sent-li`)))}
           />
         )}
         {canMarkWon && (
@@ -61,7 +206,7 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
             label="Mark Closed Won"
             loading={loading === 'won'}
             variant="success"
-            onClick={() => run('won', apiUrl(`/api/leads/${lead.id}/won`))}
+            onClick={() => run('won', () => postAction(apiUrl(`/api/leads/${lead.id}/won`)))}
           />
         )}
         {canReject && (
@@ -69,7 +214,7 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
             label="Reject"
             loading={loading === 'reject'}
             variant="danger"
-            onClick={() => run('reject', apiUrl(`/api/leads/${lead.id}/reject`))}
+            onClick={() => run('reject', () => postAction(apiUrl(`/api/leads/${lead.id}/reject`)))}
           />
         )}
       </div>
@@ -87,11 +232,13 @@ function ActionButton({
   label,
   loading,
   variant = 'default',
+  disabled = false,
   onClick,
 }: {
   label: string;
   loading: boolean;
   variant?: 'default' | 'primary' | 'danger' | 'success';
+  disabled?: boolean;
   onClick: () => void;
 }) {
   const styles = {
@@ -104,7 +251,7 @@ function ActionButton({
   return (
     <button
       type="button"
-      disabled={loading}
+      disabled={loading || disabled}
       onClick={onClick}
       className={`rounded-lg border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${styles[variant]}`}
     >
@@ -147,14 +294,6 @@ export function LeadDetailView({ lead }: { lead: LeadWithMeta }) {
         </section>
       )}
 
-      {channel === 'email' && lead.comment_draft && (
-        <DraftBlock title="Email Draft" subject={lead.meta.email_subject} body={lead.comment_draft} />
-      )}
-
-      {lead.dm_draft && (
-        <DraftBlock title={channel === 'linkedin' ? 'LinkedIn DM' : 'LinkedIn Fallback'} body={lead.dm_draft} />
-      )}
-
       {lead.meta.source_link && (
         <section className="rounded-xl border border-axon-border bg-axon-surface p-5">
           <h2 className="text-xs uppercase tracking-wider text-axon-muted">Source</h2>
@@ -178,17 +317,5 @@ function InfoBlock({ title, value }: { title: string; value: string }) {
       <p className="text-xs uppercase tracking-wider text-axon-muted">{title}</p>
       <p className="mt-1 text-sm">{value}</p>
     </div>
-  );
-}
-
-function DraftBlock({ title, subject, body }: { title: string; subject?: string | null; body: string }) {
-  return (
-    <section className="rounded-xl border border-axon-border bg-axon-surface p-5">
-      <h2 className="text-xs uppercase tracking-wider text-axon-muted">{title}</h2>
-      {subject && <p className="mt-3 text-sm font-medium">Subject: {subject}</p>}
-      <pre className="mt-3 whitespace-pre-wrap font-[family-name:var(--font-display)] text-sm leading-relaxed text-axon-text/90">
-        {body}
-      </pre>
-    </section>
   );
 }

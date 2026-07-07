@@ -1,7 +1,7 @@
 'use client';
 
 import { apiUrl } from '@/lib/api-base';
-import { IT_QUICK_LINKS } from '@/lib/it-quick-links';
+import { useAxonQuickLinks } from '@/lib/use-axon-quick-links';
 import { appPath } from '@/lib/paths';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -49,6 +49,7 @@ function isActive(pathname: string, href: string, basePath?: string): boolean {
 
 export function Sidebar({ basePath }: { basePath?: string }) {
   const pathname = usePathname();
+  const quickLinks = useAxonQuickLinks();
 
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-axon-border bg-axon-surface">
@@ -92,15 +93,15 @@ export function Sidebar({ basePath }: { basePath?: string }) {
             My ITs
           </p>
           <div className="space-y-1">
-            {IT_QUICK_LINKS.map((tool) => (
+            {quickLinks.map((tool) => (
               <a
-                key={tool.slug}
+                key={tool.id ?? `${tool.href}-${tool.label}`}
                 href={tool.href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-axon-muted transition hover:bg-axon-elevated/50 hover:text-axon-text"
               >
-                <span>{tool.name}</span>
+                <span>{tool.label}</span>
               </a>
             ))}
           </div>
