@@ -3,6 +3,7 @@
  * Sync AXON web UI + lib modules into northside-intelligence portal.
  *
  * Trigger: .github/workflows/sync-ni-portal.yml on push to main (needs NI_GITHUB_PAT).
+ *   Manual: gh workflow run sync-ni-portal.yml (or push to watched paths on main).
  *   node scripts/sync-portal-ui.mjs /path/to/northside-intelligence
  *
  * Target layout:
