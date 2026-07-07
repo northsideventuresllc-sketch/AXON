@@ -78,6 +78,13 @@ const LIB_FILES = [
   'leads.ts',
 ];
 
+/** Removed from AXON — delete from portal on sync to avoid .ts/.mjs resolution collisions. */
+const STALE_LIB_FILES = [
+  'outreach-learn.mjs',
+  'outreach-reject.mjs',
+  'outreach-run.mjs',
+];
+
 const API_FILES = [
   'preferences/route.ts',
   'reset/route.ts',
@@ -231,6 +238,14 @@ function main() {
     }
     copyWithRewrite(src, join(libDest, file));
     console.log(`lib: ${file}`);
+  }
+
+  for (const file of STALE_LIB_FILES) {
+    const stale = join(libDest, file);
+    if (existsSync(stale)) {
+      unlinkSync(stale);
+      console.log(`removed stale lib: ${file}`);
+    }
   }
 
   syncApiBase(niRoot);
