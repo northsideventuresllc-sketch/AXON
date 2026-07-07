@@ -35,7 +35,7 @@ interface AxonInterfaceProps {
 }
 
 export function AxonInterface({
-  basePath = '',
+  basePath = "",
   initialMessages,
   initialWorkspace,
   initialPreferences,
@@ -43,9 +43,7 @@ export function AxonInterface({
 }: AxonInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [workspace, setWorkspace] = useState<AxonWorkspace>(initialWorkspace);
-  const [preferences, setPreferences] = useState<AxonPreferences>(
-    initialPreferences ?? DEFAULT_PREFERENCES
-  );
+  const [preferences, setPreferences] = useState<AxonPreferences>(initialPreferences ?? DEFAULT_PREFERENCES);
   const [input, setInput] = useState('');
   const [inputMode, setInputMode] = useState<InputMode>(initialProfile.input_mode);
   const [readAloud, setReadAloud] = useState(initialProfile.read_aloud);
