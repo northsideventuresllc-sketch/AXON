@@ -33,6 +33,7 @@ const COMPONENT_FILES = [
   'lead-detail.tsx',
   'notifications-panel.tsx',
   'panel-focus-view.tsx',
+  'sidebar.tsx',
   'stats-cards.tsx',
   'status-badge.tsx',
   'todo-panel.tsx',
@@ -61,7 +62,8 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/axon-([^']+)'/g, "from '@/lib/axon/axon-$1'")
     .replace(/from '@\/lib\/use-axon-voice'/g, "from '@/lib/axon/use-axon-voice'")
     .replace(/from '@\/lib\/leads'/g, "from '@/lib/axon/leads'")
-    .replace(/from '@\/lib\/types'/g, "from '@/lib/axon/types'");
+    .replace(/from '@\/lib\/types'/g, "from '@/lib/axon/types'")
+    .replace(/from '@\/lib\/paths'/g, "from '@/lib/axon/app-path'");
 }
 
 function copyWithRewrite(src, dest) {
@@ -194,6 +196,12 @@ function main() {
 
   syncApiBase(niRoot);
   console.log('lib: api-base.ts (portal variant)');
+
+  const appPathSrc = join(INTEGRATION_ROOT, 'src/lib/axon/app-path.ts');
+  if (existsSync(appPathSrc)) {
+    cpSync(appPathSrc, join(niRoot, 'src/lib/axon/app-path.ts'));
+    console.log('lib: app-path.ts (portal vanity routes)');
+  }
 
   for (const file of API_FILES) {
     const src = join(AXON_ROOT, 'app/api/axon', file);

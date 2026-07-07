@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { LeadWithMeta } from '@/lib/types';
+import { apiUrl } from '@/lib/api-base';
 import { StatusBadge } from './status-badge';
 
 async function postAction(url: string) {
@@ -45,14 +46,14 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
             label={channel === 'email' ? 'Approve & Send Email' : 'Approve (LinkedIn)'}
             loading={loading === 'approve'}
             variant="primary"
-            onClick={() => run('approve', `/api/leads/${lead.id}/approve`)}
+            onClick={() => run('approve', apiUrl(`/api/leads/${lead.id}/approve`))}
           />
         )}
         {canSentLi && (
           <ActionButton
             label="Mark LinkedIn Sent"
             loading={loading === 'sent-li'}
-            onClick={() => run('sent-li', `/api/leads/${lead.id}/sent-li`)}
+            onClick={() => run('sent-li', apiUrl(`/api/leads/${lead.id}/sent-li`))}
           />
         )}
         {canMarkWon && (
@@ -60,7 +61,7 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
             label="Mark Closed Won"
             loading={loading === 'won'}
             variant="success"
-            onClick={() => run('won', `/api/leads/${lead.id}/won`)}
+            onClick={() => run('won', apiUrl(`/api/leads/${lead.id}/won`))}
           />
         )}
         {canReject && (
@@ -68,7 +69,7 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
             label="Reject"
             loading={loading === 'reject'}
             variant="danger"
-            onClick={() => run('reject', `/api/leads/${lead.id}/reject`)}
+            onClick={() => run('reject', apiUrl(`/api/leads/${lead.id}/reject`))}
           />
         )}
       </div>

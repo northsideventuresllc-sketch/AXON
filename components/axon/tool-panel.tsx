@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import type { AxonTool } from '@/lib/axon-types';
+import { appPath } from '@/lib/paths';
 
 interface ToolPanelProps {
   tools: AxonTool[];
   metrics?: Record<string, string | number>;
+  basePath?: string;
 }
 
-export function ToolPanel({ tools, metrics = {} }: ToolPanelProps) {
+export function ToolPanel({ tools, metrics = {}, basePath }: ToolPanelProps) {
   return (
     <section className="axon-card-3d rounded-2xl border border-axon-border/50 bg-axon-surface/70 axon-glass backdrop-blur-sm">
       <div className="border-b border-axon-border/60 px-4 py-3">
@@ -17,14 +19,22 @@ export function ToolPanel({ tools, metrics = {} }: ToolPanelProps) {
       </div>
       <div className="grid gap-2 p-3 sm:grid-cols-2">
         {tools.map((tool) => (
-          <ToolCard key={tool.slug} tool={tool} metric={metrics[tool.slug]} />
+          <ToolCard key={tool.slug} tool={tool} metric={metrics[tool.slug]} basePath={basePath} />
         ))}
       </div>
     </section>
   );
 }
 
-function ToolCard({ tool, metric }: { tool: AxonTool; metric?: string | number }) {
+function ToolCard({
+  tool,
+  metric,
+  basePath,
+}: {
+  tool: AxonTool;
+  metric?: string | number;
+  basePath?: string;
+}) {
   const disabled = tool.status !== 'active';
 
   const inner = (
@@ -51,7 +61,8 @@ function ToolCard({ tool, metric }: { tool: AxonTool; metric?: string | number }
   );
 
   if (disabled) return inner;
-  return <Link href={tool.href}>{inner}</Link>;
+  const href = basePath ? appPath(tool.href, basePath) : tool.href;
+  return <Link href={href}>{inner}</Link>;
 }
 
 function StatusPill({ status }: { status: AxonTool['status'] }) {
