@@ -50,7 +50,8 @@ export async function generateAxonReply(
   userMessage: string,
   channel: 'chat' | 'voice',
   history: ChatMessage[],
-  operatorId = 'default'
+  operatorId = 'default',
+  sessionId?: string
 ) {
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   const { sbSelect } = createSupabaseClient(key);
@@ -98,6 +99,7 @@ Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand nam
     role: 'user',
     content: userMessage,
     channel,
+    session_id: sessionId,
   });
 
   const assistantMsg = await insertChatMessage({
@@ -105,6 +107,7 @@ Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand nam
     role: 'assistant',
     content: reply,
     channel,
+    session_id: sessionId,
     metadata: { signal_count: signals.length },
   });
 

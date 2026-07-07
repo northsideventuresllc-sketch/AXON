@@ -35,6 +35,7 @@ const COMPONENT_FILES = [
   'lead-detail.tsx',
   'notifications-panel.tsx',
   'panel-focus-view.tsx',
+  'previous-chats-flip.tsx',
   'sidebar.tsx',
   'stats-cards.tsx',
   'status-badge.tsx',
@@ -44,6 +45,7 @@ const COMPONENT_FILES = [
 ];
 
 const LIB_FILES = [
+  'axon-chat-sessions.ts',
   'axon-orb-theme.ts',
   'axon-preferences.ts',
   'axon-profile.ts',
