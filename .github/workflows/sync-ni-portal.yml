@@ -15,6 +15,8 @@ on:
       - 'lib/outreach-edit.ts'
       - 'lib/outreach-reject.ts'
       - 'lib/outreach-reject.mjs'
+      - 'lib/outreach-learn.ts'
+      - 'lib/outreach-learn.mjs'
       - 'lib/axon-quick-links.ts'
       - 'lib/use-axon-quick-links.ts'
       - 'lib/leads.ts'

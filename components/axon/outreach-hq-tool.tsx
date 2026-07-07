@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { LeadWithMeta, PipelineStats } from '@/lib/types';
+import type { OutreachTrainingSummary } from '@/lib/outreach-learn';
 import { LeadCard, LeadRow } from './lead-card';
 import { GoalProgress, PipelineBreakdown, StatsCards } from './stats-cards';
+import { OutreachTrainingPanel } from './outreach-training-panel';
 import { STATUS_ORDER } from '@/lib/types';
 import { appPath } from '@/lib/paths';
 import { consumeToolLaunch } from '@/lib/axon-user-tools';
@@ -23,6 +25,7 @@ const TABS: { id: OutreachHqTab; label: string }[] = [
 interface OutreachHqToolProps {
   stats: PipelineStats;
   leads: LeadWithMeta[];
+  training: OutreachTrainingSummary;
   basePath?: string;
   initialTab?: OutreachHqTab;
   pipelineFilter?: string;
@@ -31,6 +34,7 @@ interface OutreachHqToolProps {
 export function OutreachHqTool({
   stats,
   leads,
+  training,
   basePath,
   initialTab = 'overview',
   pipelineFilter,
@@ -105,6 +109,7 @@ export function OutreachHqTool({
 
           {tab === 'overview' && (
             <>
+              <OutreachTrainingPanel summary={training} />
               <StatsCards stats={stats} />
               <div className="grid gap-6 lg:grid-cols-2">
                 <GoalProgress stats={stats} />

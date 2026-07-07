@@ -38,6 +38,7 @@ const COMPONENT_FILES = [
   'lead-detail.tsx',
   'notifications-panel.tsx',
   'outreach-hq-tool.tsx',
+  'outreach-training-panel.tsx',
   'panel-focus-view.tsx',
   'previous-chats-flip.tsx',
   'sidebar.tsx',
@@ -60,6 +61,8 @@ const LIB_FILES = [
   'outreach-edit.ts',
   'outreach-reject.ts',
   'outreach-reject.mjs',
+  'outreach-learn.ts',
+  'outreach-learn.mjs',
   'axon-quick-links.ts',
   'use-axon-quick-links.ts',
   'types.ts',
@@ -86,6 +89,7 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/it-quick-links'/g, "from '@/lib/axon/it-quick-links'")
     .replace(/from '@\/lib\/outreach-edit'/g, "from '@/lib/axon/outreach-edit'")
     .replace(/from '@\/lib\/outreach-reject'/g, "from '@/lib/axon/outreach-reject'")
+    .replace(/from '@\/lib\/outreach-learn'/g, "from '@/lib/axon/outreach-learn'")
     .replace(/from '@\/lib\/axon-quick-links'/g, "from '@/lib/axon/axon-quick-links'")
     .replace(/from '@\/lib\/use-axon-quick-links'/g, "from '@/lib/axon/use-axon-quick-links'")
     .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")

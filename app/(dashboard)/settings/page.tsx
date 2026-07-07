@@ -4,6 +4,7 @@ import { AxonHomeSettings } from '@/components/axon/axon-home-settings';
 import { AxonNotificationSettings } from '@/components/axon/axon-notification-settings';
 import { AxonToolNameSettings } from '@/components/axon/axon-tool-name-settings';
 import { fetchTopSignals, fetchMemories, getOperatorProfile } from '@/lib/axon-profile';
+import { getOutreachTrainingSummary } from '@/lib/outreach-learn';
 import { getPreferences } from '@/lib/axon-preferences';
 
 export const dynamic = 'force-dynamic';
@@ -16,11 +17,12 @@ const GUARDRAILS = [
 ];
 
 export default async function SettingsPage() {
-  const [profile, signals, memories, preferences] = await Promise.all([
+  const [profile, signals, memories, preferences, outreachTraining] = await Promise.all([
     getOperatorProfile(),
     fetchTopSignals(undefined, 8),
     fetchMemories(undefined, 5),
     getPreferences(),
+    getOutreachTrainingSummary({ limit: 40 }),
   ]);
 
   return (
@@ -74,6 +76,48 @@ export default async function SettingsPage() {
           </div>
         </section>
       )}
+
+      <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
+        <h2 className="text-sm font-medium">Outreach Training Learnings</h2>
+        <p className="mt-1 text-xs text-axon-muted">
+          From draft edits, reject reasons, and approvals in NI Outreach HQ — injected into nightly drafts.
+        </p>
+        {outreachTraining.active ? (
+          <div className="mt-4 space-y-4">
+            {outreachTraining.topRejectReasons.length > 0 && (
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-axon-muted">Avoid</p>
+                <ul className="mt-2 space-y-1.5 text-sm">
+                  {outreachTraining.topRejectReasons.slice(0, 6).map(({ reason, count }) => (
+                    <li key={reason} className="flex justify-between gap-3 text-axon-text">
+                      <span>{reason}</span>
+                      <span className="font-mono text-xs text-axon-muted">×{count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <dl className="grid gap-3 text-xs sm:grid-cols-3">
+              <div>
+                <dt className="text-axon-muted">Signals</dt>
+                <dd className="font-mono text-axon-teal">{outreachTraining.signalCount}</dd>
+              </div>
+              <div>
+                <dt className="text-axon-muted">Approved</dt>
+                <dd className="font-mono">{outreachTraining.approvals.total}</dd>
+              </div>
+              <div>
+                <dt className="text-axon-muted">Unchanged</dt>
+                <dd className="font-mono">{outreachTraining.approvals.unchanged}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-axon-muted">
+            No training signals yet. Edit a draft or reject with a reason in Outreach HQ.
+          </p>
+        )}
+      </section>
 
       {memories.length > 0 && (
         <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">

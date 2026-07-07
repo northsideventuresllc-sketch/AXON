@@ -16,6 +16,7 @@ import {
   todayUtc,
 } from '../lib/constants.mjs';
 import { jobBoardReason, leadRejectReason, rejectPendingJobBoardLeads } from '../lib/icp-filter.mjs';
+import { loadOutreachTrainingPrompt } from '../lib/outreach-learn.mjs';
 import { searchProspects } from '../lib/serpapi.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { recordDraftNotification } from '../lib/telegram-handler.mjs';
@@ -54,9 +55,22 @@ async function main() {
   );
   const cfg = await loadConfig(sbSelect);
 
+  let trainingBlock = '';
+  try {
+    const training = await loadOutreachTrainingPrompt({ sbSelect, sbInsert });
+    trainingBlock = training.promptBlock;
+    if (training.summary.active) {
+      console.log(
+        `Training mode: ${training.summary.signalCount} signal(s) — injecting into draft prompt`
+      );
+    }
+  } catch (err) {
+    console.warn(`Training signals load failed (continuing): ${err.message}`);
+  }
+
   // ICP sweep: clear job-board noise already sitting in the approval queue
   try {
-    const swept = await rejectPendingJobBoardLeads({ sbSelect, sbPatch }, SOURCE, {
+    const swept = await rejectPendingJobBoardLeads({ sbSelect, sbPatch, sbInsert }, SOURCE, {
       dryRun: cfg.dryRun,
     });
     if (swept.length) console.log(`ICP sweep: auto-rejected ${swept.length} job-board lead(s)`);
@@ -130,7 +144,7 @@ async function main() {
 
     let draft;
     try {
-      draft = await haikuScoreAndDraft(cfg, scan, prospect);
+      draft = await haikuScoreAndDraft(cfg, scan, prospect, trainingBlock);
     } catch (err) {
       console.warn(`Haiku draft skip: ${err.message}`);
       continue;
