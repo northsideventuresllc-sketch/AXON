@@ -152,6 +152,7 @@ function patchPackageJson(niRoot) {
   let changed = false;
   for (const [name, version] of Object.entries({
     three: '^0.185.1',
+    'jarvis-ai-web-animation': '^0.1.2',
   })) {
     if (pkg.dependencies[name] !== version) {
       pkg.dependencies[name] = version;
