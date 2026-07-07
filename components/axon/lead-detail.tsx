@@ -299,10 +299,12 @@ export function LeadDetailView({ lead }: { lead: LeadWithMeta }) {
 
       <LeadActions lead={lead} />
 
-      {(lead.status === 'dead' && lead.meta.rejected_reason) && (
+      {(lead.status === 'dead' && (lead.meta.rejected_reason || lead.meta.auto_rejected_reason)) && (
         <section className="rounded-xl border border-axon-danger/30 bg-axon-danger/5 p-5">
           <h2 className="text-xs uppercase tracking-wider text-axon-danger/80">Reject reason</h2>
-          <p className="mt-2 text-sm leading-relaxed text-axon-text">{lead.meta.rejected_reason}</p>
+          <p className="mt-2 text-sm leading-relaxed text-axon-text">
+            {lead.meta.rejected_reason || lead.meta.auto_rejected_reason}
+          </p>
           {lead.meta.rejected_via && (
             <p className="mt-2 text-xs text-axon-muted">
               via {lead.meta.rejected_via}

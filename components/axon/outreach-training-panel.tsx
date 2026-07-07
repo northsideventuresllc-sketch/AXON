@@ -37,6 +37,12 @@ export function OutreachTrainingPanel({ summary }: { summary: OutreachTrainingSu
               <dt className="text-axon-muted">Unchanged</dt>
               <dd className="font-mono text-axon-text">{summary.approvals.unchanged}</dd>
             </div>
+            {summary.icpDropCount > 0 && (
+              <div>
+                <dt className="text-axon-muted">ICP drops</dt>
+                <dd className="font-mono text-axon-muted">{summary.icpDropCount}</dd>
+              </div>
+            )}
           </dl>
         )}
       </div>

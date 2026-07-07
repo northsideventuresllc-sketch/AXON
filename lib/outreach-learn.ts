@@ -1,4 +1,5 @@
 import {
+  buildOperatorAvoidPatterns,
   buildTrainingPromptBlock,
   fetchOutreachTrainingSignals,
   leadHadDraftEdits,
@@ -20,12 +21,14 @@ export interface OutreachTrainingSummary {
   topRejectReasons: OutreachRejectReasonCount[];
   editFieldCounts: Record<string, number>;
   approvals: { unchanged: number; edited: number; total: number };
+  icpDropCount: number;
   active: boolean;
 }
 
 export interface OutreachTrainingPayload {
   summary: OutreachTrainingSummary;
   promptBlock: string;
+  operatorAvoidPatterns: string[];
 }
 
 export async function getOutreachTrainingSummary(
@@ -62,5 +65,6 @@ export {
   loadOutreachTrainingPrompt,
   logOutreachApproveSignal,
   logOutreachAutoRejectSignal,
+  buildOperatorAvoidPatterns,
   summarizeOutreachTraining,
 };
