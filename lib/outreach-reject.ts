@@ -1,4 +1,4 @@
-import { rejectOutreachLeadWithClient, getRejectReasonFromNotes } from './outreach-reject.mjs';
+import { rejectOutreachLeadWithClient, getRejectReasonFromNotes } from './outreach-reject-core.mjs';
 import { getClient } from './leads';
 import { OPERATOR_ID } from './axon-types';
 import type { LeadWithMeta } from './types';

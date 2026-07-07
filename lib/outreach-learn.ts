@@ -9,7 +9,7 @@ import {
   logOutreachAutoRejectSignal,
   summarizeOutreachTraining,
   summarizeIcpDropStages,
-} from './outreach-learn.mjs';
+} from './outreach-learn-core.mjs';
 import { getClient } from './leads';
 import { OPERATOR_ID } from './axon-types';
 
