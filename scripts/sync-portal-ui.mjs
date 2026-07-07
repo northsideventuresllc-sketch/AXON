@@ -63,6 +63,7 @@ const LIB_FILES = [
   'types.ts',
   'use-axon-tool-display-names.ts',
   'use-axon-voice.ts',
+  'leads.ts',
 ];
 
 const API_FILES = [

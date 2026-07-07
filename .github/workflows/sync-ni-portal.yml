@@ -15,6 +15,8 @@ on:
       - 'lib/outreach-edit.ts'
       - 'lib/axon-quick-links.ts'
       - 'lib/use-axon-quick-links.ts'
+      - 'lib/leads.ts'
+      - 'app/api/leads/**'
       - 'lib/use-axon-voice.ts'
       - 'app/globals.css'
       - 'portal-integration/**'
