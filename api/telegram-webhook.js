@@ -1,6 +1,6 @@
 import { loadConfig } from '../lib/config.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
-import { handleTelegramMessage } from '../lib/telegram-handler.mjs';
+import { handleTelegramCallback, handleTelegramMessage } from '../lib/telegram-handler.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -35,6 +35,9 @@ export default async function handler(req, res) {
     const msg = update?.message;
     if (msg?.text) {
       await handleTelegramMessage(cfg, sb, msg);
+    }
+    if (update?.callback_query) {
+      await handleTelegramCallback(cfg, sb, update.callback_query);
     }
 
     return res.status(200).json({ ok: true });
