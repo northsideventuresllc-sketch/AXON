@@ -57,6 +57,9 @@ const LIB_FILES = [
   'axon-user-tools.ts',
   'axon-workspace.ts',
   'it-quick-links.ts',
+  'outreach-edit.ts',
+  'axon-quick-links.ts',
+  'use-axon-quick-links.ts',
   'types.ts',
   'use-axon-tool-display-names.ts',
   'use-axon-voice.ts',
@@ -65,6 +68,8 @@ const LIB_FILES = [
 const API_FILES = [
   'preferences/route.ts',
   'reset/route.ts',
+  'outreach/[id]/route.ts',
+  'quick-links/route.ts',
 ];
 
 function rewriteImports(content) {
@@ -75,6 +80,9 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/leads'/g, "from '@/lib/axon/leads'")
     .replace(/from '@\/lib\/types'/g, "from '@/lib/axon/types'")
     .replace(/from '@\/lib\/it-quick-links'/g, "from '@/lib/axon/it-quick-links'")
+    .replace(/from '@\/lib\/outreach-edit'/g, "from '@/lib/axon/outreach-edit'")
+    .replace(/from '@\/lib\/axon-quick-links'/g, "from '@/lib/axon/axon-quick-links'")
+    .replace(/from '@\/lib\/use-axon-quick-links'/g, "from '@/lib/axon/use-axon-quick-links'")
     .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")
     .replace(/from '@\/lib\/use-axon-tool-display-names'/g, "from '@/lib/axon/use-axon-tool-display-names'")
     .replace(/from '@\/lib\/paths'/g, "from '@/lib/axon/app-path'");

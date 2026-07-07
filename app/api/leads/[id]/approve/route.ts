@@ -5,20 +5,32 @@ import { resendSend } from '@/lib/resend.mjs';
 import { fetchLeadById, getClient, updateLeadStatus } from '@/lib/leads';
 import { shortId } from '@/lib/constants.mjs';
 
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const lead = await fetchLeadById(id);
     if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
 
+    let send = true;
+    try {
+      const body = await req.json();
+      if (body && typeof body.send === 'boolean') send = body.send;
+    } catch {
+      /* no JSON body — default send=true for backward compatibility */
+    }
+
     const { sbSelect } = getClient();
     const cfg = await loadConfig(sbSelect);
     const meta = parseNotes(lead.notes);
 
-    if (meta.channel === 'linkedin') {
+    if (meta.channel === 'linkedin' || !send) {
       await updateLeadStatus(id, { status: 'approved' });
+      const suffix =
+        meta.channel === 'linkedin'
+          ? ' (LinkedIn). Copy the DM and send manually, then mark as sent.'
+          : '. Send manually when ready.';
       return NextResponse.json({
-        message: `Approved ${shortId(id)} (LinkedIn). Copy the DM and send manually, then mark as sent.`,
+        message: `Approved ${shortId(id)}${suffix}`,
       });
     }
 
