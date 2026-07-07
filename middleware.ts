@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE } from '@/lib/auth';
+import { getBasePath, stripBasePath } from '@/lib/paths';
 
-const PUBLIC_PATHS = ['/login', '/api/waitlist', '/api/telegram-webhook'];
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/waitlist', '/api/telegram-webhook'];
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const basePath = getBasePath();
+  const { pathname: rawPathname } = request.nextUrl;
+  const pathname = stripBasePath(rawPathname);
 
   if (
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
@@ -24,8 +27,8 @@ export function middleware(request: NextRequest) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('next', pathname);
+    const loginUrl = new URL(`${basePath}/login`, request.url);
+    loginUrl.searchParams.set('next', `${basePath}${pathname}`);
     return NextResponse.redirect(loginUrl);
   }
 

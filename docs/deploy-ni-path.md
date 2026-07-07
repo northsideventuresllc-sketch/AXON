@@ -58,7 +58,11 @@ Required for portal AXON routes:
 |-----|----------|
 | `https://northsideintelligence.com/axon` | Waitlist landing |
 | `https://northsideintelligence.com/axon-{username}/dashboard` | Latest AXON UI (master, signed in) |
+| `https://northsideintelligence.com/axon-{username}/queue` | Approval queue (sidebar nav) |
+| `https://northsideintelligence.com/axon-{username}/pipeline` | Full pipeline |
 | `https://workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/axon/login` | Standalone password login |
+
+**Standalone basePath:** middleware and auth cookies must use `NEXT_PUBLIC_BASE_PATH` — unauthenticated redirects go to `/axon/login`, not `/login` (404).
 
 Telegram webhook (production): root Vercel URL `/api/telegram-webhook` on the **workspace** project — not the NI portal path.
 

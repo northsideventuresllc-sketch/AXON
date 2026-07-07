@@ -1,6 +1,7 @@
 'use client';
 
 import { apiUrl } from '@/lib/api-base';
+import { appPath } from '@/lib/paths';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AxonTestNotificationButtons } from './axon-test-notification-buttons';
@@ -13,10 +14,10 @@ const NAV = [
   { href: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
-function SignOutButton() {
+function SignOutButton({ basePath }: { basePath?: string }) {
   async function handleSignOut() {
     await fetch(apiUrl('/api/auth/logout'), { method: 'POST' });
-    window.location.href = apiUrl('/login');
+    window.location.href = basePath ? appPath('/login', basePath) : apiUrl('/login');
   }
 
   return (
@@ -30,7 +31,22 @@ function SignOutButton() {
   );
 }
 
-export function Sidebar() {
+function resolveHref(href: string, basePath?: string): string {
+  return basePath ? appPath(href, basePath) : href;
+}
+
+function isActive(pathname: string, href: string, basePath?: string): boolean {
+  const resolved = resolveHref(href, basePath);
+  if (href === '/') {
+    if (basePath) {
+      return pathname === basePath || pathname === `${basePath}/dashboard`;
+    }
+    return pathname === '/';
+  }
+  return pathname === resolved || pathname.startsWith(`${resolved}/`);
+}
+
+export function Sidebar({ basePath }: { basePath?: string }) {
   const pathname = usePathname();
 
   return (
@@ -44,14 +60,12 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-1 px-3 py-4">
         {NAV.map((item) => {
-          const active =
-            item.href === '/'
-              ? pathname === '/'
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = isActive(pathname, item.href, basePath);
+          const href = resolveHref(item.href, basePath);
           return (
             <div key={item.href}>
               <Link
-                href={item.href}
+                href={href}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                   active
                     ? 'bg-axon-blue/15 text-axon-cyan'
@@ -72,7 +86,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-axon-border px-4 py-4">
-        <SignOutButton />
+        <SignOutButton basePath={basePath} />
       </div>
     </aside>
   );

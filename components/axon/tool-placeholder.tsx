@@ -1,15 +1,20 @@
 import Link from 'next/link';
+import { appPath } from '@/lib/paths';
 
 export function ToolPlaceholder({
   title,
   description,
+  basePath,
 }: {
   title: string;
   description: string;
+  basePath?: string;
 }) {
+  const homeHref = basePath ? appPath('/', basePath) : '/';
+
   return (
     <div className="space-y-6">
-      <Link href="/" className="text-sm text-axon-muted hover:text-axon-gold">
+      <Link href={homeHref} className="text-sm text-axon-muted hover:text-axon-gold">
         ← Back to AXON
       </Link>
       <div className="rounded-xl border border-dashed border-axon-border p-12 text-center">

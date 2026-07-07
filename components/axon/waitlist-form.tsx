@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { apiUrl } from '@/lib/api-base';
 
 export function WaitlistForm() {
   const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ export function WaitlistForm() {
     setStatus('loading');
     setMessage('');
 
-    const res = await fetch('/api/waitlist', {
+    const res = await fetch(apiUrl('/api/waitlist'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
