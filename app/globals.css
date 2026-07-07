@@ -828,3 +828,130 @@
 .axon-chats-flip-back .axon-chats-session-list {
   animation: axon-chats-flip-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+/* AXON tool workspace enter + branded launch overlay */
+@keyframes axon-tool-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.axon-tool-enter {
+  animation: axon-tool-enter 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.axon-tool-enter--delayed {
+  opacity: 0;
+  animation-delay: 1.35s;
+}
+
+.axon-tool-launch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(12, 28, 48, 0.97), rgba(4, 8, 16, 0.99));
+  animation: axon-launch-bg-in 0.35s ease-out forwards;
+}
+
+.axon-tool-launch-overlay--exit {
+  animation: axon-launch-bg-out 0.4s ease-in forwards;
+}
+
+.axon-tool-launch-overlay__glow {
+  position: absolute;
+  width: min(420px, 70vw);
+  height: min(420px, 70vw);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.35) 0%, transparent 70%);
+  animation: axon-launch-pulse 1.2s ease-in-out infinite;
+}
+
+.axon-tool-launch-overlay__ring {
+  position: absolute;
+  width: min(280px, 55vw);
+  height: min(280px, 55vw);
+  border-radius: 50%;
+  border: 2px solid rgba(212, 175, 55, 0.45);
+  box-shadow: 0 0 60px rgba(56, 189, 248, 0.25), inset 0 0 40px rgba(212, 175, 55, 0.08);
+  animation: axon-launch-ring 1.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.axon-tool-launch-overlay__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  animation: axon-launch-content-in 0.5s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.axon-tool-launch-overlay__brand {
+  display: block;
+  font-size: 0.65rem;
+  letter-spacing: 0.45em;
+  color: var(--axon-blue-glow, #38bdf8);
+  margin-bottom: 0.75rem;
+}
+
+.axon-tool-launch-overlay__icon {
+  display: block;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.9;
+}
+
+.axon-tool-launch-overlay__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: var(--axon-muted, #94a3b8);
+}
+
+.axon-tool-launch-overlay__name {
+  margin-top: 0.35rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #d4af37, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes axon-launch-bg-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes axon-launch-bg-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes axon-launch-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes axon-launch-ring {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+@keyframes axon-launch-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

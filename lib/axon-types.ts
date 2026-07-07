@@ -249,9 +249,9 @@ export const HOME_WIDGET_LABELS: Record<HomeWidgetId, string> = {
 export const AXON_TOOLS: AxonTool[] = [
   {
     slug: 'ni-services-outreach',
-    name: 'NI Services Outreach',
+    name: 'NI Outreach HQ',
     description:
-      '24/7 B2B prospecting — find, score, draft outreach, queue for approval, close paid clients.',
+      '24/7 B2B prospecting — queue, pipeline, and approval in one workspace.',
     status: 'active',
     icon: '◎',
     href: '/tools/ni-outreach',

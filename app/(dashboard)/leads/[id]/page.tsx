@@ -12,7 +12,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="space-y-6">
-      <Link href="/pipeline" className="text-sm text-axon-muted hover:text-axon-gold">
+      <Link href="/tools/ni-outreach?tab=pipeline" className="text-sm text-axon-muted hover:text-axon-gold">
         ← Back to pipeline
       </Link>
       <LeadDetailView lead={lead} />

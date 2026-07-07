@@ -6,12 +6,10 @@ import { appPath } from '@/lib/paths';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AxonTestNotificationButtons } from './axon-test-notification-buttons';
+import { AxonToolsNav } from './axon-tools-nav';
 
 const NAV = [
   { href: '/', label: 'AXON', icon: '◈' },
-  { href: '/tools/ni-outreach', label: 'Outreach', icon: '◎' },
-  { href: '/queue', label: 'Queue', icon: '▣' },
-  { href: '/pipeline', label: 'Pipeline', icon: '▤' },
   { href: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
@@ -87,9 +85,11 @@ export function Sidebar({ basePath }: { basePath?: string }) {
           );
         })}
 
+        <AxonToolsNav basePath={basePath} />
+
         <div className="mt-4 border-t border-axon-border/60 pt-4">
           <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.2em] text-axon-muted">
-            Intelligence Tools
+            My ITs
           </p>
           <div className="space-y-1">
             {IT_QUICK_LINKS.map((tool) => (
