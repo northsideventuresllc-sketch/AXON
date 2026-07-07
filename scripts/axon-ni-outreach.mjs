@@ -23,7 +23,7 @@ import {
   rejectPendingIcpViolations,
   scanIcpRejectReason,
 } from '../lib/icp-filter.mjs';
-import { loadOutreachTrainingPrompt, logOutreachIcpDropSignal } from '../lib/outreach-learn.mjs';
+import { loadOutreachTrainingPrompt, logOutreachIcpDropSignal } from '../lib/outreach-learn-core.mjs';
 import { searchProspects } from '../lib/serpapi.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { recordDraftNotification } from '../lib/telegram-handler.mjs';

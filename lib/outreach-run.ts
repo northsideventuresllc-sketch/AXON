@@ -1,4 +1,4 @@
-import { dispatchOutreachRun, fetchLatestOutreachRun } from './outreach-run.mjs';
+import { dispatchOutreachRun, fetchLatestOutreachRun } from './outreach-run-core.mjs';
 
 export interface OutreachRunStatus {
   configured: boolean;
