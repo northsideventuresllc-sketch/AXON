@@ -1,0 +1,62 @@
+name: Sync AXON UI to NI Portal
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'components/axon/**'
+      - 'app/globals.css'
+      - 'lib/axon-*.ts'
+      - 'lib/use-axon-voice.ts'
+      - 'lib/types.ts'
+      - 'portal-integration/**'
+      - 'scripts/sync-portal-ui.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout AXON
+        uses: actions/checkout@v4
+
+      - name: Checkout northside-intelligence
+        uses: actions/checkout@v4
+        with:
+          repository: northsideventuresllc-sketch/northside-intelligence
+          token: ${{ secrets.NI_PORTAL_SYNC_TOKEN }}
+          path: northside-intelligence
+
+      - name: Sync UI
+        run: node scripts/sync-portal-ui.mjs ./northside-intelligence
+
+      - name: Build NI portal
+        working-directory: northside-intelligence
+        run: |
+          npm ci
+          npm run build
+
+      - name: Create NI portal PR
+        working-directory: northside-intelligence
+        env:
+          GH_TOKEN: ${{ secrets.NI_PORTAL_SYNC_TOKEN }}
+        run: |
+          set -e
+          BRANCH="sync/axon-ui-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          if git diff --quiet; then
+            echo "No changes to sync."
+            exit 0
+          fi
+          git add -A
+          git commit -m "Sync latest AXON holo UI into NI portal dashboard"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "Sync latest AXON holo UI into NI portal dashboard" \
+            --body "Automated sync from AXON main (${GITHUB_SHA}). Merge to deploy the latest holographic AXON home UI to northsideintelligence.com/axon-{username}/dashboard." \
+            --base main
