@@ -75,6 +75,7 @@ const API_FILES = [
 function rewriteImports(content) {
   return content
     .replace(/from '@\/lib\/api-base'/g, "from '@/lib/axon/api-base'")
+    .replace(/from '@\/components\/axon\//g, "from '@/components/axon-ui/")
     .replace(/from '@\/lib\/axon-([^']+)'/g, "from '@/lib/axon/axon-$1'")
     .replace(/from '@\/lib\/use-axon-voice'/g, "from '@/lib/axon/use-axon-voice'")
     .replace(/from '@\/lib\/leads'/g, "from '@/lib/axon/leads'")

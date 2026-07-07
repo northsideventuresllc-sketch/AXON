@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { LeadWithMeta, PipelineStats } from '@/lib/types';
-import { LeadCard, LeadRow } from '@/components/axon/lead-card';
-import { GoalProgress, PipelineBreakdown, StatsCards } from '@/components/axon/stats-cards';
+import { LeadCard, LeadRow } from './lead-card';
+import { GoalProgress, PipelineBreakdown, StatsCards } from './stats-cards';
 import { STATUS_ORDER } from '@/lib/types';
 import { appPath } from '@/lib/paths';
 import { consumeToolLaunch } from '@/lib/axon-user-tools';
 import { useAxonToolDisplayNames } from '@/lib/use-axon-tool-display-names';
-import { AxonToolLaunchOverlay } from '@/components/axon/axon-tool-launch-overlay';
+import { AxonToolLaunchOverlay } from './axon-tool-launch-overlay';
 
 export type OutreachHqTab = 'overview' | 'queue' | 'pipeline';
 
