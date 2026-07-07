@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { OutreachHqTool } from '@/components/axon-ui/outreach-hq-tool';
 import { fetchLeads, fetchPipelineStats } from '@/lib/axon/leads';
-import { getOutreachTrainingSummary } from '@/lib/axon/outreach-learn';
+import { getOutreachTrainingSummary, getOutreachIcpChecklistMeta } from '@/lib/axon/outreach-learn';
 import { axonPublicPath } from '@/lib/axon/paths';
 import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
 
@@ -25,12 +25,16 @@ export default async function AxonNiOutreachPage({
   const initialTab =
     tab === 'queue' || tab === 'pipeline' || tab === 'overview' ? tab : 'overview';
 
+  const { minScore, todayQueries } = getOutreachIcpChecklistMeta();
+
   return (
     <Suspense fallback={<div className="text-sm text-axon-muted">Loading NI Outreach HQ…</div>}>
       <OutreachHqTool
         stats={stats}
         leads={leads}
         training={training}
+        todayQueries={todayQueries}
+        minScore={minScore}
         basePath={basePath}
         initialTab={initialTab}
         pipelineFilter={tab === 'pipeline' ? status : undefined}

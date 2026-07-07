@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { fetchLeads, fetchPipelineStats } from '@/lib/leads';
-import { getOutreachTrainingSummary } from '@/lib/outreach-learn';
+import { getOutreachTrainingSummary, getOutreachIcpChecklistMeta } from '@/lib/outreach-learn';
 import { OutreachHqTool } from '@/components/axon/outreach-hq-tool';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +16,7 @@ export default async function NiOutreachToolPage({
     fetchLeads(500),
     getOutreachTrainingSummary(),
   ]);
+  const { minScore, todayQueries } = getOutreachIcpChecklistMeta();
   const initialTab =
     tab === 'queue' || tab === 'pipeline' || tab === 'overview' ? tab : 'overview';
 
@@ -25,6 +26,8 @@ export default async function NiOutreachToolPage({
         stats={stats}
         leads={leads}
         training={training}
+        todayQueries={todayQueries}
+        minScore={minScore}
         initialTab={initialTab}
         pipelineFilter={tab === 'pipeline' ? status : undefined}
       />

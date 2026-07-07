@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LeadWithMeta } from '@/lib/types';
 import { apiUrl } from '@/lib/api-base';
 import { StatusBadge } from './status-badge';
+import { IcpFitBadge } from './icp-fit-badge';
 
 interface DraftState {
   emailSubject: string;
@@ -291,6 +292,12 @@ export function LeadDetailView({ lead }: { lead: LeadWithMeta }) {
             <StatusBadge status={lead.status} />
           </div>
           <h1 className="mt-2 text-2xl font-semibold">{lead.handle}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <IcpFitBadge meta={lead.meta} />
+            {lead.meta.icp_scan?.industry && (
+              <span className="text-xs text-axon-muted">{lead.meta.icp_scan.industry}</span>
+            )}
+          </div>
           <p className="mt-1 text-sm text-axon-muted">
             {lead.niche} · {lead.target_group?.toUpperCase()} · Score {lead.meta.score ?? '—'}
           </p>

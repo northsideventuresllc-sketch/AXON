@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { LeadWithMeta } from '@/lib/types';
 import { appPath } from '@/lib/paths';
 import { StatusBadge } from './status-badge';
+import { IcpFitBadge } from './icp-fit-badge';
 
 export function LeadCard({ lead, basePath }: { lead: LeadWithMeta; basePath?: string }) {
   const channel = lead.meta.channel || 'email';
@@ -22,6 +23,7 @@ export function LeadCard({ lead, basePath }: { lead: LeadWithMeta; basePath?: st
                 {score}
               </span>
             )}
+            <IcpFitBadge meta={lead.meta} />
           </div>
           <h3 className="mt-1 truncate text-base font-medium group-hover:text-axon-gold">
             {lead.handle}
@@ -57,7 +59,10 @@ export function LeadRow({ lead, basePath }: { lead: LeadWithMeta; basePath?: str
     >
       <span className="font-mono text-xs text-axon-gold">{lead.shortId}</span>
       <div className="min-w-0">
-        <p className="truncate font-medium">{lead.handle}</p>
+        <div className="flex items-center gap-2">
+          <p className="truncate font-medium">{lead.handle}</p>
+          <IcpFitBadge meta={lead.meta} />
+        </div>
         <p className="truncate text-xs text-axon-muted">{lead.niche}</p>
       </div>
       <span className="text-xs capitalize text-axon-muted">{channel}</span>
