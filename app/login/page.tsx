@@ -23,8 +23,10 @@ interface VerifyErrorResponse {
   lockout?: {
     locked: boolean;
     lockoutUntil?: string | null;
+    locked_until?: string | null;
     attemptsRemaining?: number;
     failedAttempts?: number;
+    tries_remaining_in_phase?: number;
   };
   displayName?: string;
 }
@@ -37,15 +39,19 @@ function secondsUntil(iso: string | null | undefined): number {
 function mapLockout(data: {
   locked?: boolean;
   lockoutUntil?: string | null;
+  locked_until?: string | null;
   attemptsRemaining?: number;
+  tries_remaining_in_phase?: number;
   failedAttempts?: number;
 }): PasscodeLockoutState {
+  const lockoutUntil = data.lockoutUntil ?? data.locked_until ?? null;
+  const attemptsRemaining = data.attemptsRemaining ?? data.tries_remaining_in_phase;
   return {
     locked: Boolean(data.locked),
-    lockoutUntil: data.lockoutUntil,
-    attemptsRemaining: data.attemptsRemaining,
+    lockoutUntil,
+    attemptsRemaining,
     attemptsUsed: data.failedAttempts,
-    lockoutSecondsRemaining: data.locked ? secondsUntil(data.lockoutUntil) : 0,
+    lockoutSecondsRemaining: data.locked ? secondsUntil(lockoutUntil) : 0,
   };
 }
 
