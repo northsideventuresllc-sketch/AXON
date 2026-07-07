@@ -739,3 +739,571 @@
   transform: perspective(800px) rotateY(-8deg) scale(0.9);
   transform-origin: left center;
 }
+
+/* ── Passcode gate — Iron Man HUD ───────────────────────────────────── */
+
+.hex-grid-bg {
+  background-color: var(--color-axon-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 0 L56 16.5 L56 50 L28 66.5 L0 50 L0 16.5 Z' fill='none' stroke='rgba(34,211,238,0.045)' stroke-width='1'/%3E%3Cpath d='M28 33.5 L56 50 L56 83.5 L28 100 L0 83.5 L0 50 Z' fill='none' stroke='rgba(37,99,235,0.035)' stroke-width='1'/%3E%3C/svg%3E");
+  background-size: 56px 100px;
+}
+
+.axon-passcode-screen {
+  isolation: isolate;
+}
+
+.axon-passcode-scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(34, 211, 238, 0.018) 2px,
+    rgba(34, 211, 238, 0.018) 4px
+  );
+  animation: axon-passcode-scanline-drift 8s linear infinite;
+}
+
+.axon-passcode-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(5, 11, 22, 0.75) 100%);
+}
+
+@keyframes axon-passcode-scanline-drift {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(4px);
+  }
+}
+
+.axon-passcode-shell {
+  z-index: 10;
+  transition: transform 0.35s ease;
+}
+
+.axon-passcode-shell--error {
+  animation: shake-deny 0.52s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.axon-passcode-shake {
+  animation: shake-deny 0.52s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes shake-deny {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15%,
+  45%,
+  75% {
+    transform: translateX(-8px);
+  }
+  30%,
+  60%,
+  90% {
+    transform: translateX(8px);
+  }
+}
+
+.axon-passcode-shell--error .axon-passcode-panel {
+  animation: glitch-flash 0.45s ease-out;
+}
+
+@keyframes glitch-flash {
+  0%,
+  100% {
+    box-shadow:
+      0 0 40px rgba(37, 99, 235, 0.14),
+      inset 0 0 0 1px rgba(240, 113, 120, 0);
+  }
+  25%,
+  75% {
+    box-shadow:
+      0 0 48px rgba(240, 113, 120, 0.35),
+      inset 0 0 60px rgba(240, 113, 120, 0.12);
+    border-color: rgba(240, 113, 120, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 32px rgba(240, 113, 120, 0.2),
+      inset 0 0 40px rgba(240, 113, 120, 0.08);
+  }
+}
+
+.axon-passcode-scan-sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.axon-passcode-scan-sweep::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(34, 211, 238, 0.9),
+    rgba(96, 165, 250, 0.95),
+    transparent
+  );
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.8);
+  animation: scan-sweep 1.2s ease-out forwards;
+}
+
+@keyframes scan-sweep {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.axon-passcode-panel-glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgba(34, 211, 238, 0.06) 0%,
+    transparent 40%,
+    rgba(99, 102, 241, 0.08) 100%
+  );
+}
+
+.axon-passcode-shell--success .axon-passcode-panel-glow {
+  animation: axon-passcode-success-glow 2s ease-in-out infinite;
+}
+
+@keyframes axon-passcode-success-glow {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.axon-passcode-title {
+  background: linear-gradient(160deg, #e8f0fa 0%, #60a5fa 45%, #22d3ee 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.25));
+}
+
+/* Arc reactor orb */
+.axon-passcode-arc-reactor {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.axon-passcode-arc-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+}
+
+.axon-passcode-arc-ring--outer {
+  inset: 0;
+  animation: arc-pulse 3s ease-in-out infinite;
+}
+
+.axon-passcode-arc-ring--mid {
+  inset: 12px;
+  border-color: rgba(37, 99, 235, 0.45);
+  animation: arc-pulse 2.4s ease-in-out infinite 0.3s;
+}
+
+.axon-passcode-arc-ring--inner {
+  inset: 22px;
+  border-color: rgba(96, 165, 250, 0.5);
+  animation: arc-pulse 2s ease-in-out infinite 0.6s;
+}
+
+.axon-passcode-arc-core {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 40% 35%,
+    rgba(224, 242, 254, 0.95) 0%,
+    rgba(34, 211, 238, 0.85) 35%,
+    rgba(37, 99, 235, 0.7) 70%,
+    rgba(5, 11, 22, 0.9) 100%
+  );
+  box-shadow:
+    0 0 28px rgba(34, 211, 238, 0.55),
+    0 0 48px rgba(37, 99, 235, 0.35),
+    inset 0 0 12px rgba(255, 255, 255, 0.35);
+  animation: axon-passcode-arc-core-pulse 2.8s ease-in-out infinite;
+}
+
+.axon-passcode-arc-core-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, transparent 55%);
+}
+
+@keyframes axon-passcode-arc-core-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 28px rgba(34, 211, 238, 0.55),
+      0 0 48px rgba(37, 99, 235, 0.35);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow:
+      0 0 40px rgba(34, 211, 238, 0.75),
+      0 0 64px rgba(37, 99, 235, 0.45);
+  }
+}
+
+.axon-passcode-shell--success .axon-passcode-arc-core {
+  animation: axon-passcode-arc-success 1.4s ease-in-out infinite;
+}
+
+@keyframes axon-passcode-arc-success {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.12);
+    filter: brightness(1.25);
+  }
+}
+
+.axon-passcode-arc--error .axon-passcode-arc-core {
+  background: radial-gradient(
+    circle at 40% 35%,
+    rgba(254, 226, 226, 0.9) 0%,
+    rgba(240, 113, 120, 0.85) 50%,
+    rgba(127, 29, 29, 0.9) 100%
+  );
+  box-shadow: 0 0 32px rgba(240, 113, 120, 0.55);
+}
+
+.axon-passcode-arc--locked .axon-passcode-arc-core {
+  background: radial-gradient(
+    circle at 40% 35%,
+    rgba(254, 243, 199, 0.8) 0%,
+    rgba(201, 169, 98, 0.75) 50%,
+    rgba(5, 11, 22, 0.95) 100%
+  );
+  animation: none;
+}
+
+.axon-passcode-arc--processing .axon-passcode-arc-spinner {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: rgba(34, 211, 238, 0.9);
+  animation: orb-spin 1s linear infinite;
+}
+
+/* Corner telemetry */
+.axon-passcode-corner {
+  position: fixed;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(34, 211, 238, 0.35);
+  pointer-events: none;
+}
+
+.axon-passcode-corner--tl {
+  top: 1.25rem;
+  left: 1.25rem;
+  align-items: flex-start;
+}
+
+.axon-passcode-corner--tr {
+  top: 1.25rem;
+  right: 1.25rem;
+  align-items: flex-end;
+}
+
+.axon-passcode-corner--bl {
+  bottom: 1.25rem;
+  left: 1.25rem;
+  align-items: flex-start;
+}
+
+.axon-passcode-corner--br {
+  bottom: 1.25rem;
+  right: 1.25rem;
+  align-items: flex-end;
+}
+
+.axon-passcode-corner-bracket {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 0.35rem;
+  border-color: rgba(34, 211, 238, 0.4);
+  border-style: solid;
+  border-width: 0;
+}
+
+.axon-passcode-corner--tl .axon-passcode-corner-bracket {
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.axon-passcode-corner--tr .axon-passcode-corner-bracket {
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.axon-passcode-corner--bl .axon-passcode-corner-bracket {
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+
+.axon-passcode-corner--br .axon-passcode-corner-bracket {
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+.axon-passcode-telemetry-line {
+  opacity: 0.7;
+}
+
+/* Passcode cells */
+.axon-passcode-cell {
+  width: 1.75rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(30, 58, 95, 0.9);
+  border-radius: 0.35rem;
+  background: rgba(10, 20, 36, 0.85);
+  font-size: 0.65rem;
+  color: rgba(34, 211, 238, 0.9);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+@media (min-width: 640px) {
+  .axon-passcode-cell {
+    width: 2rem;
+    height: 2.5rem;
+  }
+}
+
+.axon-passcode-cell--filled {
+  border-color: rgba(34, 211, 238, 0.45);
+  box-shadow: inset 0 0 8px rgba(34, 211, 238, 0.12);
+}
+
+.axon-passcode-cell--active {
+  border-color: rgba(96, 165, 250, 0.75);
+  box-shadow:
+    0 0 12px rgba(34, 211, 238, 0.25),
+    inset 0 0 8px rgba(37, 99, 235, 0.15);
+  animation: axon-passcode-cell-blink 1.2s step-end infinite;
+}
+
+@keyframes axon-passcode-cell-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.axon-passcode-welcome {
+  animation: axon-passcode-welcome-in 0.6s ease-out;
+  text-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+}
+
+@keyframes axon-passcode-welcome-in {
+  from {
+    opacity: 0;
+    letter-spacing: 0.5em;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.22em;
+    transform: scale(1);
+  }
+}
+
+.axon-passcode-glitch {
+  animation: axon-passcode-glitch-text 0.35s ease-out;
+}
+
+@keyframes axon-passcode-glitch-text {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 1px);
+  }
+  40% {
+    transform: translate(2px, -1px);
+  }
+  60% {
+    transform: translate(-1px, -1px);
+  }
+  80% {
+    transform: translate(1px, 1px);
+  }
+}
+
+/* Lockout ring */
+.axon-passcode-lockout-ring {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(201, 169, 98, 0.35);
+  position: relative;
+}
+
+.axon-passcode-lockout-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: rgba(201, 169, 98, 0.85);
+  border-right-color: rgba(240, 113, 120, 0.4);
+  animation: lockout-ring 1.8s linear infinite;
+}
+
+@keyframes lockout-ring {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Numpad & keys */
+.axon-passcode-key {
+  height: 2.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(30, 58, 95, 0.95);
+  background: linear-gradient(180deg, rgba(16, 30, 51, 0.95) 0%, rgba(10, 20, 36, 0.98) 100%);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: rgba(232, 240, 250, 0.92);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
+}
+
+.axon-passcode-key:hover:not(:disabled) {
+  border-color: rgba(34, 211, 238, 0.45);
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.2);
+}
+
+.axon-passcode-key:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.axon-passcode-key--utility {
+  font-size: 1.1rem;
+  color: rgba(122, 143, 168, 0.95);
+}
+
+.axon-passcode-key--enter {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.55) 0%, rgba(99, 102, 241, 0.45) 100%);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #fff;
+}
+
+.axon-passcode-alpha-key {
+  width: 1.65rem;
+  height: 2rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(30, 58, 95, 0.9);
+  background: rgba(10, 20, 36, 0.9);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: rgba(232, 240, 250, 0.9);
+  transition: border-color 0.15s;
+}
+
+@media (min-width: 640px) {
+  .axon-passcode-alpha-key {
+    width: 1.85rem;
+    height: 2.15rem;
+    font-size: 0.78rem;
+  }
+}
+
+.axon-passcode-alpha-key:hover:not(:disabled) {
+  border-color: rgba(34, 211, 238, 0.4);
+}
+
+.axon-passcode-mode-btn {
+  border: 1px solid rgba(30, 58, 95, 0.8);
+  color: rgba(122, 143, 168, 0.85);
+  background: transparent;
+  transition: all 0.15s;
+}
+
+.axon-passcode-mode-btn--active {
+  border-color: rgba(34, 211, 238, 0.5);
+  color: rgba(34, 211, 238, 0.95);
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.axon-passcode-passkey-icon {
+  font-size: 0.85rem;
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.5));
+}
+
+.axon-passcode-turnstile {
+  min-height: 65px;
+  display: flex;
+  justify-content: center;
+}

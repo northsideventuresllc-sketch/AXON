@@ -1,81 +1,175 @@
 'use client';
 
-import { apiUrl } from '@/lib/api-base';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, Suspense } from 'react';
+import { startAuthentication } from '@simplewebauthn/browser';
+import {
+  PasscodeGate,
+  type PasscodeLockoutState,
+} from '@/components/axon/passcode-gate';
+import { apiUrl } from '@/lib/api-base';
 
-function LoginForm() {
+interface PasscodeStatusResponse {
+  locked: boolean;
+  lockoutUntil?: string | null;
+  attemptsRemaining?: number;
+  failedAttempts?: number;
+  displayName?: string;
+}
+
+interface VerifyErrorResponse {
+  ok?: false;
+  error?: string;
+  lockout?: {
+    locked: boolean;
+    lockoutUntil?: string | null;
+    attemptsRemaining?: number;
+    failedAttempts?: number;
+  };
+  displayName?: string;
+}
+
+function secondsUntil(iso: string | null | undefined): number {
+  if (!iso) return 0;
+  return Math.max(0, Math.floor((new Date(iso).getTime() - Date.now()) / 1000));
+}
+
+function mapLockout(data: {
+  locked?: boolean;
+  lockoutUntil?: string | null;
+  attemptsRemaining?: number;
+  failedAttempts?: number;
+}): PasscodeLockoutState {
+  return {
+    locked: Boolean(data.locked),
+    lockoutUntil: data.lockoutUntil,
+    attemptsRemaining: data.attemptsRemaining,
+    attemptsUsed: data.failedAttempts,
+    lockoutSecondsRemaining: data.locked ? secondsUntil(data.lockoutUntil) : 0,
+  };
+}
+
+function LoginPasscode() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/';
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  const [lockoutState, setLockoutState] = useState<PasscodeLockoutState | undefined>();
+  const [displayName, setDisplayName] = useState('OPERATOR');
+  const [statusLoading, setStatusLoading] = useState(true);
 
-    const res = await fetch(apiUrl('/api/auth/login'), {
+  const refreshStatus = useCallback(async () => {
+    try {
+      const res = await fetch(apiUrl('/api/auth/passcode/status'), { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = (await res.json()) as PasscodeStatusResponse;
+      setLockoutState(mapLockout(data));
+      if (data.displayName) setDisplayName(data.displayName);
+    } catch {
+      /* status endpoint optional during rollout */
+    } finally {
+      setStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshStatus();
+  }, [refreshStatus]);
+
+  const handleSuccess = async (passcode: string, turnstileToken?: string | null) => {
+    const res = await fetch(apiUrl('/api/auth/passcode/verify'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ passcode, turnstileToken }),
     });
 
-    if (!res.ok) {
-      setError('Invalid credentials');
-      setLoading(false);
-      return;
+    if (res.status === 423) {
+      const data = (await res.json()) as VerifyErrorResponse;
+      const lockout = data.lockout ?? data;
+      setLockoutState(mapLockout(lockout));
+      throw new Error('locked');
     }
 
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as VerifyErrorResponse;
+      if (data.lockout) {
+        setLockoutState(mapLockout(data.lockout));
+      } else if (data.lockout === undefined && data.error) {
+        await refreshStatus();
+      }
+      throw new Error('invalid');
+    }
+
+    await new Promise((r) => setTimeout(r, 1400));
     router.push(next);
     router.refresh();
+  };
+
+  const handlePasskey = async () => {
+    const optionsRes = await fetch(apiUrl('/api/auth/passkey/login/options'), {
+      method: 'POST',
+    });
+
+    if (!optionsRes.ok) throw new Error('options failed');
+
+    const options = await optionsRes.json();
+    const authResponse = await startAuthentication({ optionsJSON: options });
+
+    const verifyRes = await fetch(apiUrl('/api/auth/passkey/login/verify'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(authResponse),
+    });
+
+    if (!verifyRes.ok) throw new Error('verify failed');
+
+    await new Promise((r) => setTimeout(r, 1400));
+    router.push(next);
+    router.refresh();
+  };
+
+  const handleRecovery = async (turnstileToken?: string | null) => {
+    const res = await fetch(apiUrl('/api/auth/security-questions/request-email'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ turnstileToken }),
+    });
+    if (!res.ok) throw new Error('recovery failed');
+  };
+
+  if (statusLoading) {
+    return (
+      <div className="hex-grid-bg flex min-h-screen items-center justify-center bg-axon-bg">
+        <p className="font-mono text-xs uppercase tracking-[0.32em] text-axon-cyan/70">
+          Initializing HUD…
+        </p>
+      </div>
+    );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="password" className="block text-xs uppercase tracking-wider text-axon-muted">
-          Access Key
-        </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-2 w-full rounded-lg border border-axon-border bg-axon-elevated px-4 py-3 text-sm outline-none focus:border-axon-gold/50"
-          placeholder="AXON_DASHBOARD_SECRET"
-          required
-        />
-      </div>
-      {error && <p className="text-sm text-axon-danger">{error}</p>}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-lg axon-gradient-btn px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
-      >
-        {loading ? 'Signing in…' : 'Enter Command Center'}
-      </button>
-    </form>
+    <PasscodeGate
+      displayName={displayName}
+      lockoutState={lockoutState}
+      onSuccess={handleSuccess}
+      onPasskey={handlePasskey}
+      onRequestRecovery={handleRecovery}
+    />
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="axon-grid-bg flex min-h-screen items-center justify-center bg-axon-bg px-4">
-      <div className="w-full max-w-md rounded-2xl border border-axon-border bg-axon-surface p-8 axon-glow">
-        <p className="text-xs uppercase tracking-[0.3em] text-axon-blue-glow">Northside Intelligence</p>
-        <h1 className="mt-2 text-2xl font-semibold">AXON</h1>
-        <p className="mt-2 text-sm text-axon-muted">
-          State of the Art Personalized Agentic Assistant
-        </p>
-        <div className="mt-8">
-          <Suspense>
-            <LoginForm />
-          </Suspense>
+    <Suspense
+      fallback={
+        <div className="hex-grid-bg flex min-h-screen items-center justify-center bg-axon-bg">
+          <p className="font-mono text-xs uppercase tracking-[0.32em] text-axon-cyan/70">
+            Loading…
+          </p>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <LoginPasscode />
+    </Suspense>
   );
 }
