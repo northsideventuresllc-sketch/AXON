@@ -1,0 +1,5029 @@
+From 99807d0d6b5803217b44e770d0cb2b46e2d519eb Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Tue, 7 Jul 2026 15:33:48 +0000
+Subject: [PATCH] Sync latest AXON holo UI into NI portal dashboard
+
+Pull in 3-monitor holographic layout, canvas orb, notifications panel,
+focus overlays, preferences API, and full axon route tree from AXON repo.
+Users opening /axon-{username}/dashboard now see the current AXON home UI.
+---
+ package-lock.json                             |  29 +-
+ package.json                                  |   4 +-
+ src/app/api/axon/chat/route.ts                |  33 +-
+ src/app/api/axon/preferences/route.ts         |  54 ++
+ src/app/api/axon/profile/route.ts             |  40 +-
+ src/app/api/axon/reset/route.ts               |  35 +
+ src/app/api/axon/workspace/route.ts           |  46 +-
+ src/app/axon/u/[username]/dashboard/page.tsx  | 133 ++--
+ src/app/axon/u/[username]/layout.tsx          |  35 +
+ src/app/axon/u/[username]/leads/[id]/page.tsx |  32 +
+ src/app/axon/u/[username]/pipeline/page.tsx   |  94 +++
+ src/app/axon/u/[username]/queue/page.tsx      |  39 +
+ src/app/axon/u/[username]/settings/page.tsx   | 109 +++
+ .../axon/u/[username]/tools/deals/page.tsx    |  16 +
+ .../u/[username]/tools/follow-up/page.tsx     |  16 +
+ .../axon/u/[username]/tools/hermes/page.tsx   |  16 +
+ .../u/[username]/tools/ni-outreach/page.tsx   |  70 ++
+ src/components/axon-ui/axon-home-settings.tsx | 172 +++++
+ src/components/axon-ui/axon-interface.tsx     | 576 +++++++++++----
+ src/components/axon-ui/axon-lab-floor.tsx     |   2 +-
+ .../axon-ui/axon-notification-settings.tsx    | 221 ++++++
+ src/components/axon-ui/axon-orb-status.tsx    |  40 +
+ .../axon-test-notification-buttons.tsx        |  98 +++
+ src/components/axon-ui/briefing-panel.tsx     |  21 +-
+ src/components/axon-ui/jarvis-orb.tsx         | 503 ++++++++++---
+ src/components/axon-ui/lead-card.tsx          |  11 +-
+ src/components/axon-ui/lead-detail.tsx        |   9 +-
+ .../axon-ui/notifications-panel.tsx           | 346 +++++++++
+ src/components/axon-ui/panel-focus-view.tsx   |  66 ++
+ src/components/axon-ui/sidebar.tsx            | 102 ++-
+ src/components/axon-ui/todo-panel.tsx         |  30 +-
+ src/components/axon-ui/tool-panel.tsx         |  19 +-
+ src/components/axon-ui/tool-placeholder.tsx   |   7 +-
+ src/lib/axon/api-base.ts                      |   2 +-
+ src/lib/axon/app-path.ts                      |   6 +
+ src/lib/axon/axon-orb-theme.ts                |  33 +
+ src/lib/axon/axon-preferences.ts              | 124 ++++
+ src/lib/axon/axon-profile.ts                  |  29 +-
+ src/lib/axon/axon-types.ts                    | 106 +++
+ src/lib/axon/axon-web-chat.ts                 |  38 +-
+ src/lib/axon/operator.ts                      |  33 +
+ src/lib/axon/portal-guard.ts                  |  41 +
+ src/styles/axon.css                           | 699 ++++++++++++++++++
+ tailwind.config.ts                            |   7 +
+ 44 files changed, 3676 insertions(+), 466 deletions(-)
+ create mode 100644 src/app/api/axon/preferences/route.ts
+ create mode 100644 src/app/api/axon/reset/route.ts
+ create mode 100644 src/app/axon/u/[username]/layout.tsx
+ create mode 100644 src/app/axon/u/[username]/leads/[id]/page.tsx
+ create mode 100644 src/app/axon/u/[username]/pipeline/page.tsx
+ create mode 100644 src/app/axon/u/[username]/queue/page.tsx
+ create mode 100644 src/app/axon/u/[username]/settings/page.tsx
+ create mode 100644 src/app/axon/u/[username]/tools/deals/page.tsx
+ create mode 100644 src/app/axon/u/[username]/tools/follow-up/page.tsx
+ create mode 100644 src/app/axon/u/[username]/tools/hermes/page.tsx
+ create mode 100644 src/app/axon/u/[username]/tools/ni-outreach/page.tsx
+ create mode 100644 src/components/axon-ui/axon-home-settings.tsx
+ create mode 100644 src/components/axon-ui/axon-notification-settings.tsx
+ create mode 100644 src/components/axon-ui/axon-orb-status.tsx
+ create mode 100644 src/components/axon-ui/axon-test-notification-buttons.tsx
+ create mode 100644 src/components/axon-ui/notifications-panel.tsx
+ create mode 100644 src/components/axon-ui/panel-focus-view.tsx
+ create mode 100644 src/lib/axon/app-path.ts
+ create mode 100644 src/lib/axon/axon-orb-theme.ts
+ create mode 100644 src/lib/axon/axon-preferences.ts
+ create mode 100644 src/lib/axon/operator.ts
+ create mode 100644 src/lib/axon/portal-guard.ts
+
+diff --git a/package-lock.json b/package-lock.json
+index c650003..29d4a54 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -11,11 +11,13 @@
+         "@supabase/ssr": "^0.10.3",
+         "@supabase/supabase-js": "^2.49.1",
+         "ai": "^6.0.199",
++        "jarvis-ai-web-animation": "^0.1.2",
+         "next": "^14.2.28",
+         "react": "^18.3.1",
+         "react-dom": "^18.3.1",
+         "resend": "^6.12.4",
+-        "stripe": "^14.25.0"
++        "stripe": "^14.25.0",
++        "three": "^0.185.1"
+       },
+       "devDependencies": {
+         "@types/node": "^20.17.24",
+@@ -3993,6 +3995,25 @@
+         "@pkgjs/parseargs": "^0.11.0"
+       }
+     },
++    "node_modules/jarvis-ai-web-animation": {
++      "version": "0.1.2",
++      "resolved": "https://registry.npmjs.org/jarvis-ai-web-animation/-/jarvis-ai-web-animation-0.1.2.tgz",
++      "integrity": "sha512-ePbh7d2XAylk+M5lJZC3GtZ1Yg1fp2FBBpJM85AKSuX3ihHRAOj0p9qg8WdWrKM3JiGhysVXaq0PtyTjsQRkKQ==",
++      "license": "MIT",
++      "dependencies": {
++        "three": "^0.184.0"
++      },
++      "peerDependencies": {
++        "react": "^18 || ^19",
++        "react-dom": "^18 || ^19"
++      }
++    },
++    "node_modules/jarvis-ai-web-animation/node_modules/three": {
++      "version": "0.184.0",
++      "resolved": "https://registry.npmjs.org/three/-/three-0.184.0.tgz",
++      "integrity": "sha512-wtTRjG92pM5eUg/KuUnHsqSAlPM296brTOcLgMRqEeylYTh/CdtvKUvCyyCQTzFuStieWxvZb8mVTMvdPyUpxg==",
++      "license": "MIT"
++    },
+     "node_modules/jiti": {
+       "version": "1.21.7",
+       "resolved": "https://registry.npmjs.org/jiti/-/jiti-1.21.7.tgz",
+@@ -5960,6 +5981,12 @@
+         "node": ">=0.8"
+       }
+     },
++    "node_modules/three": {
++      "version": "0.185.1",
++      "resolved": "https://registry.npmjs.org/three/-/three-0.185.1.tgz",
++      "integrity": "sha512-5aojFCXKwnjBRZvUnt3WFfEcvUJgkN5LlijRFN95hMy8WVkG4I0QNcJE+OuWvuJ0bOdStrbfXn0pkd6/QyiAlg==",
++      "license": "MIT"
++    },
+     "node_modules/tinyglobby": {
+       "version": "0.2.17",
+       "resolved": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz",
+diff --git a/package.json b/package.json
+index 417f4b0..0b7401f 100644
+--- a/package.json
++++ b/package.json
+@@ -22,7 +22,9 @@
+     "react": "^18.3.1",
+     "react-dom": "^18.3.1",
+     "resend": "^6.12.4",
+-    "stripe": "^14.25.0"
++    "stripe": "^14.25.0",
++    "jarvis-ai-web-animation": "^0.1.2",
++    "three": "^0.185.1"
+   },
+   "devDependencies": {
+     "@types/node": "^20.17.24",
+diff --git a/src/app/api/axon/chat/route.ts b/src/app/api/axon/chat/route.ts
+index 01e59e1..4bd9109 100644
+--- a/src/app/api/axon/chat/route.ts
++++ b/src/app/api/axon/chat/route.ts
+@@ -1,28 +1,30 @@
+-import { NextResponse } from 'next/server';
+-import { generateAxonReply } from '@/lib/axon/axon-web-chat';
+-import { fetchChatHistory } from '@/lib/axon/axon-profile';
++import { NextResponse } from "next/server";
++import { generateAxonReply } from "@/lib/axon/axon-web-chat";
++import { fetchChatHistory } from "@/lib/axon/axon-profile";
++import { requireAxonOperatorId } from "@/lib/axon/operator";
+ 
+ export async function GET() {
+   try {
+-    const messages = await fetchChatHistory();
++    const operatorId = await requireAxonOperatorId();
++    const messages = await fetchChatHistory(operatorId);
+     return NextResponse.json({ messages });
+   } catch (err) {
+-    return NextResponse.json(
+-      { error: err instanceof Error ? err.message : 'Failed to load chat' },
+-      { status: 500 }
+-    );
++    const message = err instanceof Error ? err.message : "Failed to load chat";
++    const status = message === "AXON access denied" ? 401 : 500;
++    return NextResponse.json({ error: message }, { status });
+   }
+ }
+ 
+ export async function POST(req: Request) {
+   try {
+-    const { message, channel = 'chat' } = await req.json();
++    const operatorId = await requireAxonOperatorId();
++    const { message, channel = "chat" } = await req.json();
+     if (!message?.trim()) {
+-      return NextResponse.json({ error: 'Message required' }, { status: 400 });
++      return NextResponse.json({ error: "Message required" }, { status: 400 });
+     }
+ 
+-    const history = await fetchChatHistory();
+-    const result = await generateAxonReply(message.trim(), channel, history);
++    const history = await fetchChatHistory(operatorId);
++    const result = await generateAxonReply(message.trim(), channel, history, operatorId);
+ 
+     return NextResponse.json({
+       reply: result.reply,
+@@ -31,9 +33,8 @@ export async function POST(req: Request) {
+       workspace: result.workspace,
+     });
+   } catch (err) {
+-    return NextResponse.json(
+-      { error: err instanceof Error ? err.message : 'Chat failed' },
+-      { status: 500 }
+-    );
++    const message = err instanceof Error ? err.message : "Chat failed";
++    const status = message === "AXON access denied" ? 401 : 500;
++    return NextResponse.json({ error: message }, { status });
+   }
+ }
+diff --git a/src/app/api/axon/preferences/route.ts b/src/app/api/axon/preferences/route.ts
+new file mode 100644
+index 0000000..b2fc45c
+--- /dev/null
++++ b/src/app/api/axon/preferences/route.ts
+@@ -0,0 +1,54 @@
++import { NextResponse } from "next/server";
++import {
++  addNotification,
++  getPreferences,
++  markNotificationRead,
++  updateHomeLayout,
++  updateNotificationSettings,
++} from "@/lib/axon/axon-preferences";
++import { requireAxonOperatorId } from "@/lib/axon/operator";
++
++export async function GET() {
++  try {
++    const operatorId = await requireAxonOperatorId();
++    const preferences = await getPreferences(operatorId);
++    return NextResponse.json({ preferences });
++  } catch (err) {
++    const message = err instanceof Error ? err.message : "Failed to load preferences";
++    const status = message === "AXON access denied" ? 401 : 500;
++    return NextResponse.json({ error: message }, { status });
++  }
++}
++
++export async function PATCH(req: Request) {
++  try {
++    const operatorId = await requireAxonOperatorId();
++    const body = await req.json();
++
++    if (body.homeLayout) {
++      const preferences = await updateHomeLayout(body.homeLayout, operatorId);
++      return NextResponse.json({ preferences });
++    }
++
++    if (body.notifications) {
++      const preferences = await updateNotificationSettings(body.notifications, operatorId);
++      return NextResponse.json({ preferences });
++    }
++
++    if (body.addNotification) {
++      const preferences = await addNotification(body.addNotification, operatorId);
++      return NextResponse.json({ preferences });
++    }
++
++    if (body.markReadId) {
++      const preferences = await markNotificationRead(body.markReadId, operatorId);
++      return NextResponse.json({ preferences });
++    }
++
++    return NextResponse.json({ error: "No valid preference action" }, { status: 400 });
++  } catch (err) {
++    const message = err instanceof Error ? err.message : "Preference update failed";
++    const status = message === "AXON access denied" ? 401 : 500;
++    return NextResponse.json({ error: message }, { status });
++  }
++}
+diff --git a/src/app/api/axon/profile/route.ts b/src/app/api/axon/profile/route.ts
+index eb6e6ec..09e586d 100644
+--- a/src/app/api/axon/profile/route.ts
++++ b/src/app/api/axon/profile/route.ts
+@@ -1,40 +1,46 @@
+-import { NextResponse } from 'next/server';
+-import { getOperatorProfile, updateOperatorProfile, fetchTopSignals, fetchMemories } from '@/lib/axon/axon-profile';
++import { NextResponse } from "next/server";
++import {
++  fetchMemories,
++  fetchTopSignals,
++  getOperatorProfile,
++  updateOperatorProfile,
++} from "@/lib/axon/axon-profile";
++import { requireAxonOperatorId } from "@/lib/axon/operator";
+ 
+ export async function GET() {
+   try {
++    const operatorId = await requireAxonOperatorId();
+     const [profile, signals, memories] = await Promise.all([
+-      getOperatorProfile(),
+-      fetchTopSignals(undefined, 10),
+-      fetchMemories(undefined, 10),
++      getOperatorProfile(operatorId),
++      fetchTopSignals(operatorId, 10),
++      fetchMemories(operatorId, 10),
+     ]);
+     return NextResponse.json({ profile, signals, memories });
+   } catch (err) {
+-    return NextResponse.json(
+-      { error: err instanceof Error ? err.message : 'Failed to load profile' },
+-      { status: 500 }
+-    );
++    const message = err instanceof Error ? err.message : "Failed to load profile";
++    const status = message === "AXON access denied" ? 401 : 500;
++    return NextResponse.json({ error: message }, { status });
+   }
+ }
+ 
+ export async function PATCH(req: Request) {
+   try {
++    const operatorId = await requireAxonOperatorId();
+     const body = await req.json();
+-    const allowed = ['input_mode', 'read_aloud', 'voice_id', 'voice_name'];
++    const allowed = ["input_mode", "read_aloud", "voice_id", "voice_name"];
+     const patch: Record<string, unknown> = {};
+     for (const key of allowed) {
+       if (body[key] !== undefined) patch[key] = body[key];
+     }
+     if (Object.keys(patch).length === 0) {
+-      return NextResponse.json({ error: 'No valid fields' }, { status: 400 });
++      return NextResponse.json({ error: "No valid fields" }, { status: 400 });
+     }
+-    await updateOperatorProfile('default', patch);
+-    const profile = await getOperatorProfile();
++    await updateOperatorProfile(operatorId, patch);
++    const profile = await getOperatorProfile(operatorId);
+     return NextResponse.json({ profile });
+   } catch (err) {
+-    return NextResponse.json(
+-      { error: err instanceof Error ? err.message : 'Update failed' },
+-      { status: 500 }
+-    );
++    const message = err instanceof Error ? err.message : "Update failed";
++    const status = message === "AXON access denied" ? 401 : 500;
++    return NextResponse.json({ error: message }, { status });
+   }
+ }
+diff --git a/src/app/api/axon/reset/route.ts b/src/app/api/axon/reset/route.ts
+new file mode 100644
+index 0000000..1ffe731
+--- /dev/null
++++ b/src/app/api/axon/reset/route.ts
+@@ -0,0 +1,35 @@
++import { NextResponse } from "next/server";
++import { resetOperatorData } from "@/lib/axon/axon-profile";
++import { requireAxonOperatorId } from "@/lib/axon/operator";
++
++const MESSAGES: Record<string, string> = {
++  memories_before: "Memories before the selected date have been cleared.",
++  communication: "Communication learnings reset. AXON returns to default tone signals.",
++  context: "Context and memories cleared. Chat history preserved.",
++  full: "Full clean slate. AXON is back to default starting mode.",
++};
++
++export async function POST(req: Request) {
++  try {
++    const operatorId = await requireAxonOperatorId();
++    const { scope, beforeDate } = await req.json();
++    const valid = ["memories_before", "communication", "context", "full"];
++    if (!valid.includes(scope)) {
++      return NextResponse.json({ error: "Invalid scope" }, { status: 400 });
++    }
++    if (scope === "memories_before" && !beforeDate) {
++      return NextResponse.json({ error: "beforeDate required" }, { status: 400 });
++    }
++
++    await resetOperatorData(
++      operatorId,
++      scope,
++      beforeDate ? `${beforeDate}T00:00:00Z` : undefined
++    );
++    return NextResponse.json({ ok: true, message: MESSAGES[scope] });
++  } catch (err) {
++    const message = err instanceof Error ? err.message : "Reset failed";
++    const status = message === "AXON access denied" ? 401 : 500;
++    return NextResponse.json({ error: message }, { status });
++  }
++}
+diff --git a/src/app/api/axon/workspace/route.ts b/src/app/api/axon/workspace/route.ts
+index 568f850..e57659a 100644
+--- a/src/app/api/axon/workspace/route.ts
++++ b/src/app/api/axon/workspace/route.ts
+@@ -1,4 +1,4 @@
+-import { NextResponse } from 'next/server';
++import { NextResponse } from "next/server";
+ import {
+   applyBriefingUpdates,
+   applyTodoUpdates,
+@@ -7,62 +7,66 @@ import {
+   removeTodo,
+   setWorkspaceFlags,
+   toggleTodo,
+-} from '@/lib/axon/axon-workspace';
++} from "@/lib/axon/axon-workspace";
++import { requireAxonOperatorId } from "@/lib/axon/operator";
+ 
+ export async function GET() {
+   try {
+-    const workspace = await getWorkspace();
++    const operatorId = await requireAxonOperatorId();
++    const workspace = await getWorkspace(operatorId);
+     return NextResponse.json({ workspace });
+   } catch (err) {
+-    return NextResponse.json(
+-      { error: err instanceof Error ? err.message : 'Failed to load workspace' },
+-      { status: 500 }
+-    );
++    const message = err instanceof Error ? err.message : "Failed to load workspace";
++    const status = message === "AXON access denied" ? 401 : 500;
++    return NextResponse.json({ error: message }, { status });
+   }
+ }
+ 
+ export async function PATCH(req: Request) {
+   try {
++    const operatorId = await requireAxonOperatorId();
+     const body = await req.json();
+ 
+     if (body.toggle_todo_id) {
+-      const workspace = await toggleTodo(body.toggle_todo_id);
++      const workspace = await toggleTodo(body.toggle_todo_id, operatorId);
+       return NextResponse.json({ workspace });
+     }
+ 
+     if (body.remove_todo_id) {
+-      const workspace = await removeTodo(body.remove_todo_id);
++      const workspace = await removeTodo(body.remove_todo_id, operatorId);
+       return NextResponse.json({ workspace });
+     }
+ 
+     if (body.remove_briefing_id) {
+-      const workspace = await removeBriefing(body.remove_briefing_id);
++      const workspace = await removeBriefing(body.remove_briefing_id, operatorId);
+       return NextResponse.json({ workspace });
+     }
+ 
+     if (body.briefing_autonomous !== undefined || body.todos_autonomous !== undefined) {
+-      const workspace = await setWorkspaceFlags({
+-        briefing_autonomous: body.briefing_autonomous,
+-        todos_autonomous: body.todos_autonomous,
+-      });
++      const workspace = await setWorkspaceFlags(
++        {
++          briefing_autonomous: body.briefing_autonomous,
++          todos_autonomous: body.todos_autonomous,
++        },
++        operatorId
++      );
+       return NextResponse.json({ workspace });
+     }
+ 
+     if (body.briefing_updates?.length) {
+-      const workspace = await applyBriefingUpdates(body.briefing_updates);
++      const workspace = await applyBriefingUpdates(body.briefing_updates, operatorId);
+       return NextResponse.json({ workspace });
+     }
+ 
+     if (body.todo_updates?.length) {
+-      const workspace = await applyTodoUpdates(body.todo_updates);
++      const workspace = await applyTodoUpdates(body.todo_updates, operatorId);
+       return NextResponse.json({ workspace });
+     }
+ 
+-    return NextResponse.json({ error: 'No valid workspace action' }, { status: 400 });
++    return NextResponse.json({ error: "No valid workspace action" }, { status: 400 });
+   } catch (err) {
+-    return NextResponse.json(
+-      { error: err instanceof Error ? err.message : 'Workspace update failed' },
+-      { status: 500 }
+-    );
++    const message = err instanceof Error ? err.message : "Workspace update failed";
++    const status = message === "AXON access denied" ? 401 : 500;
++    return NextResponse.json({ error: message }, { status });
+   }
+ }
+diff --git a/src/app/axon/u/[username]/dashboard/page.tsx b/src/app/axon/u/[username]/dashboard/page.tsx
+index 13c9f84..e0b5efd 100644
+--- a/src/app/axon/u/[username]/dashboard/page.tsx
++++ b/src/app/axon/u/[username]/dashboard/page.tsx
+@@ -1,110 +1,67 @@
+-import type { Metadata } from "next";
+-import Link from "next/link";
+-import { cookies } from "next/headers";
+-import { redirect } from "next/navigation";
+-import { AxonChangeCodeForm } from "@/components/axon/AxonChangeCodeForm";
+-import { AxonAmbientBg } from "@/components/axon-ui/axon-ambient-bg";
+-import { AxonInterface } from "@/components/axon-ui/axon-interface";
+-import { Sidebar } from "@/components/axon-ui/sidebar";
+-import { ToolPanel } from "@/components/axon-ui/tool-panel";
+-import { canEnterAxonPortal } from "@/lib/axon/access";
+-import { fetchChatHistory, getOperatorProfile } from "@/lib/axon/axon-profile";
+-import { AXON_TOOLS } from "@/lib/axon/axon-types";
+-import { getWorkspace } from "@/lib/axon/axon-workspace";
+-import { fetchPipelineStats } from "@/lib/axon/leads";
+-import { axonPublicPath } from "@/lib/axon/paths";
+-import {
+-  AXON_SESSION_COOKIE,
+-  readAxonSessionFromCookieValue,
+-} from "@/lib/axon/session";
+-import { createServerAuthClient } from "@/lib/supabase/server-auth";
+-import "@/styles/axon.css";
++import Link from 'next/link';
++import { AxonChangeCodeForm } from '@/components/axon/AxonChangeCodeForm';
++import { AxonInterface } from '@/components/axon-ui/axon-interface';
++import { ToolPanel } from '@/components/axon-ui/tool-panel';
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++import { fetchChatHistory, getOperatorProfile } from '@/lib/axon/axon-profile';
++import { getPreferences } from '@/lib/axon/axon-preferences';
++import { AXON_TOOLS } from '@/lib/axon/axon-types';
++import { getWorkspace } from '@/lib/axon/axon-workspace';
++import { fetchPipelineStats } from '@/lib/axon/leads';
++import { axonPublicPath } from '@/lib/axon/paths';
+ 
+-export const metadata: Metadata = {
+-  title: "AXON Command | Northside Intelligence",
+-};
+-
+-export const dynamic = "force-dynamic";
++export const dynamic = 'force-dynamic';
+ 
+ export default async function AxonUserDashboardPage({
+   params,
+ }: {
+   params: { username: string };
+ }) {
+-  const username = params.username.trim().toLowerCase();
+-  const supabase = await createServerAuthClient();
+-  const {
+-    data: { user },
+-  } = await supabase.auth.getUser();
+-
+-  if (!user) redirect(`/auth/signin?next=${axonPublicPath(username, "/dashboard")}`);
+-
+-  const { data: profile } = await supabase
+-    .from("ni_portal_profiles")
+-    .select("username")
+-    .eq("id", user.id)
+-    .maybeSingle();
+-
+-  const portalUsername = profile?.username?.trim().toLowerCase() ?? "";
+-  if (portalUsername !== username) redirect("/axon");
++  const { username, operatorId } = await requireAxonPortalUser(params.username);
++  const basePath = axonPublicPath(username);
+ 
+-  const allowed = await canEnterAxonPortal(user.id);
+-  if (!allowed) redirect("/axon");
+-
+-  const sessionToken = cookies().get(AXON_SESSION_COOKIE)?.value;
+-  if (!readAxonSessionFromCookieValue(sessionToken, user.id)) {
+-    redirect(`/api/axon/bootstrap?username=${encodeURIComponent(username)}`);
+-  }
+-
+-  const operatorId = username;
+-  const [operatorProfile, messages, stats, workspace] = await Promise.all([
++  const [operatorProfile, messages, stats, workspace, preferences] = await Promise.all([
+     getOperatorProfile(operatorId),
+     fetchChatHistory(operatorId, 30),
+     fetchPipelineStats().catch(() => null),
+     getWorkspace(operatorId),
++    getPreferences(operatorId),
+   ]);
+ 
+   const metrics: Record<string, string | number> = {};
+-  if (stats) metrics["ni-services-outreach"] = stats.pending;
++  if (stats) metrics['ni-services-outreach'] = stats.pending;
+ 
+   return (
+-    <main className="relative min-h-screen overflow-hidden bg-axon-bg text-axon-text">
+-      <div className="relative flex min-h-screen">
+-        <AxonAmbientBg />
+-        <Sidebar basePath={axonPublicPath(username)} />
+-        <div className="axon-grid-bg relative z-10 flex-1 overflow-auto">
+-          <div className="mx-auto max-w-[1600px] px-6 py-8">
+-            <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+-              <div>
+-                <p className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">
+-                  Northside Intelligence
+-                </p>
+-                <h1 className="mt-2 text-2xl font-semibold axon-gradient-text sm:text-3xl">AXON</h1>
+-                <p className="mt-2 text-sm text-axon-muted">Operator: @{username}</p>
+-              </div>
+-              <Link href="/" className="text-sm text-axon-blue-glow hover:underline">
+-                Back to Portal
+-              </Link>
+-            </header>
++    <div className="space-y-8">
++      <header className="flex flex-wrap items-center justify-between gap-4">
++        <div>
++          <p className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">
++            Northside Intelligence
++          </p>
++          <h1 className="mt-2 text-2xl font-semibold axon-gradient-text sm:text-3xl">AXON</h1>
++          <p className="mt-2 text-sm text-axon-muted">Operator: @{username}</p>
++        </div>
++        <Link href="/" className="text-sm text-axon-blue-glow hover:underline">
++          Back to Portal
++        </Link>
++      </header>
+ 
+-            <AxonInterface
+-              basePath={axonPublicPath(username)}
+-              initialMessages={messages}
+-              initialWorkspace={workspace}
+-              initialProfile={{
+-                input_mode: operatorProfile.input_mode,
+-                read_aloud: operatorProfile.read_aloud,
+-                voice_id: operatorProfile.voice_id,
+-                tone_preset: operatorProfile.tone_preset,
+-              }}
+-            />
++      <AxonInterface
++        basePath={basePath}
++        initialMessages={messages}
++        initialWorkspace={workspace}
++        initialPreferences={preferences}
++        initialProfile={{
++          input_mode: operatorProfile.input_mode,
++          read_aloud: operatorProfile.read_aloud,
++          voice_id: operatorProfile.voice_id,
++          tone_preset: operatorProfile.tone_preset,
++        }}
++      />
+ 
+-            <ToolPanel tools={AXON_TOOLS} metrics={metrics} />
++      <ToolPanel tools={AXON_TOOLS} metrics={metrics} basePath={basePath} />
+ 
+-            <AxonChangeCodeForm />
+-          </div>
+-        </div>
+-      </div>
+-    </main>
++      <AxonChangeCodeForm />
++    </div>
+   );
+ }
+diff --git a/src/app/axon/u/[username]/layout.tsx b/src/app/axon/u/[username]/layout.tsx
+new file mode 100644
+index 0000000..cbcb27c
+--- /dev/null
++++ b/src/app/axon/u/[username]/layout.tsx
+@@ -0,0 +1,35 @@
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++import type { Metadata } from 'next';
++import { AxonAmbientBg } from '@/components/axon-ui/axon-ambient-bg';
++import { Sidebar } from '@/components/axon-ui/sidebar';
++import { axonPublicPath } from '@/lib/axon/paths';
++import '@/styles/axon.css';
++
++export const metadata: Metadata = {
++  title: 'AXON Command | Northside Intelligence',
++};
++
++export const dynamic = 'force-dynamic';
++
++export default async function AxonUserLayout({
++  children,
++  params,
++}: {
++  children: React.ReactNode;
++  params: { username: string };
++}) {
++  const { username } = await requireAxonPortalUser(params.username);
++  const basePath = axonPublicPath(username);
++
++  return (
++    <main className="relative min-h-screen overflow-hidden bg-axon-bg text-axon-text">
++      <div className="relative flex min-h-screen">
++        <AxonAmbientBg />
++        <Sidebar basePath={basePath} />
++        <div className="axon-grid-bg relative z-10 flex-1 overflow-auto">
++          <div className="mx-auto max-w-[1720px] px-4 py-6 sm:px-6 sm:py-8">{children}</div>
++        </div>
++      </div>
++    </main>
++  );
++}
+diff --git a/src/app/axon/u/[username]/leads/[id]/page.tsx b/src/app/axon/u/[username]/leads/[id]/page.tsx
+new file mode 100644
+index 0000000..c756dc9
+--- /dev/null
++++ b/src/app/axon/u/[username]/leads/[id]/page.tsx
+@@ -0,0 +1,32 @@
++import Link from 'next/link';
++import { LeadDetailView } from '@/components/axon-ui/lead-detail';
++import { fetchLeadById } from '@/lib/axon/leads';
++import { axonPublicPath } from '@/lib/axon/paths';
++import { appPath } from '@/lib/axon/app-path';
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++import { notFound } from 'next/navigation';
++
++export const dynamic = 'force-dynamic';
++
++export default async function AxonLeadPage({
++  params,
++}: {
++  params: { username: string; id: string };
++}) {
++  const { username } = await requireAxonPortalUser(params.username);
++  const basePath = axonPublicPath(username);
++  const lead = await fetchLeadById(params.id);
++  if (!lead) notFound();
++
++  return (
++    <div className="space-y-6">
++      <Link
++        href={appPath('/pipeline', basePath)}
++        className="text-sm text-axon-muted hover:text-axon-gold"
++      >
++        ← Back to pipeline
++      </Link>
++      <LeadDetailView lead={lead} />
++    </div>
++  );
++}
+diff --git a/src/app/axon/u/[username]/pipeline/page.tsx b/src/app/axon/u/[username]/pipeline/page.tsx
+new file mode 100644
+index 0000000..bf9e0e6
+--- /dev/null
++++ b/src/app/axon/u/[username]/pipeline/page.tsx
+@@ -0,0 +1,94 @@
++import Link from 'next/link';
++import { LeadRow } from '@/components/axon-ui/lead-card';
++import { fetchLeads } from '@/lib/axon/leads';
++import { axonPublicPath } from '@/lib/axon/paths';
++import { appPath } from '@/lib/axon/app-path';
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++import { STATUS_ORDER } from '@/lib/axon/types';
++
++export const dynamic = 'force-dynamic';
++
++export default async function AxonPipelinePage({
++  params,
++  searchParams,
++}: {
++  params: { username: string };
++  searchParams: { status?: string };
++}) {
++  const { username } = await requireAxonPortalUser(params.username);
++  const basePath = axonPublicPath(username);
++  const { status: filter } = searchParams;
++  const leads = await fetchLeads();
++  const filtered = filter ? leads.filter((l) => l.status === filter) : leads;
++
++  return (
++    <div className="space-y-6">
++      <header>
++        <h1 className="text-2xl font-semibold">Pipeline</h1>
++        <p className="mt-1 text-sm text-axon-muted">All AXON NI Services leads from NI-Brain.</p>
++      </header>
++
++      <div className="flex flex-wrap gap-2">
++        <FilterPill
++          href={appPath('/pipeline', basePath)}
++          label="All"
++          active={!filter}
++          count={leads.length}
++        />
++        {STATUS_ORDER.map((status) => {
++          const count = leads.filter((l) => l.status === status).length;
++          if (count === 0) return null;
++          return (
++            <FilterPill
++              key={status}
++              href={`${appPath('/pipeline', basePath)}?status=${status}`}
++              label={status.replace(/_/g, ' ')}
++              active={filter === status}
++              count={count}
++            />
++          );
++        })}
++      </div>
++
++      <div className="overflow-hidden rounded-xl border border-axon-border bg-axon-surface">
++        <div className="grid grid-cols-[100px_1fr_120px_100px_100px] gap-4 border-b border-axon-border bg-axon-elevated px-4 py-2 text-xs uppercase tracking-wider text-axon-muted">
++          <span>ID</span>
++          <span>Company</span>
++          <span>Channel</span>
++          <span>Score</span>
++          <span>Status</span>
++        </div>
++        {filtered.length === 0 ? (
++          <p className="px-4 py-8 text-center text-sm text-axon-muted">No leads match this filter.</p>
++        ) : (
++          filtered.map((lead) => <LeadRow key={lead.id} lead={lead} basePath={basePath} />)
++        )}
++      </div>
++    </div>
++  );
++}
++
++function FilterPill({
++  href,
++  label,
++  active,
++  count,
++}: {
++  href: string;
++  label: string;
++  active: boolean;
++  count: number;
++}) {
++  return (
++    <Link
++      href={href}
++      className={`rounded-full border px-3 py-1 text-xs capitalize transition ${
++        active
++          ? 'border-axon-gold/50 bg-axon-gold/10 text-axon-gold'
++          : 'border-axon-border text-axon-muted hover:border-axon-gold/30'
++      }`}
++    >
++      {label} ({count})
++    </Link>
++  );
++}
+diff --git a/src/app/axon/u/[username]/queue/page.tsx b/src/app/axon/u/[username]/queue/page.tsx
+new file mode 100644
+index 0000000..8ca561e
+--- /dev/null
++++ b/src/app/axon/u/[username]/queue/page.tsx
+@@ -0,0 +1,39 @@
++import { LeadCard } from '@/components/axon-ui/lead-card';
++import { fetchLeads } from '@/lib/axon/leads';
++import { axonPublicPath } from '@/lib/axon/paths';
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++
++export const dynamic = 'force-dynamic';
++
++export default async function AxonQueuePage({ params }: { params: { username: string } }) {
++  const { username } = await requireAxonPortalUser(params.username);
++  const basePath = axonPublicPath(username);
++  const leads = await fetchLeads();
++  const pending = leads.filter((l) => l.status === 'pending_approval');
++
++  return (
++    <div className="space-y-6">
++      <header>
++        <h1 className="text-2xl font-semibold">Approval Queue</h1>
++        <p className="mt-1 text-sm text-axon-muted">
++          Review AI-drafted outreach. Approve to send (email) or mark for manual LinkedIn DM.
++        </p>
++      </header>
++
++      {pending.length === 0 ? (
++        <div className="rounded-xl border border-dashed border-axon-border p-12 text-center">
++          <p className="text-axon-muted">No drafts pending approval.</p>
++          <p className="mt-2 text-xs text-axon-muted">
++            Nightly outreach runs at 2:30 AM EST via GitHub Actions.
++          </p>
++        </div>
++      ) : (
++        <div className="grid gap-4">
++          {pending.map((lead) => (
++            <LeadCard key={lead.id} lead={lead} basePath={basePath} />
++          ))}
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/src/app/axon/u/[username]/settings/page.tsx b/src/app/axon/u/[username]/settings/page.tsx
+new file mode 100644
+index 0000000..9dcbe91
+--- /dev/null
++++ b/src/app/axon/u/[username]/settings/page.tsx
+@@ -0,0 +1,109 @@
++import { AxonHomeSettings } from '@/components/axon-ui/axon-home-settings';
++import { AxonNotificationSettings } from '@/components/axon-ui/axon-notification-settings';
++import { AxonResetSettings } from '@/components/axon-ui/axon-reset-settings';
++import { fetchMemories, fetchTopSignals, getOperatorProfile } from '@/lib/axon/axon-profile';
++import { getPreferences } from '@/lib/axon/axon-preferences';
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++
++export const dynamic = 'force-dynamic';
++
++const GUARDRAILS = [
++  { label: 'No auto-send', detail: 'Every outbound requires JB approval via dashboard or Telegram.' },
++  { label: 'Daily cap', detail: 'Max 15 new drafts per day.' },
++  { label: 'API budget', detail: '$20/mo cap — monitor Anthropic console.' },
++  { label: 'Adaptive tone', detail: 'AXON learns from every message. Reset anytime below.' },
++];
++
++export default async function AxonSettingsPage({ params }: { params: { username: string } }) {
++  const { operatorId } = await requireAxonPortalUser(params.username);
++
++  const [profile, signals, memories, preferences] = await Promise.all([
++    getOperatorProfile(operatorId),
++    fetchTopSignals(operatorId, 8),
++    fetchMemories(operatorId, 5),
++    getPreferences(operatorId),
++  ]);
++
++  return (
++    <div className="space-y-8">
++      <header>
++        <h1 className="text-2xl font-semibold axon-gradient-text">Settings</h1>
++        <p className="mt-1 text-sm text-axon-muted">Customize your home page, notifications, voice, and learning.</p>
++      </header>
++
++      <AxonHomeSettings initial={preferences.homeLayout} />
++      <AxonNotificationSettings initial={preferences.notifications} />
++
++      <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
++        <h2 className="text-sm font-medium">Communication Profile</h2>
++        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
++          <div>
++            <dt className="text-axon-muted">Input mode</dt>
++            <dd className="capitalize">{profile.input_mode}</dd>
++          </div>
++          <div>
++            <dt className="text-axon-muted">Read aloud</dt>
++            <dd>{profile.read_aloud ? 'On' : 'Off'}</dd>
++          </div>
++          <div>
++            <dt className="text-axon-muted">Voice</dt>
++            <dd>{profile.voice_id}</dd>
++          </div>
++          <div>
++            <dt className="text-axon-muted">Active signals</dt>
++            <dd>{signals.length}</dd>
++          </div>
++        </dl>
++        {profile.tone_preset.summary && (
++          <p className="mt-4 text-xs text-axon-muted">{profile.tone_preset.summary}</p>
++        )}
++      </section>
++
++      {signals.length > 0 && (
++        <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
++          <h2 className="text-sm font-medium">Top Communication Learnings</h2>
++          <div className="mt-4 space-y-2">
++            {signals.map((s) => (
++              <div key={s.id} className="flex justify-between gap-4 text-xs">
++                <span className="text-axon-muted">
++                  [{s.signal_type}] {s.signal_key}
++                </span>
++                <span className="font-mono text-axon-cyan">
++                  w{s.weight.toFixed(1)} · n{s.evidence_count}
++                </span>
++              </div>
++            ))}
++          </div>
++        </section>
++      )}
++
++      {memories.length > 0 && (
++        <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
++          <h2 className="text-sm font-medium">Recent Memories</h2>
++          <ul className="mt-4 space-y-2 text-sm text-axon-muted">
++            {memories.map((m) => (
++              <li key={m.id}>
++                <span className="text-[10px] uppercase text-axon-blue-glow">{m.memory_type}</span> —{' '}
++                {m.content}
++              </li>
++            ))}
++          </ul>
++        </section>
++      )}
++
++      <AxonResetSettings />
++
++      <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
++        <h2 className="text-sm font-medium">Guardrails</h2>
++        <div className="mt-4 space-y-4">
++          {GUARDRAILS.map((g) => (
++            <div key={g.label} className="border-l-2 border-axon-blue/40 pl-4">
++              <p className="text-sm font-medium">{g.label}</p>
++              <p className="text-xs text-axon-muted">{g.detail}</p>
++            </div>
++          ))}
++        </div>
++      </section>
++    </div>
++  );
++}
+diff --git a/src/app/axon/u/[username]/tools/deals/page.tsx b/src/app/axon/u/[username]/tools/deals/page.tsx
+new file mode 100644
+index 0000000..3127461
+--- /dev/null
++++ b/src/app/axon/u/[username]/tools/deals/page.tsx
+@@ -0,0 +1,16 @@
++import { ToolPlaceholder } from '@/components/axon-ui/tool-placeholder';
++import { axonPublicPath } from '@/lib/axon/paths';
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++
++export default async function AxonDealsPage({ params }: { params: { username: string } }) {
++  const { username } = await requireAxonPortalUser(params.username);
++  const basePath = axonPublicPath(username);
++
++  return (
++    <ToolPlaceholder
++      title="Deal Tracker"
++      description="Track proposals, negotiations, and closed-won revenue across the pipeline."
++      basePath={basePath}
++    />
++  );
++}
+diff --git a/src/app/axon/u/[username]/tools/follow-up/page.tsx b/src/app/axon/u/[username]/tools/follow-up/page.tsx
+new file mode 100644
+index 0000000..9a02750
+--- /dev/null
++++ b/src/app/axon/u/[username]/tools/follow-up/page.tsx
+@@ -0,0 +1,16 @@
++import { ToolPlaceholder } from '@/components/axon-ui/tool-placeholder';
++import { axonPublicPath } from '@/lib/axon/paths';
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++
++export default async function AxonFollowUpPage({ params }: { params: { username: string } }) {
++  const { username } = await requireAxonPortalUser(params.username);
++  const basePath = axonPublicPath(username);
++
++  return (
++    <ToolPlaceholder
++      title="Follow-Up Engine"
++      description="Automated follow-up sequences for sent outreach. Haiku drafts are ready in the backend — wiring in progress."
++      basePath={basePath}
++    />
++  );
++}
+diff --git a/src/app/axon/u/[username]/tools/hermes/page.tsx b/src/app/axon/u/[username]/tools/hermes/page.tsx
+new file mode 100644
+index 0000000..82bfe34
+--- /dev/null
++++ b/src/app/axon/u/[username]/tools/hermes/page.tsx
+@@ -0,0 +1,16 @@
++import { ToolPlaceholder } from '@/components/axon-ui/tool-placeholder';
++import { axonPublicPath } from '@/lib/axon/paths';
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++
++export default async function AxonHermesPage({ params }: { params: { username: string } }) {
++  const { username } = await requireAxonPortalUser(params.username);
++  const basePath = axonPublicPath(username);
++
++  return (
++    <ToolPlaceholder
++      title="Hermes Task Sync"
++      description="Mirror Hermes marketing tasks into AXON. Sync only — no LLM overlap per guardrails."
++      basePath={basePath}
++    />
++  );
++}
+diff --git a/src/app/axon/u/[username]/tools/ni-outreach/page.tsx b/src/app/axon/u/[username]/tools/ni-outreach/page.tsx
+new file mode 100644
+index 0000000..48e4679
+--- /dev/null
++++ b/src/app/axon/u/[username]/tools/ni-outreach/page.tsx
+@@ -0,0 +1,70 @@
++import Link from 'next/link';
++import { LeadCard } from '@/components/axon-ui/lead-card';
++import { GoalProgress, PipelineBreakdown, StatsCards } from '@/components/axon-ui/stats-cards';
++import { fetchLeads, fetchPipelineStats } from '@/lib/axon/leads';
++import { axonPublicPath } from '@/lib/axon/paths';
++import { appPath } from '@/lib/axon/app-path';
++import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
++
++export const dynamic = 'force-dynamic';
++
++export default async function AxonNiOutreachPage({ params }: { params: { username: string } }) {
++  const { username } = await requireAxonPortalUser(params.username);
++  const basePath = axonPublicPath(username);
++  const [stats, leads] = await Promise.all([fetchPipelineStats(), fetchLeads(50)]);
++  const pending = leads.filter((l) => l.status === 'pending_approval');
++  const recent = leads.slice(0, 6);
++
++  return (
++    <div className="space-y-8">
++      <header>
++        <Link
++          href={appPath('/', basePath)}
++          className="text-sm text-axon-muted hover:text-axon-gold"
++        >
++          ← Back to AXON
++        </Link>
++        <p className="mt-3 text-xs uppercase tracking-[0.25em] text-axon-gold">Autonomous Task</p>
++        <h1 className="mt-1 text-3xl font-semibold">NI Services Outreach</h1>
++        <p className="mt-2 max-w-2xl text-sm text-axon-muted">
++          Phase 1 — find → score → draft → approve → send → close 4 paid clients. No auto-send.
++        </p>
++      </header>
++
++      <StatsCards stats={stats} />
++
++      <div className="grid gap-6 lg:grid-cols-2">
++        <GoalProgress stats={stats} />
++        <PipelineBreakdown stats={stats} />
++      </div>
++
++      {pending.length > 0 && (
++        <section>
++          <div className="mb-4 flex items-center justify-between">
++            <h2 className="text-lg font-medium">
++              Pending Approval
++              <span className="ml-2 font-mono text-sm text-axon-gold">({pending.length})</span>
++            </h2>
++            <Link href={appPath('/queue', basePath)} className="text-sm text-axon-teal hover:underline">
++              View all →
++            </Link>
++          </div>
++          <div className="grid gap-4 md:grid-cols-2">
++            {pending.slice(0, 4).map((lead) => (
++              <LeadCard key={lead.id} lead={lead} basePath={basePath} />
++            ))}
++          </div>
++        </section>
++      )}
++
++      <section>
++        <h2 className="mb-4 text-lg font-medium">Recent Activity</h2>
++        <div className="grid gap-4 md:grid-cols-2">
++          {recent.map((lead) => (
++            <LeadCard key={lead.id} lead={lead} basePath={basePath} />
++          ))}
++        </div>
++      </section>
++    </div>
++  );
++}
+diff --git a/src/components/axon-ui/axon-home-settings.tsx b/src/components/axon-ui/axon-home-settings.tsx
+new file mode 100644
+index 0000000..99a6c86
+--- /dev/null
++++ b/src/components/axon-ui/axon-home-settings.tsx
+@@ -0,0 +1,172 @@
++'use client';
++
++import { useState } from 'react';
++import {
++  HOME_WIDGET_LABELS,
++  type AxonPreferences,
++  type HomeLayoutPrefs,
++  type HomeWidgetId,
++} from '@/lib/axon/axon-types';
++import { apiUrl } from '@/lib/axon/api-base';
++
++const ALL_WIDGETS: HomeWidgetId[] = [
++  'test_buttons',
++  'briefing',
++  'chat',
++  'todo',
++  'notifications',
++  'orb',
++  'controls',
++];
++
++interface AxonHomeSettingsProps {
++  initial: HomeLayoutPrefs;
++}
++
++export function AxonHomeSettings({ initial }: AxonHomeSettingsProps) {
++  const [layout, setLayout] = useState<HomeLayoutPrefs>(initial);
++  const [dragItem, setDragItem] = useState<{ id: HomeWidgetId; from: keyof HomeLayoutPrefs } | null>(null);
++  const [saving, setSaving] = useState(false);
++  const [message, setMessage] = useState('');
++
++  function visible(id: HomeWidgetId) {
++    return !layout.hidden.includes(id);
++  }
++
++  function toggleVisibility(id: HomeWidgetId) {
++    setLayout((prev) => {
++      const hidden = prev.hidden.includes(id)
++        ? prev.hidden.filter((x) => x !== id)
++        : [...prev.hidden, id];
++      return { ...prev, hidden };
++    });
++  }
++
++  function onDragStart(id: HomeWidgetId, from: 'left' | 'center' | 'right') {
++    setDragItem({ id, from });
++  }
++
++  function onDrop(column: 'left' | 'center' | 'right') {
++    if (!dragItem || dragItem.from === column) {
++      setDragItem(null);
++      return;
++    }
++    setLayout((prev) => {
++      const fromKey = dragItem.from as 'left' | 'center' | 'right';
++      const next = {
++        ...prev,
++        [fromKey]: (prev[fromKey] as HomeWidgetId[]).filter((x) => x !== dragItem.id),
++        [column]: [...(prev[column] as HomeWidgetId[]), dragItem.id],
++      };
++      return next;
++    });
++    setDragItem(null);
++  }
++
++  async function save() {
++    setSaving(true);
++    setMessage('');
++    try {
++      const res = await fetch(apiUrl('/api/axon/preferences'), {
++        method: 'PATCH',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ homeLayout: layout }),
++      });
++      const data = await res.json();
++      if (!res.ok) throw new Error(data.error);
++      setLayout(data.preferences.homeLayout);
++      setMessage('Home layout saved.');
++    } catch (err) {
++      setMessage(err instanceof Error ? err.message : 'Save failed');
++    } finally {
++      setSaving(false);
++    }
++  }
++
++  return (
++    <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
++      <h2 className="text-sm font-medium text-axon-blue-glow">Home Page Layout</h2>
++      <p className="mt-1 text-xs text-axon-muted">
++        Drag widgets between columns and toggle visibility. Make AXON yours.
++      </p>
++
++      <div className="mt-6 grid gap-4 lg:grid-cols-3">
++        {(['left', 'center', 'right'] as const).map((col) => (
++          <ColumnDropZone
++            key={col}
++            label={col === 'left' ? 'Left column' : col === 'center' ? 'Center column' : 'Right column'}
++            items={layout[col]}
++            onDragStart={(id) => onDragStart(id, col)}
++            onDrop={() => onDrop(col)}
++          />
++        ))}
++      </div>
++
++      <div className="mt-6">
++        <p className="text-xs font-medium text-axon-muted">Widget visibility</p>
++        <div className="mt-3 flex flex-wrap gap-2">
++          {ALL_WIDGETS.map((id) => (
++            <button
++              key={id}
++              type="button"
++              onClick={() => toggleVisibility(id)}
++              className={`rounded-full border px-3 py-1 text-xs transition ${
++                visible(id)
++                  ? 'border-axon-blue/50 bg-axon-blue/15 text-axon-cyan'
++                  : 'border-axon-border text-axon-muted line-through opacity-60'
++              }`}
++            >
++              {HOME_WIDGET_LABELS[id]}
++            </button>
++          ))}
++        </div>
++      </div>
++
++      <div className="mt-6 flex items-center gap-3">
++        <button
++          type="button"
++          disabled={saving}
++          onClick={save}
++          className="rounded-lg axon-gradient-btn px-5 py-2 text-sm text-white disabled:opacity-40"
++        >
++          {saving ? 'Saving…' : 'Save layout'}
++        </button>
++        {message && <span className="text-xs text-axon-muted">{message}</span>}
++      </div>
++    </section>
++  );
++}
++
++function ColumnDropZone({
++  label,
++  items,
++  onDragStart,
++  onDrop,
++}: {
++  label: string;
++  items: HomeWidgetId[];
++  onDragStart: (id: HomeWidgetId) => void;
++  onDrop: () => void;
++}) {
++  return (
++    <div
++      onDragOver={(e) => e.preventDefault()}
++      onDrop={onDrop}
++      className="min-h-[160px] rounded-xl border border-dashed border-axon-border/70 bg-axon-elevated/40 p-3"
++    >
++      <p className="text-[10px] uppercase tracking-wider text-axon-muted">{label}</p>
++      <ul className="mt-2 space-y-2">
++        {items.map((id) => (
++          <li
++            key={id}
++            draggable
++            onDragStart={() => onDragStart(id)}
++            className="cursor-grab rounded-lg border border-axon-border/60 bg-axon-surface px-3 py-2 text-xs active:cursor-grabbing"
++          >
++            {HOME_WIDGET_LABELS[id]}
++          </li>
++        ))}
++      </ul>
++    </div>
++  );
++}
+diff --git a/src/components/axon-ui/axon-interface.tsx b/src/components/axon-ui/axon-interface.tsx
+index 168678f..233c059 100644
+--- a/src/components/axon-ui/axon-interface.tsx
++++ b/src/components/axon-ui/axon-interface.tsx
+@@ -1,14 +1,21 @@
+ 'use client';
+ 
+-import { useCallback, useEffect, useRef, useState } from 'react';
++import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+ import { JarvisOrb } from './jarvis-orb';
++import { AxonOrbStatus } from './axon-orb-status';
+ import { BriefingPanel } from './briefing-panel';
+ import { TodoPanel } from './todo-panel';
+ import { AxonLabFloor } from './axon-lab-floor';
++import { NotificationsPanel } from './notifications-panel';
++import { PanelFocusView, type FocusPanelId } from './panel-focus-view';
+ import {
+   AXON_VOICES,
++  DEFAULT_PREFERENCES,
++  type AxonNotification,
++  type AxonPreferences,
+   type AxonWorkspace,
+   type ChatMessage,
++  type HomeWidgetId,
+   type InputMode,
+ } from '@/lib/axon/axon-types';
+ import { useAxonVoice } from '@/lib/axon/use-axon-voice';
+@@ -18,6 +25,7 @@ interface AxonInterfaceProps {
+   basePath?: string;
+   initialMessages: ChatMessage[];
+   initialWorkspace: AxonWorkspace;
++  initialPreferences?: AxonPreferences;
+   initialProfile: {
+     input_mode: InputMode;
+     read_aloud: boolean;
+@@ -27,21 +35,37 @@ interface AxonInterfaceProps {
+ }
+ 
+ export function AxonInterface({
++  basePath = "",
+   initialMessages,
+   initialWorkspace,
++  initialPreferences,
+   initialProfile,
+ }: AxonInterfaceProps) {
+   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+   const [workspace, setWorkspace] = useState<AxonWorkspace>(initialWorkspace);
++  const [preferences, setPreferences] = useState<AxonPreferences>(initialPreferences ?? DEFAULT_PREFERENCES);
+   const [input, setInput] = useState('');
+   const [inputMode, setInputMode] = useState<InputMode>(initialProfile.input_mode);
+   const [readAloud, setReadAloud] = useState(initialProfile.read_aloud);
+   const [voiceId, setVoiceId] = useState(initialProfile.voice_id);
+   const [loading, setLoading] = useState(false);
+   const [speaking, setSpeaking] = useState(false);
++  const [focusPanel, setFocusPanel] = useState<FocusPanelId | null>(null);
++  const [urgentChatOverlay, setUrgentChatOverlay] = useState(false);
++  const [notifTrigger, setNotifTrigger] = useState<{ notification: AxonNotification; key: number } | null>(null);
+   const scrollRef = useRef<HTMLDivElement>(null);
+   const voice = useAxonVoice(inputMode, voiceId, readAloud);
+ 
++  const layout = preferences.homeLayout;
++  const isVisible = (id: HomeWidgetId) => !layout.hidden.includes(id);
++
++  const sideLeft = layout.left.filter((id) => id !== 'test_buttons' && isVisible(id));
++  const centerWidgets = layout.center.filter(isVisible);
++  const rightWidgets = layout.right.filter(isVisible);
++
++  const rightTopWidgets = rightWidgets.filter((id) => id === 'todo');
++  const rightLowerWidgets = rightWidgets.filter((id) => id !== 'todo');
++
+   const refreshWorkspace = useCallback(async () => {
+     const res = await fetch(apiUrl('/api/axon/workspace'));
+     if (res.ok) {
+@@ -55,11 +79,22 @@ export function AxonInterface({
+   }, [messages, loading]);
+ 
+   useEffect(() => {
+-    if (voice.transcript && !loading) {
+-      setInput(voice.transcript);
+-    }
++    if (voice.transcript && !loading) setInput(voice.transcript);
+   }, [voice.transcript, loading]);
+ 
++  useEffect(() => {
++    function onTestNotification(e: Event) {
++      const detail = (e as CustomEvent<{ notification: AxonNotification }>).detail;
++      if (!detail?.notification) return;
++      setNotifTrigger({ notification: detail.notification, key: Date.now() });
++      fetch(apiUrl('/api/axon/preferences'))
++        .then((r) => r.json())
++        .then((d) => d.preferences && setPreferences(d.preferences));
++    }
++    window.addEventListener('axon:test-notification', onTestNotification);
++    return () => window.removeEventListener('axon:test-notification', onTestNotification);
++  }, []);
++
+   const savePrefs = useCallback(
+     async (patch: Partial<{ input_mode: InputMode; read_aloud: boolean; voice_id: string }>) => {
+       await fetch(apiUrl('/api/axon/profile'), {
+@@ -102,11 +137,8 @@ export function AxonInterface({
+         data.assistantMsg,
+       ]);
+ 
+-      if (data.workspace) {
+-        setWorkspace(data.workspace);
+-      } else {
+-        refreshWorkspace();
+-      }
++      if (data.workspace) setWorkspace(data.workspace);
++      else refreshWorkspace();
+ 
+       if (readAloud && data.reply) {
+         setSpeaking(true);
+@@ -133,163 +165,423 @@ export function AxonInterface({
+     }
+   }
+ 
+-  function handleSubmit(e: React.FormEvent) {
+-    e.preventDefault();
+-    sendMessage(input);
+-  }
++  const briefingPanel = (
++    <BriefingPanel
++      items={workspace.briefing}
++      autonomous={workspace.briefing_autonomous}
++      onRefresh={refreshWorkspace}
++      onTitleClick={() => setFocusPanel('briefing')}
++    />
++  );
+ 
+-  function toggleInputMode(mode: InputMode) {
+-    setInputMode(mode);
+-    savePrefs({ input_mode: mode });
+-    if (mode === 'chat') voice.stopListening();
+-  }
++  const todoPanel = (
++    <TodoPanel
++      items={workspace.todos}
++      autonomous={workspace.todos_autonomous}
++      onRefresh={refreshWorkspace}
++      onTitleClick={() => setFocusPanel('todo')}
++    />
++  );
+ 
+-  return (
+-    <div className="axon-lab-stage relative min-h-[820px] pb-6">
+-      <AxonLabFloor />
+-
+-      {/* Core intelligence — center of the arc */}
+-      <div className="relative z-30 flex flex-col items-center pt-2">
+-        <JarvisOrb active={!loading} listening={voice.listening} speaking={speaking} />
+-
+-        <div className="axon-lab-controls mt-6 flex flex-wrap items-center justify-center gap-3">
+-          <div className="flex rounded-full border border-axon-blue/30 bg-axon-elevated/80 p-1 axon-glass">
+-            <ModeButton
+-              active={inputMode === 'chat'}
+-              onClick={() => toggleInputMode('chat')}
+-              label="Chat"
+-            />
+-            <ModeButton
+-              active={inputMode === 'voice'}
+-              onClick={() => toggleInputMode('voice')}
+-              label="Voice"
+-              disabled={!voice.voiceSupported}
+-            />
++  const desktopChatShell = (
++    <div className="axon-holo-chat-shell axon-card-3d relative rounded-2xl border border-axon-border/50 axon-glass">
++      {urgentChatOverlay && (
++        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-red-950/90 animate-pulse">
++          <p className="text-lg font-bold uppercase tracking-[0.3em] text-red-400">Urgent notification</p>
++        </div>
++      )}
++      <div className="relative shrink-0 border-b border-axon-border/50 px-4 py-2.5">
++        <p className="text-[10px] uppercase tracking-[0.25em] text-axon-blue-glow">Command Interface</p>
++      </div>
++      <div ref={scrollRef} className="axon-holo-messages space-y-3 overflow-y-auto p-4 sm:p-5">
++        {messages.length === 0 && !loading && (
++          <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
++            <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
++            <p className="mt-2 text-xs">Ask about outreach, briefing, or to-dos.</p>
+           </div>
+-
+-          <div className="axon-card-3d flex flex-wrap items-center gap-4 rounded-2xl border border-axon-border/50 px-4 py-2.5 axon-glass">
+-            <Toggle
+-              label="Read aloud"
+-              checked={readAloud}
+-              onChange={(v) => {
+-                setReadAloud(v);
+-                savePrefs({ read_aloud: v });
+-                if (!v) voice.stopSpeaking();
+-              }}
+-              disabled={!voice.ttsSupported}
++        )}
++        {messages.map((m) => (
++          <MessageBubble key={m.id} role={m.role} content={m.content} channel={m.channel} />
++        ))}
++        {loading && (
++          <div className="flex items-center gap-2 text-xs text-axon-muted">
++            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-axon-cyan" />
++            AXON is thinking…
++          </div>
++        )}
++      </div>
++      <form
++        onSubmit={(e) => {
++          e.preventDefault();
++          sendMessage(input);
++        }}
++        className="axon-holo-input-region shrink-0 border-t border-axon-border/60 p-4"
++      >
++        {inputMode === 'voice' ? (
++          <div className="flex flex-col gap-3">
++            <button
++              type="button"
++              onClick={voice.listening ? voice.stopListening : voice.startListening}
++              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
++                voice.listening
++                  ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
++                  : 'border-axon-border hover:border-axon-blue-glow/40'
++              }`}
++            >
++              {voice.listening ? 'Stop listening' : 'Tap to speak'}
++            </button>
++            {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
++            <button
++              type="submit"
++              disabled={!input.trim() || loading}
++              className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
++            >
++              Send voice message
++            </button>
++          </div>
++        ) : (
++          <div className="flex gap-2">
++            <input
++              value={input}
++              onChange={(e) => setInput(e.target.value)}
++              placeholder="Talk to AXON…"
++              className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-blue-glow/50"
+             />
+-            <label className="flex items-center gap-2 text-xs text-axon-muted">
+-              Voice
+-              <select
+-                value={voiceId}
+-                onChange={(e) => {
+-                  setVoiceId(e.target.value);
+-                  savePrefs({ voice_id: e.target.value });
+-                }}
+-                className="rounded-lg border border-axon-border bg-axon-elevated px-2 py-1.5 text-xs outline-none focus:border-axon-blue-glow/50"
+-              >
+-                {AXON_VOICES.map((v) => (
+-                  <option key={v.id} value={v.id}>
+-                    {v.name}
+-                  </option>
+-                ))}
+-              </select>
+-            </label>
++            <button
++              type="submit"
++              disabled={!input.trim() || loading}
++              className="rounded-lg axon-gradient-btn px-5 py-3 text-sm text-white disabled:opacity-40"
++            >
++              Send
++            </button>
+           </div>
++        )}
++      </form>
++    </div>
++  );
++
++  const chatMessagesBlock = (
++    <div className="axon-holo-chat-card axon-card-3d relative flex flex-col rounded-t-2xl border border-axon-border/50 axon-glass">
++      {urgentChatOverlay && (
++        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-t-2xl bg-red-950/90 animate-pulse">
++          <p className="text-lg font-bold uppercase tracking-[0.3em] text-red-400">Urgent notification</p>
+         </div>
++      )}
++      <div className="shrink-0 border-b border-axon-border/50 px-4 py-2.5">
++        <p className="text-[10px] uppercase tracking-[0.25em] text-axon-blue-glow">Command Interface</p>
+       </div>
++      <div ref={scrollRef} className="axon-holo-messages flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
++        {messages.length === 0 && !loading && (
++          <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
++            <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
++            <p className="mt-2 text-xs">Ask about outreach, briefing, or to-dos.</p>
++          </div>
++        )}
++        {messages.map((m) => (
++          <MessageBubble key={m.id} role={m.role} content={m.content} channel={m.channel} />
++        ))}
++        {loading && (
++          <div className="flex items-center gap-2 text-xs text-axon-muted">
++            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-axon-cyan" />
++            AXON is thinking…
++          </div>
++        )}
++      </div>
++    </div>
++  );
+ 
+-      {/* Semicircle arc — panels curve around the core with depth */}
+-      <div className="axon-lab-arc relative z-20 mx-auto mt-4 flex max-w-[1340px] flex-col items-stretch gap-4 px-2 lg:mt-2 lg:flex-row lg:items-end lg:justify-center lg:gap-5">
+-        <div className="axon-lab-wing-left axon-card-3d w-full lg:mb-12 lg:w-[min(300px,28%)]">
+-          <BriefingPanel
+-            items={workspace.briefing}
+-            autonomous={workspace.briefing_autonomous}
+-            onRefresh={refreshWorkspace}
++  const chatInputBlock = (
++    <form
++      onSubmit={(e) => {
++        e.preventDefault();
++        sendMessage(input);
++      }}
++      className="axon-holo-input-region axon-card-3d rounded-b-2xl border border-axon-border/50 border-t border-axon-border/60 axon-glass p-4"
++    >
++      {inputMode === 'voice' ? (
++        <div className="flex flex-col gap-3">
++          <button
++            type="button"
++            onClick={voice.listening ? voice.stopListening : voice.startListening}
++            className={`rounded-xl border px-4 py-3 text-sm font-medium ${
++              voice.listening
++                ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
++                : 'border-axon-border hover:border-axon-blue-glow/40'
++            }`}
++          >
++            {voice.listening ? 'Stop listening' : 'Tap to speak'}
++          </button>
++          {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
++          <button
++            type="submit"
++            disabled={!input.trim() || loading}
++            className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
++          >
++            Send voice message
++          </button>
++        </div>
++      ) : (
++        <div className="flex gap-2">
++          <input
++            value={input}
++            onChange={(e) => setInput(e.target.value)}
++            placeholder="Talk to AXON…"
++            className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-blue-glow/50"
+           />
++          <button
++            type="submit"
++            disabled={!input.trim() || loading}
++            className="rounded-lg axon-gradient-btn px-5 py-3 text-sm text-white disabled:opacity-40"
++          >
++            Send
++          </button>
+         </div>
++      )}
++    </form>
++  );
+ 
+-        <div className="axon-lab-center axon-card-3d flex min-h-[460px] w-full flex-col rounded-2xl border border-axon-border/50 axon-glass lg:mb-4 lg:w-[min(560px,44%)]">
+-          <div className="border-b border-axon-border/50 px-4 py-2.5">
+-            <p className="text-[10px] uppercase tracking-[0.25em] text-axon-blue-glow">Command Interface</p>
+-          </div>
+-          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+-            {messages.length === 0 && (
+-              <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
+-                <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
+-                <p className="mt-2 text-xs">
+-                  Ask about outreach, set up your briefing, or add tasks to your to-do list.
+-                </p>
++  const chatPanel = (
++    <div className="flex flex-col">
++      {chatMessagesBlock}
++      {chatInputBlock}
++    </div>
++  );
++
++  const chatGhost = (
++    <div className="rounded-2xl border border-axon-border/30 bg-axon-surface/50 p-4">
++      <p className="text-[10px] uppercase text-axon-muted">Command Interface</p>
++      <div className="mt-4 h-40 rounded-lg bg-axon-elevated/30" />
++    </div>
++  );
++
++  function renderWidget(
++    id: HomeWidgetId,
++    zone?: 'holo-left' | 'holo-right-top' | 'holo-right-lower' | 'holo-left-lower' | 'orb-deck' | 'stack'
++  ) {
++    if (!isVisible(id)) return null;
++
++    const wrap = (node: ReactNode, className = '') => (
++      <div key={id} className={className}>
++        {node}
++      </div>
++    );
++
++    switch (id) {
++      case 'test_buttons':
++        return null;
++      case 'briefing':
++        return wrap(
++          briefingPanel,
++          zone === 'holo-left' ? 'axon-holo-panel axon-holo-side-panel min-h-0 overflow-hidden' : 'min-h-[360px]'
++        );
++      case 'chat':
++        return wrap(chatPanel, zone === 'stack' ? 'w-full' : 'w-full');
++      case 'todo':
++        return wrap(
++          todoPanel,
++          zone === 'holo-right-top' ? 'axon-holo-panel axon-holo-side-panel min-h-0 overflow-hidden' : 'min-h-[360px]'
++        );
++      case 'notifications':
++        return wrap(
++          <NotificationsPanel
++            settings={preferences.notifications}
++            notifications={preferences.notificationsInbox}
++            trigger={notifTrigger}
++            onUrgentStart={() => setUrgentChatOverlay(true)}
++            onUrgentEnd={() => setUrgentChatOverlay(false)}
++            onOpen={(n) => {
++              fetch(apiUrl('/api/axon/preferences'), {
++                method: 'PATCH',
++                headers: { 'Content-Type': 'application/json' },
++                body: JSON.stringify({ markReadId: n.id }),
++              })
++                .then((r) => r.json())
++                .then((d) => d.preferences && setPreferences(d.preferences));
++            }}
++          />,
++          zone === 'holo-right-lower' ? 'axon-holo-panel w-full' : 'w-full'
++        );
++      case 'orb':
++        return wrap(
++          <JarvisOrb
++            active={!loading}
++            listening={voice.listening}
++            speaking={speaking}
++            processing={loading}
++            size="large"
++          />,
++          zone === 'orb-deck' ? 'axon-holo-orb-zone w-full' : 'flex justify-center py-6'
++        );
++      case 'controls':
++        return wrap(
++          <div className="axon-holo-controls relative z-40 flex w-full flex-col items-center gap-3 overflow-visible">
++            <div className="flex w-full flex-wrap items-center justify-center gap-2.5">
++              <div className="flex rounded-full border border-axon-blue/30 bg-axon-elevated/90 p-1 axon-glass shadow-lg">
++                <ModeButton
++                  active={inputMode === 'chat'}
++                  onClick={() => {
++                    setInputMode('chat');
++                    savePrefs({ input_mode: 'chat' });
++                    voice.stopListening();
++                  }}
++                  label="Chat"
++                />
++                <ModeButton
++                  active={inputMode === 'voice'}
++                  onClick={() => {
++                    setInputMode('voice');
++                    savePrefs({ input_mode: 'voice' });
++                  }}
++                  label="Voice"
++                  disabled={!voice.voiceSupported}
++                />
++              </div>
++              <AxonOrbStatus
++                active={!loading}
++                listening={voice.listening}
++                speaking={speaking}
++                processing={loading}
++              />
++            </div>
++            <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-axon-border/50 px-4 py-3 axon-glass">
++              <Toggle
++                label="Read aloud"
++                checked={readAloud}
++                onChange={(v) => {
++                  setReadAloud(v);
++                  savePrefs({ read_aloud: v });
++                  if (!v) voice.stopSpeaking();
++                }}
++                disabled={!voice.ttsSupported}
++              />
++              <label className="flex items-center gap-2 text-xs text-axon-muted">
++                Voice
++                <select
++                  value={voiceId}
++                  onChange={(e) => {
++                    setVoiceId(e.target.value);
++                    savePrefs({ voice_id: e.target.value });
++                  }}
++                  className="rounded-lg border border-axon-border bg-axon-elevated px-2 py-1.5 text-xs outline-none focus:border-axon-blue-glow/50"
++                >
++                  {AXON_VOICES.map((v) => (
++                    <option key={v.id} value={v.id}>
++                      {v.name}
++                    </option>
++                  ))}
++                </select>
++              </label>
++            </div>
++          </div>,
++          zone === 'orb-deck' ? 'w-full' : 'relative z-40 pb-4'
++        );
++      default:
++        return null;
++    }
++  }
++
++  const centerChat = centerWidgets.filter((id) => id === 'chat');
++  const orbDeckWidgets = centerWidgets.filter((id) => id === 'controls' || id === 'orb');
++  const centerOther = centerWidgets.filter((id) => id !== 'chat' && id !== 'orb' && id !== 'controls');
++
++  const gridModifiers = [
++    sideLeft.length === 0 ? 'axon-holo-grid-no-left' : '',
++    rightWidgets.length === 0 ? 'axon-holo-grid-no-right' : '',
++    sideLeft.length === 0 && rightWidgets.length === 0 ? 'axon-holo-grid-single' : '',
++  ]
++    .filter(Boolean)
++    .join(' ');
++
++  const mobileStack: HomeWidgetId[] = [
++    ...sideLeft,
++    ...centerChat,
++    ...centerOther,
++    ...rightTopWidgets,
++    ...rightLowerWidgets,
++    ...orbDeckWidgets.filter((id) => id === 'controls'),
++    ...orbDeckWidgets.filter((id) => id === 'orb'),
++  ];
++
++  return (
++    <>
++      <div className="axon-holo-stage axon-lab-stage relative min-h-0 overflow-visible pb-8">
++        <AxonLabFloor />
++
++        {/* Desktop: aligned holo grid */}
++        <div className="axon-holo-rig relative z-20 mx-auto hidden max-w-[1720px] px-1 lg:block">
++          <div className={`axon-holo-grid ${gridModifiers}`}>
++            {sideLeft.length > 0 && (
++              <div className="axon-holo-cell axon-holo-cell-left">
++                {sideLeft.map((id) => renderWidget(id, 'holo-left'))}
+               </div>
+             )}
+-            {messages.map((m) => (
+-              <MessageBubble key={m.id} role={m.role} content={m.content} channel={m.channel} />
+-            ))}
+-            {loading && (
+-              <div className="flex items-center gap-2 text-xs text-axon-muted">
+-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-axon-cyan" />
+-                AXON is thinking…
++
++            {centerChat.length > 0 && (
++              <div className="axon-holo-cell axon-holo-cell-center">{desktopChatShell}</div>
++            )}
++
++            {centerOther.length > 0 && (
++              <div className="axon-holo-cell axon-holo-cell-left-lower flex flex-col gap-4">
++                {centerOther.map((id) => renderWidget(id, 'holo-left-lower'))}
+               </div>
+             )}
+-          </div>
+ 
+-          <form onSubmit={handleSubmit} className="border-t border-axon-border/60 p-4">
+-            {inputMode === 'voice' ? (
+-              <div className="flex flex-col gap-3">
+-                <button
+-                  type="button"
+-                  onClick={voice.listening ? voice.stopListening : voice.startListening}
+-                  className={`rounded-xl border px-4 py-4 text-sm font-medium transition ${
+-                    voice.listening
+-                      ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
+-                      : 'border-axon-border hover:border-axon-blue-glow/40'
+-                  }`}
+-                >
+-                  {voice.listening ? 'Stop listening' : 'Hold to speak — tap to start'}
+-                </button>
+-                {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
+-                <button
+-                  type="submit"
+-                  disabled={!input.trim() || loading}
+-                  className="rounded-lg axon-gradient-btn px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+-                >
+-                  Send voice message
+-                </button>
++            {rightTopWidgets.length > 0 && (
++              <div className="axon-holo-cell axon-holo-cell-right-top">
++                {rightTopWidgets.map((id) => renderWidget(id, 'holo-right-top'))}
+               </div>
+-            ) : (
+-              <div className="flex gap-2">
+-                <input
+-                  value={input}
+-                  onChange={(e) => setInput(e.target.value)}
+-                  placeholder="Talk to AXON…"
+-                  className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-blue-glow/50"
+-                />
+-                <button
+-                  type="submit"
+-                  disabled={!input.trim() || loading}
+-                  className="rounded-lg axon-gradient-btn px-5 py-3 text-sm font-medium text-white disabled:opacity-40"
+-                >
+-                  Send
+-                </button>
++            )}
++
++            {rightLowerWidgets.length > 0 && (
++              <div className="axon-holo-cell axon-holo-cell-right-lower flex flex-col gap-4">
++                {rightLowerWidgets.map((id) => renderWidget(id, 'holo-right-lower'))}
+               </div>
+             )}
+-          </form>
++
++            <div className="axon-holo-cell axon-holo-cell-orb">
++              <div className="axon-holo-orb-deck">
++                {orbDeckWidgets
++                  .filter((id) => id === 'controls')
++                  .map((id) => renderWidget(id, 'orb-deck'))}
++                {orbDeckWidgets
++                  .filter((id) => id === 'orb')
++                  .map((id) => renderWidget(id, 'orb-deck'))}
++              </div>
++            </div>
++          </div>
++        </div>
++
++        {/* Mobile / tablet stack */}
++        <div className="relative z-20 mx-auto flex max-w-[1720px] flex-col gap-5 px-1 lg:hidden">
++          {mobileStack.map((id) => renderWidget(id, 'stack'))}
+         </div>
+ 
+-        <div className="axon-lab-wing-right axon-card-3d w-full lg:mb-12 lg:w-[min(300px,28%)]">
++        <p className="relative z-10 mx-auto mt-6 max-w-lg px-2 text-center text-[10px] leading-relaxed text-axon-muted/80">
++          {initialProfile.tone_preset.summary ||
++            'Default tone — AXON adapts from every message you send.'}
++        </p>
++      </div>
++
++      <PanelFocusView
++        active={focusPanel}
++        onClose={() => setFocusPanel(null)}
++        briefing={
++          <BriefingPanel
++            items={workspace.briefing}
++            autonomous={workspace.briefing_autonomous}
++            onRefresh={refreshWorkspace}
++          />
++        }
++        todo={
+           <TodoPanel
+             items={workspace.todos}
+             autonomous={workspace.todos_autonomous}
+             onRefresh={refreshWorkspace}
+           />
+-        </div>
+-      </div>
+-
+-      <p className="relative z-10 mx-auto mt-4 max-w-lg text-center text-[10px] leading-relaxed text-axon-muted/80">
+-        {initialProfile.tone_preset.summary ||
+-          'Default tone — AXON adapts from every message you send.'}
+-      </p>
+-    </div>
++        }
++        chatGhost={chatGhost}
++      />
++    </>
+   );
+ }
+ 
+@@ -310,9 +602,7 @@ function ModeButton({
+       onClick={onClick}
+       disabled={disabled}
+       className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+-        active
+-          ? 'axon-gradient-btn text-white'
+-          : 'text-axon-muted hover:text-axon-text disabled:opacity-40'
++        active ? 'axon-gradient-btn text-white' : 'text-axon-muted hover:text-axon-text disabled:opacity-40'
+       }`}
+     >
+       {label}
+diff --git a/src/components/axon-ui/axon-lab-floor.tsx b/src/components/axon-ui/axon-lab-floor.tsx
+index 9687f3b..3c33072 100644
+--- a/src/components/axon-ui/axon-lab-floor.tsx
++++ b/src/components/axon-ui/axon-lab-floor.tsx
+@@ -7,7 +7,7 @@ export function AxonLabFloor() {
+       aria-hidden
+     >
+       {/* Semicircle holographic floor ring */}
+-      <div className="relative h-[280px] w-[min(920px,95%)]">
++      <div className="relative h-[320px] w-[min(1200px,96%)]">
+         <div
+           className="absolute inset-x-[8%] bottom-0 h-[220px] rounded-[50%] border border-axon-blue/25 animate-pulse-glow"
+           style={{
+diff --git a/src/components/axon-ui/axon-notification-settings.tsx b/src/components/axon-ui/axon-notification-settings.tsx
+new file mode 100644
+index 0000000..37a12c0
+--- /dev/null
++++ b/src/components/axon-ui/axon-notification-settings.tsx
+@@ -0,0 +1,221 @@
++'use client';
++
++import { useState } from 'react';
++import type { NotificationSettings } from '@/lib/axon/axon-types';
++import { apiUrl } from '@/lib/axon/api-base';
++
++interface AxonNotificationSettingsProps {
++  initial: NotificationSettings;
++}
++
++export function AxonNotificationSettings({ initial }: AxonNotificationSettingsProps) {
++  const [settings, setSettings] = useState<NotificationSettings>(initial);
++  const [saving, setSaving] = useState(false);
++  const [message, setMessage] = useState('');
++  const [customRule, setCustomRule] = useState('');
++
++  async function save() {
++    setSaving(true);
++    setMessage('');
++    try {
++      const res = await fetch(apiUrl('/api/axon/preferences'), {
++        method: 'PATCH',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ notifications: settings }),
++      });
++      const data = await res.json();
++      if (!res.ok) throw new Error(data.error);
++      setSettings(data.preferences.notifications);
++      setMessage('Notification settings saved.');
++    } catch (err) {
++      setMessage(err instanceof Error ? err.message : 'Save failed');
++    } finally {
++      setSaving(false);
++    }
++  }
++
++  function patch(partial: Partial<NotificationSettings>) {
++    setSettings((s) => ({ ...s, ...partial }));
++  }
++
++  function addCustomNotUrgent() {
++    if (!customRule.trim()) return;
++    setSettings((s) => ({
++      ...s,
++      customNotUrgent: [...s.customNotUrgent, customRule.trim()],
++    }));
++    setCustomRule('');
++  }
++
++  return (
++    <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
++      <h2 className="text-sm font-medium text-axon-blue-glow">Notifications & Urgency</h2>
++      <p className="mt-1 text-xs text-axon-muted">
++        AXON pre-packages urgency rules. Clarify what is not urgent, or disable urgency entirely.
++      </p>
++
++      <div className="mt-6 space-y-4">
++        <ToggleRow label="Notifications enabled" checked={settings.enabled} onChange={(v) => patch({ enabled: v })} />
++        <ToggleRow
++          label="Urgent notifications (flash + alarm)"
++          checked={settings.urgencyEnabled}
++          onChange={(v) => patch({ urgencyEnabled: v })}
++        />
++        <ToggleRow
++          label="Urgent alarm sound"
++          checked={settings.urgencySound}
++          onChange={(v) => patch({ urgencySound: v })}
++          disabled={!settings.urgencyEnabled}
++        />
++
++        <label className="block text-xs text-axon-muted">
++          Urgent flash duration ({settings.urgencyFlashSeconds}s)
++          <input
++            type="range"
++            min={3}
++            max={5}
++            step={1}
++            value={settings.urgencyFlashSeconds}
++            onChange={(e) => patch({ urgencyFlashSeconds: Number(e.target.value) })}
++            className="mt-2 w-full"
++            disabled={!settings.urgencyEnabled}
++          />
++        </label>
++
++        <label className="block text-xs text-axon-muted">
++          Alarm volume
++          <input
++            type="range"
++            min={0}
++            max={1}
++            step={0.05}
++            value={settings.urgencyVolume}
++            onChange={(e) => patch({ urgencyVolume: Number(e.target.value) })}
++            className="mt-2 w-full"
++            disabled={!settings.urgencySound}
++          />
++        </label>
++      </div>
++
++      <div className="mt-6">
++        <p className="text-xs font-medium text-axon-muted">Integration notifications</p>
++        <div className="mt-3 grid gap-2 sm:grid-cols-2">
++          {(
++            [
++              ['outreach', 'NI Outreach'],
++              ['telegram', 'Telegram'],
++              ['pipeline', 'Pipeline'],
++              ['hermes', 'Hermes'],
++            ] as const
++          ).map(([key, label]) => (
++            <ToggleRow
++              key={key}
++              label={label}
++              checked={settings.integrations[key]}
++              onChange={(v) =>
++                patch({ integrations: { ...settings.integrations, [key]: v } })
++              }
++            />
++          ))}
++        </div>
++      </div>
++
++      <div className="mt-6">
++        <p className="text-xs font-medium text-axon-muted">AXON urgency rules (pre-packaged)</p>
++        <div className="mt-3 space-y-2">
++          {(
++            [
++              ['pipelineApproval', 'Pipeline items needing approval'],
++              ['dealWon', 'Deal won / closed'],
++              ['systemError', 'System errors & failures'],
++              ['outreachReply', 'Outreach replies (off by default)'],
++            ] as const
++          ).map(([key, label]) => (
++            <ToggleRow
++              key={key}
++              label={label}
++              checked={settings.urgencyRules[key]}
++              onChange={(v) =>
++                patch({ urgencyRules: { ...settings.urgencyRules, [key]: v } })
++              }
++              disabled={!settings.urgencyEnabled}
++            />
++          ))}
++        </div>
++      </div>
++
++      <div className="mt-6">
++        <p className="text-xs font-medium text-axon-muted">Never treat as urgent (keywords)</p>
++        <div className="mt-2 flex gap-2">
++          <input
++            value={customRule}
++            onChange={(e) => setCustomRule(e.target.value)}
++            placeholder="e.g. newsletter, digest"
++            className="flex-1 rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm"
++          />
++          <button
++            type="button"
++            onClick={addCustomNotUrgent}
++            className="rounded-lg border border-axon-border px-3 text-xs hover:border-axon-blue/40"
++          >
++            Add
++          </button>
++        </div>
++        {settings.customNotUrgent.length > 0 && (
++          <ul className="mt-2 flex flex-wrap gap-2">
++            {settings.customNotUrgent.map((rule) => (
++              <li
++                key={rule}
++                className="rounded-full bg-axon-elevated px-2 py-0.5 text-[10px] text-axon-muted"
++              >
++                {rule}
++              </li>
++            ))}
++          </ul>
++        )}
++      </div>
++
++      <div className="mt-6 flex items-center gap-3">
++        <button
++          type="button"
++          disabled={saving}
++          onClick={save}
++          className="rounded-lg axon-gradient-btn px-5 py-2 text-sm text-white disabled:opacity-40"
++        >
++          {saving ? 'Saving…' : 'Save notification settings'}
++        </button>
++        {message && <span className="text-xs text-axon-muted">{message}</span>}
++      </div>
++    </section>
++  );
++}
++
++function ToggleRow({
++  label,
++  checked,
++  onChange,
++  disabled,
++}: {
++  label: string;
++  checked: boolean;
++  onChange: (v: boolean) => void;
++  disabled?: boolean;
++}) {
++  return (
++    <label className={`flex items-center justify-between text-xs ${disabled ? 'opacity-50' : ''}`}>
++      <span className="text-axon-muted">{label}</span>
++      <button
++        type="button"
++        role="switch"
++        aria-checked={checked}
++        disabled={disabled}
++        onClick={() => onChange(!checked)}
++        className={`relative h-5 w-9 rounded-full transition ${checked ? 'bg-axon-blue' : 'bg-axon-border'}`}
++      >
++        <span
++          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${checked ? 'left-4' : 'left-0.5'}`}
++        />
++      </button>
++    </label>
++  );
++}
+diff --git a/src/components/axon-ui/axon-orb-status.tsx b/src/components/axon-ui/axon-orb-status.tsx
+new file mode 100644
+index 0000000..fe97385
+--- /dev/null
++++ b/src/components/axon-ui/axon-orb-status.tsx
+@@ -0,0 +1,40 @@
++'use client';
++
++import {
++  AXON_ORB_STATUS,
++  resolveAxonOrbState,
++} from '@/lib/axon/axon-orb-theme';
++
++interface AxonOrbStatusProps {
++  active: boolean;
++  listening?: boolean;
++  speaking?: boolean;
++  processing?: boolean;
++}
++
++export function AxonOrbStatus({
++  active,
++  listening,
++  speaking,
++  processing,
++}: AxonOrbStatusProps) {
++  const state = resolveAxonOrbState(active, listening, speaking, processing);
++  const status = AXON_ORB_STATUS[state];
++
++  return (
++    <div
++      className="axon-orb-status-pill flex items-center gap-2 rounded-full border border-white/8 bg-black/35 px-2.5 py-1 backdrop-blur-md"
++      role="status"
++      aria-live="polite"
++      aria-label={`AXON status: ${status.label}`}
++    >
++      <span
++        className={`axon-orb-status-dot ${status.dotClass} ${
++          status.pulseFast ? 'axon-orb-status-dot--fast' : ''
++        }`}
++        aria-hidden
++      />
++      <span className="axon-orb-status-text">{status.label}</span>
++    </div>
++  );
++}
+diff --git a/src/components/axon-ui/axon-test-notification-buttons.tsx b/src/components/axon-ui/axon-test-notification-buttons.tsx
+new file mode 100644
+index 0000000..c11a239
+--- /dev/null
++++ b/src/components/axon-ui/axon-test-notification-buttons.tsx
+@@ -0,0 +1,98 @@
++'use client';
++
++import { useState } from 'react';
++import { classifyUrgency } from '@/lib/axon/axon-preferences';
++import type { AxonNotification, NotificationSettings } from '@/lib/axon/axon-types';
++import { apiUrl } from '@/lib/axon/api-base';
++
++interface AxonTestNotificationButtonsProps {
++  className?: string;
++}
++
++export function AxonTestNotificationButtons({ className = '' }: AxonTestNotificationButtonsProps) {
++  const [busy, setBusy] = useState(false);
++
++  async function fireTest(urgent: boolean) {
++    if (busy) return;
++    setBusy(true);
++
++    const source = urgent ? 'Pipeline Alert' : 'NI Outreach';
++    const title = urgent ? 'Lead approval required NOW' : 'New draft ready for review';
++
++    try {
++      const prefsRes = await fetch(apiUrl('/api/axon/preferences'));
++      const prefsData = prefsRes.ok ? await prefsRes.json() : null;
++      const settings: NotificationSettings =
++        prefsData?.preferences?.notifications ?? {
++          enabled: true,
++          urgencyEnabled: true,
++          urgencyFlashSeconds: 4,
++          urgencySound: true,
++          urgencyVolume: 0.35,
++          integrations: { outreach: true, telegram: true, pipeline: true, hermes: true },
++          urgencyRules: {
++            pipelineApproval: true,
++            dealWon: true,
++            systemError: true,
++            outreachReply: false,
++          },
++          customNotUrgent: [],
++        };
++
++      const notification: AxonNotification = {
++        id: `test-${Date.now()}`,
++        source,
++        title,
++        body: urgent ? 'High-priority lead waiting in queue.' : 'A new outreach draft was generated.',
++        urgent:
++          urgent &&
++          settings.urgencyEnabled &&
++          (classifyUrgency(source, title, settings) || urgent),
++        read: false,
++        created_at: new Date().toISOString(),
++      };
++
++      await fetch(apiUrl('/api/axon/preferences'), {
++        method: 'PATCH',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ addNotification: notification }),
++      }).then(async (res) => {
++        if (!res.ok) {
++          window.dispatchEvent(
++            new CustomEvent('axon:test-notification', { detail: { notification } })
++          );
++          return;
++        }
++        const data = await res.json();
++        const saved = data.preferences?.notificationsInbox?.[0] ?? notification;
++        window.dispatchEvent(
++          new CustomEvent('axon:test-notification', { detail: { notification: saved } })
++        );
++      });
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return (
++    <div className={`flex flex-col gap-2 ${className}`}>
++      <p className="px-1 text-[10px] uppercase tracking-[0.15em] text-axon-muted/80">Test alerts</p>
++      <button
++        type="button"
++        disabled={busy}
++        onClick={() => fireTest(false)}
++        className="rounded-lg border border-axon-border/60 bg-axon-elevated/80 px-3 py-2 text-[11px] leading-snug text-axon-muted transition hover:border-axon-blue/40 hover:text-axon-cyan disabled:opacity-50"
++      >
++        Normal notification
++      </button>
++      <button
++        type="button"
++        disabled={busy}
++        onClick={() => fireTest(true)}
++        className="rounded-lg border border-red-500/30 bg-red-950/20 px-3 py-2 text-[11px] leading-snug text-red-300 transition hover:border-red-400/50 disabled:opacity-50"
++      >
++        Urgent notification
++      </button>
++    </div>
++  );
++}
+diff --git a/src/components/axon-ui/briefing-panel.tsx b/src/components/axon-ui/briefing-panel.tsx
+index 21269ae..3401c58 100644
+--- a/src/components/axon-ui/briefing-panel.tsx
++++ b/src/components/axon-ui/briefing-panel.tsx
+@@ -7,6 +7,9 @@ interface BriefingPanelProps {
+   items: BriefingItem[];
+   autonomous: boolean;
+   onRefresh: () => void;
++  onTitleClick?: () => void;
++  compact?: boolean;
++  className?: string;
+ }
+ 
+ const PRIORITY_STYLES = {
+@@ -15,7 +18,7 @@ const PRIORITY_STYLES = {
+   low: 'border border-axon-border bg-axon-elevated/60 text-axon-muted',
+ };
+ 
+-export function BriefingPanel({ items, autonomous, onRefresh }: BriefingPanelProps) {
++export function BriefingPanel({ items, autonomous, onRefresh, onTitleClick, compact, className = '' }: BriefingPanelProps) {
+   async function dismiss(id: string) {
+     await fetch(apiUrl('/api/axon/workspace'), {
+       method: 'PATCH',
+@@ -26,10 +29,16 @@ export function BriefingPanel({ items, autonomous, onRefresh }: BriefingPanelPro
+   }
+ 
+   return (
+-    <section className="axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden">
+-      <header className="border-b border-axon-border/60 px-4 py-3">
++    <section className={`axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden h-full ${className}`}>
++      <header className="border-b border-axon-border/60 px-5 py-4">
+         <div className="flex items-center justify-between gap-2">
+-          <h2 className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">Briefing</h2>
++          <button
++            type="button"
++            onClick={onTitleClick}
++            className={`text-left text-xs uppercase tracking-[0.2em] text-axon-blue-glow transition hover:text-axon-cyan ${onTitleClick ? 'cursor-pointer hover:underline' : ''}`}
++          >
++            Briefing
++          </button>
+           {autonomous && (
+             <span className="rounded-full bg-axon-blue/20 px-2 py-0.5 text-[10px] text-axon-cyan animate-pulse-glow">
+               Autonomous
+@@ -41,7 +50,7 @@ export function BriefingPanel({ items, autonomous, onRefresh }: BriefingPanelPro
+         </p>
+       </header>
+ 
+-      <div className="flex-1 space-y-2 overflow-y-auto p-3 max-h-[280px]">
++      <div className={`flex-1 min-h-0 space-y-3 overflow-y-auto p-4 md:p-5 ${compact ? 'max-h-[280px]' : ''}`}>
+         {items.length === 0 ? (
+           <EmptyState
+             icon="◈"
+@@ -51,7 +60,7 @@ export function BriefingPanel({ items, autonomous, onRefresh }: BriefingPanelPro
+           items.map((item, i) => (
+             <article
+               key={item.id}
+-              className="group rounded-xl border border-axon-border/50 bg-axon-elevated/40 p-3 transition hover:border-axon-blue/40"
++              className="group rounded-xl border border-axon-border/50 bg-axon-elevated/40 p-4 transition hover:border-axon-blue/40"
+               style={{ animationDelay: `${i * 80}ms` }}
+             >
+               <div className="flex items-start justify-between gap-2">
+diff --git a/src/components/axon-ui/jarvis-orb.tsx b/src/components/axon-ui/jarvis-orb.tsx
+index 3280de1..3b4c0fc 100644
+--- a/src/components/axon-ui/jarvis-orb.tsx
++++ b/src/components/axon-ui/jarvis-orb.tsx
+@@ -1,110 +1,441 @@
+ 'use client';
+ 
+-import { useEffect, useState } from 'react';
++import { useCallback, useEffect, useRef, useState } from 'react';
+ 
+ interface JarvisOrbProps {
+   active: boolean;
+   listening?: boolean;
+   speaking?: boolean;
++  processing?: boolean;
++  size?: 'default' | 'large';
+ }
+ 
+-export function JarvisOrb({ active, listening, speaking }: JarvisOrbProps) {
+-  const [pulse, setPulse] = useState(0);
+-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
++type OrbState = 'standby' | 'online' | 'listening' | 'speaking' | 'processing';
++
++interface Palette {
++  core: string;
++  mid: string;
++  deep: string;
++  rim: string;
++  specular: string;
++  aura: string;
++  auraSecondary: string;
++}
++
++const PALETTES: Record<OrbState, Palette> = {
++  standby: {
++    core: 'rgba(186, 230, 253, 0.55)',
++    mid: 'rgba(37, 99, 235, 0.92)',
++    deep: 'rgba(8, 18, 38, 0.98)',
++    rim: 'rgba(96, 165, 250, 0.35)',
++    specular: 'rgba(224, 242, 254, 0.9)',
++    aura: '59, 130, 246',
++    auraSecondary: '99, 102, 241',
++  },
++  online: {
++    core: 'rgba(165, 243, 252, 0.72)',
++    mid: 'rgba(59, 130, 246, 0.95)',
++    deep: 'rgba(10, 22, 45, 0.98)',
++    rim: 'rgba(34, 211, 238, 0.42)',
++    specular: 'rgba(255, 255, 255, 0.92)',
++    aura: '59, 130, 246',
++    auraSecondary: '34, 211, 238',
++  },
++  listening: {
++    core: 'rgba(103, 232, 249, 0.85)',
++    mid: 'rgba(34, 211, 238, 0.95)',
++    deep: 'rgba(6, 24, 40, 0.98)',
++    rim: 'rgba(45, 212, 191, 0.5)',
++    specular: 'rgba(236, 254, 255, 0.95)',
++    aura: '34, 211, 238',
++    auraSecondary: '45, 212, 191',
++  },
++  speaking: {
++    core: 'rgba(191, 219, 254, 0.8)',
++    mid: 'rgba(96, 165, 250, 0.95)',
++    deep: 'rgba(12, 20, 42, 0.98)',
++    rim: 'rgba(129, 140, 248, 0.48)',
++    specular: 'rgba(248, 250, 252, 0.9)',
++    aura: '96, 165, 250',
++    auraSecondary: '129, 140, 248',
++  },
++  processing: {
++    core: 'rgba(224, 242, 254, 0.9)',
++    mid: 'rgba(34, 211, 238, 0.98)',
++    deep: 'rgba(5, 16, 36, 0.98)',
++    rim: 'rgba(99, 102, 241, 0.55)',
++    specular: 'rgba(255, 255, 255, 0.98)',
++    aura: '34, 211, 238',
++    auraSecondary: '99, 102, 241',
++  },
++};
++
++function resolveState(
++  active: boolean,
++  listening?: boolean,
++  speaking?: boolean,
++  processing?: boolean
++): OrbState {
++  if (processing) return 'processing';
++  if (listening) return 'listening';
++  if (speaking) return 'speaking';
++  if (active) return 'online';
++  return 'standby';
++}
++
++function statusLabel(state: OrbState): string {
++  switch (state) {
++    case 'processing':
++      return 'Thinking…';
++    case 'listening':
++      return 'Listening';
++    case 'speaking':
++      return 'Speaking';
++    case 'online':
++      return 'Ready';
++    default:
++      return 'At rest';
++  }
++}
++
++/** Draw a soft circular bloom — never uses fillRect to avoid square artifacts */
++function drawCircularBloom(
++  ctx: CanvasRenderingContext2D,
++  x: number,
++  y: number,
++  radius: number,
++  innerAlpha: number,
++  rgb: string,
++  blur = 0
++) {
++  ctx.save();
++  if (blur > 0) ctx.filter = `blur(${blur}px)`;
++  const g = ctx.createRadialGradient(x, y, radius * 0.05, x, y, radius);
++  g.addColorStop(0, `rgba(${rgb}, ${innerAlpha})`);
++  g.addColorStop(0.45, `rgba(${rgb}, ${innerAlpha * 0.35})`);
++  g.addColorStop(0.78, `rgba(${rgb}, ${innerAlpha * 0.08})`);
++  g.addColorStop(1, 'rgba(0, 0, 0, 0)');
++  ctx.fillStyle = g;
++  ctx.beginPath();
++  ctx.arc(x, y, radius, 0, Math.PI * 2);
++  ctx.fill();
++  ctx.restore();
++}
++
++function drawOrbFrame(
++  ctx: CanvasRenderingContext2D,
++  size: number,
++  dpr: number,
++  time: number,
++  pointer: { x: number; y: number; hover: number },
++  state: OrbState
++) {
++  const w = size * dpr;
++  const h = size * dpr;
++  ctx.setTransform(1, 0, 0, 1, 0, 0);
++  ctx.clearRect(0, 0, w, h);
++
++  const cx = w / 2;
++  const cy = h / 2;
++  const radius = size * 0.36 * dpr;
++  const palette = PALETTES[state];
++
++  const breathe = 1 + Math.sin(time * 0.0018) * (state === 'processing' ? 0.018 : 0.01);
++  const r = radius * breathe * (1 + pointer.hover * 0.035);
++
++  const tiltX = (pointer.x - 0.5) * 0.22 * pointer.hover;
++  const tiltY = (pointer.y - 0.5) * 0.22 * pointer.hover;
++
++  const lightX = cx + (-0.28 + tiltX + (pointer.x - 0.5) * 0.35 * pointer.hover) * r;
++  const lightY = cy + (-0.32 + tiltY + (pointer.y - 0.5) * 0.35 * pointer.hover) * r;
++
++  const activity =
++    state === 'processing' ? 1 : state === 'listening' ? 0.75 : state === 'speaking' ? 0.6 : 0.35;
++
++  const hoverBoost = pointer.hover * 0.22;
++  const pulse = 0.5 + Math.sin(time * 0.0022) * 0.5;
++
++  // ── Layer 1: elliptical floor pool (scaled circle, not a rectangle)
++  ctx.save();
++  ctx.translate(cx, cy + r * 0.92);
++  ctx.scale(1.75 + hoverBoost * 0.2, 0.38);
++  drawCircularBloom(
++    ctx,
++    0,
++    0,
++    r * 1.35,
++    0.22 + activity * 0.12 + hoverBoost,
++    palette.aura,
++    14 * dpr
++  );
++  ctx.restore();
++
++  // ── Layer 2: outer aura shells (animated, strictly circular)
++  const auraLayers = [
++    { scale: 1.72 + pulse * 0.06, alpha: 0.14 + activity * 0.08, blur: 22 * dpr },
++    { scale: 1.48 + pulse * 0.04, alpha: 0.18 + activity * 0.1, blur: 12 * dpr },
++    { scale: 1.28 + pulse * 0.03, alpha: 0.12 + hoverBoost, blur: 6 * dpr },
++  ];
++  for (const layer of auraLayers) {
++    drawCircularBloom(ctx, cx, cy, r * layer.scale, layer.alpha, palette.aura, layer.blur);
++  }
++
++  // ── Layer 3: rotating aurora wisps
++  ctx.save();
++  ctx.globalCompositeOperation = 'screen';
++  for (let i = 0; i < 3; i++) {
++    const angle = time * 0.00045 * (i + 1) + i * 2.1;
++    const wx = cx + Math.cos(angle) * r * 0.15;
++    const wy = cy + Math.sin(angle * 0.9) * r * 0.12;
++    const wispRgb = i % 2 === 0 ? palette.aura : palette.auraSecondary;
++    drawCircularBloom(
++      ctx,
++      wx,
++      wy,
++      r * (0.95 + i * 0.12),
++      0.06 + activity * 0.05,
++      wispRgb,
++      18 * dpr
++    );
++  }
++  ctx.globalCompositeOperation = 'source-over';
++  ctx.restore();
++
++  // Processing orbit arcs
++  if (state === 'processing') {
++    ctx.save();
++    ctx.translate(cx, cy);
++    ctx.rotate(time * 0.0012);
++    ctx.strokeStyle = 'rgba(34, 211, 238, 0.22)';
++    ctx.lineWidth = 1.2 * dpr;
++    ctx.beginPath();
++    ctx.arc(0, 0, r * 1.22, 0.2, Math.PI * 1.35);
++    ctx.stroke();
++    ctx.rotate(Math.PI);
++    ctx.strokeStyle = 'rgba(99, 102, 241, 0.18)';
++    ctx.beginPath();
++    ctx.arc(0, 0, r * 1.28, -0.4, Math.PI * 0.95);
++    ctx.stroke();
++    ctx.restore();
++  }
++
++  // ── Sphere body
++  const body = ctx.createRadialGradient(lightX, lightY, r * 0.04, cx, cy, r);
++  body.addColorStop(0, palette.core);
++  body.addColorStop(0.22, palette.mid);
++  body.addColorStop(0.58, 'rgba(30, 58, 95, 0.96)');
++  body.addColorStop(0.88, palette.deep);
++  body.addColorStop(1, 'rgba(2, 8, 18, 1)');
++
++  ctx.beginPath();
++  ctx.arc(cx, cy, r, 0, Math.PI * 2);
++  ctx.fillStyle = body;
++  ctx.fill();
++
++  // Caustic veins — circular fills only, clipped to sphere
++  ctx.save();
++  ctx.beginPath();
++  ctx.arc(cx, cy, r * 0.98, 0, Math.PI * 2);
++  ctx.clip();
++  for (let i = 0; i < 5; i++) {
++    const angle = time * 0.00035 * (i + 1) + i * 1.4;
++    const nx = cx + Math.cos(angle) * r * 0.35;
++    const ny = cy + Math.sin(angle * 0.85) * r * 0.28;
++    const caustic = ctx.createRadialGradient(nx, ny, 0, nx, ny, r * (0.32 + i * 0.07));
++    caustic.addColorStop(0, `rgba(34, 211, 238, ${0.06 + activity * 0.04})`);
++    caustic.addColorStop(0.6, 'rgba(0, 0, 0, 0)');
++    ctx.fillStyle = caustic;
++    ctx.beginPath();
++    ctx.arc(nx, ny, r * (0.32 + i * 0.07), 0, Math.PI * 2);
++    ctx.fill();
++  }
++  ctx.restore();
++
++  // Inner core
++  const corePulse = 0.55 + Math.sin(time * 0.003) * 0.12 + pointer.hover * 0.2;
++  const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.42);
++  core.addColorStop(0, `rgba(186, 230, 253, ${corePulse * activity})`);
++  core.addColorStop(0.45, `rgba(37, 99, 235, ${0.15 + activity * 0.12})`);
++  core.addColorStop(1, 'rgba(0, 0, 0, 0)');
++  ctx.globalCompositeOperation = 'screen';
++  ctx.fillStyle = core;
++  ctx.beginPath();
++  ctx.arc(cx, cy, r * 0.42, 0, Math.PI * 2);
++  ctx.fill();
++  ctx.globalCompositeOperation = 'source-over';
++
++  // Specular highlight
++  const specX = cx + (pointer.x - 0.5) * r * 0.55 * (0.35 + pointer.hover * 0.65);
++  const specY = cy + (pointer.y - 0.5) * r * 0.55 * (0.35 + pointer.hover * 0.65);
++  const specSize = r * (0.22 + pointer.hover * 0.08);
++  const spec = ctx.createRadialGradient(specX, specY, 0, specX, specY, specSize);
++  spec.addColorStop(0, palette.specular);
++  spec.addColorStop(0.35, 'rgba(186, 230, 253, 0.35)');
++  spec.addColorStop(1, 'rgba(0, 0, 0, 0)');
++  ctx.globalCompositeOperation = 'screen';
++  ctx.fillStyle = spec;
++  ctx.beginPath();
++  ctx.arc(specX, specY, specSize, 0, Math.PI * 2);
++  ctx.fill();
++  ctx.globalCompositeOperation = 'source-over';
++
++  // Rim fresnel
++  const rim = ctx.createRadialGradient(cx, cy, r * 0.78, cx, cy, r);
++  rim.addColorStop(0, 'rgba(0, 0, 0, 0)');
++  rim.addColorStop(0.72, palette.rim);
++  rim.addColorStop(1, `rgba(34, 211, 238, ${0.25 + pointer.hover * 0.2})`);
++  ctx.fillStyle = rim;
++  ctx.beginPath();
++  ctx.arc(cx, cy, r, 0, Math.PI * 2);
++  ctx.fill();
++
++  // Terminator shadow
++  const shadowX = cx - (lightX - cx) * 0.35;
++  const shadowY = cy - (lightY - cy) * 0.35;
++  const shadow = ctx.createRadialGradient(shadowX, shadowY, r * 0.2, shadowX, shadowY, r * 1.05);
++  shadow.addColorStop(0, 'rgba(0, 0, 0, 0.35)');
++  shadow.addColorStop(0.55, 'rgba(0, 0, 0, 0.12)');
++  shadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
++  ctx.globalCompositeOperation = 'multiply';
++  ctx.fillStyle = shadow;
++  ctx.beginPath();
++  ctx.arc(cx, cy, r, 0, Math.PI * 2);
++  ctx.fill();
++  ctx.globalCompositeOperation = 'source-over';
++
++  // Surface grain — tiny dots, not rects
++  ctx.save();
++  ctx.beginPath();
++  ctx.arc(cx, cy, r, 0, Math.PI * 2);
++  ctx.clip();
++  for (let n = 0; n < 36; n++) {
++    const a = (n / 36) * Math.PI * 2 + time * 0.00008;
++    const dist = r * (0.15 + (n % 7) * 0.09);
++    const px = cx + Math.cos(a) * dist;
++    const py = cy + Math.sin(a * 1.1) * dist;
++    ctx.fillStyle = `rgba(255,255,255,${0.012 + (n % 3) * 0.006})`;
++    ctx.beginPath();
++    ctx.arc(px, py, 0.6 * dpr, 0, Math.PI * 2);
++    ctx.fill();
++  }
++  ctx.restore();
++
++  // Listening / speaking ripple rings
++  if (state === 'listening' || state === 'speaking') {
++    const ripplePhase = (time * 0.004) % 1;
++    ctx.strokeStyle = `rgba(34, 211, 238, ${0.35 * (1 - ripplePhase)})`;
++    ctx.lineWidth = 1.5 * dpr;
++    ctx.beginPath();
++    ctx.arc(cx, cy, r * (1.05 + ripplePhase * 0.25), 0, Math.PI * 2);
++    ctx.stroke();
++  }
++}
++
++export function JarvisOrb({
++  active,
++  listening,
++  speaking,
++  processing,
++  size = 'large',
++}: JarvisOrbProps) {
++  const canvasRef = useRef<HTMLCanvasElement>(null);
++  const rootRef = useRef<HTMLDivElement>(null);
++  const pointerRef = useRef({ x: 0.5, y: 0.42, hover: 0 });
++  const hoverTarget = useRef(0);
++  const rafRef = useRef<number>(0);
++  const [hovered, setHovered] = useState(false);
++  const [dims, setDims] = useState({ px: size === 'large' ? 280 : 220, dpr: 1 });
++
++  const state = resolveState(active, listening, speaking, processing);
++  const label = statusLabel(state);
++  const isLive = state !== 'standby';
++
++  const measure = useCallback(() => {
++    const el = rootRef.current;
++    if (!el) return;
++    const rect = el.getBoundingClientRect();
++    const px = Math.max(Math.round(rect.width), size === 'large' ? 260 : 200);
++    setDims({ px, dpr: Math.min(window.devicePixelRatio || 1, 2) });
++  }, [size]);
+ 
+   useEffect(() => {
+-    if (!active) return;
+-    const id = setInterval(() => setPulse((p) => p + 1), 120);
+-    return () => clearInterval(id);
+-  }, [active]);
++    measure();
++    const ro = new ResizeObserver(measure);
++    if (rootRef.current) ro.observe(rootRef.current);
++    window.addEventListener('resize', measure);
++    return () => {
++      ro.disconnect();
++      window.removeEventListener('resize', measure);
++    };
++  }, [measure]);
+ 
+   useEffect(() => {
+-    function onMove(e: MouseEvent) {
+-      const cx = window.innerWidth / 2;
+-      const cy = window.innerHeight / 3;
+-      setTilt({
+-        x: (e.clientY - cy) / 70,
+-        y: (e.clientX - cx) / 70,
+-      });
+-    }
+-    window.addEventListener('mousemove', onMove);
+-    return () => window.removeEventListener('mousemove', onMove);
+-  }, []);
+-
+-  const ringClass = listening
+-    ? 'border-axon-cyan shadow-[0_0_90px_rgba(34,211,238,0.4)]'
+-    : speaking
+-      ? 'border-axon-blue-glow shadow-[0_0_90px_rgba(96,165,250,0.4)]'
+-      : active
+-        ? 'border-axon-blue-bright/80 shadow-[0_0_70px_rgba(59,130,246,0.3)]'
+-        : 'border-axon-border';
+-
+-  const scale = 1 + Math.sin(pulse * 0.15) * 0.05;
++    const canvas = canvasRef.current;
++    if (!canvas) return;
++
++    const ctx = canvas.getContext('2d', { alpha: true });
++    if (!ctx) return;
++
++    canvas.width = dims.px * dims.dpr;
++    canvas.height = dims.px * dims.dpr;
++
++    const tick = (time: number) => {
++      pointerRef.current.hover += (hoverTarget.current - pointerRef.current.hover) * 0.12;
++      drawOrbFrame(ctx, dims.px, dims.dpr, time, pointerRef.current, state);
++      rafRef.current = requestAnimationFrame(tick);
++    };
++
++    rafRef.current = requestAnimationFrame(tick);
++    return () => cancelAnimationFrame(rafRef.current);
++  }, [dims, state]);
++
++  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
++    const rect = e.currentTarget.getBoundingClientRect();
++    pointerRef.current.x = (e.clientX - rect.left) / rect.width;
++    pointerRef.current.y = (e.clientY - rect.top) / rect.height;
++  }
++
++  function handlePointerEnter() {
++    setHovered(true);
++    hoverTarget.current = 1;
++  }
++
++  function handlePointerLeave() {
++    setHovered(false);
++    hoverTarget.current = 0;
++    pointerRef.current.x = 0.5;
++    pointerRef.current.y = 0.42;
++  }
+ 
+   return (
+     <div
+-      className="relative flex items-center justify-center perspective-[900px]"
+-      style={{
+-        transform: `rotateX(${-tilt.x}deg) rotateY(${tilt.y}deg)`,
+-        transition: 'transform 0.15s ease-out',
+-      }}
++      ref={rootRef}
++      className={`axon-orb-root group relative mx-auto aspect-square w-full max-w-[280px] cursor-pointer select-none touch-none ${
++        size === 'large' ? 'max-w-[300px] sm:max-w-[320px]' : 'max-w-[220px]'
++      } ${hovered ? 'axon-orb-hovered' : ''} ${processing ? 'axon-orb-processing-state' : ''}`}
++      onPointerEnter={handlePointerEnter}
++      onPointerLeave={handlePointerLeave}
++      onPointerMove={handlePointerMove}
++      role="img"
++      aria-label={`AXON — ${label}`}
+     >
+-      <div
+-        className={`absolute h-56 w-56 rounded-full border border-axon-blue/25 transition-all duration-700 ${active ? 'animate-drift opacity-35' : 'opacity-10'}`}
+-        style={{ transform: `scale(${scale * 1.1}) rotate(${pulse * 0.5}deg)` }}
+-      />
+-      <div
+-        className={`absolute h-48 w-48 rounded-full border transition-all duration-700 ${ringClass} ${active ? 'opacity-55' : 'opacity-20'}`}
+-        style={{ transform: `scale(${scale}) rotate(${-pulse * 0.3}deg)` }}
+-      />
+-      <div
+-        className={`absolute h-40 w-40 rounded-full border border-axon-purple-glow/30 transition-all duration-500 ${listening ? 'border-axon-cyan/60' : ''}`}
+-        style={{ transform: `scale(${1 + Math.sin(pulse * 0.2 + 1) * 0.07})` }}
+-      />
+-
+-      <div
+-        className={`relative flex h-36 w-36 items-center justify-center rounded-full border-2 bg-gradient-to-br from-axon-blue via-axon-violet to-axon-purple-deep ${ringClass} animate-float`}
+-        style={{
+-          boxShadow: active
+-            ? 'inset 0 -10px 28px rgba(37,99,235,0.55), inset 0 10px 20px rgba(34,211,238,0.12), 0 0 40px rgba(99,102,241,0.25)'
+-            : undefined,
+-        }}
+-      >
+-        <div className="absolute inset-3 rounded-full bg-gradient-to-tr from-axon-cyan/25 via-transparent to-axon-purple-glow/20" />
+-        <div className="absolute inset-0 overflow-hidden rounded-full">
+-          <div
+-            className="absolute inset-0 opacity-45"
+-            style={{
+-              background:
+-                'linear-gradient(105deg, transparent 35%, rgba(96,165,250,0.35) 50%, rgba(129,140,248,0.2) 55%, transparent 65%)',
+-              backgroundSize: '200% 100%',
+-              animation: active ? 'shimmer 3.5s linear infinite' : undefined,
+-            }}
+-          />
+-        </div>
++      <canvas ref={canvasRef} className="block h-full w-full" />
++
++      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
++        <span className={`axon-orb-title ${hovered ? 'axon-orb-title-active' : ''}`}>AXON</span>
+ 
+-        <div className="relative text-center">
+-          <span className="block text-xs uppercase tracking-[0.35em] text-axon-cyan">AXON</span>
+-          <span className="mt-1 block font-mono text-[10px] text-axon-muted">
+-            {listening ? 'listening' : speaking ? 'speaking' : active ? 'online' : 'standby'}
++        <div className="axon-orb-status mt-2 flex items-center gap-2">
++          {isLive && (
++            <span
++              className={`axon-orb-pulse-dot ${state === 'processing' ? 'axon-orb-pulse-dot-fast' : ''}`}
++              aria-hidden
++            />
++          )}
++          <span className={`axon-orb-status-text ${hovered ? 'axon-orb-status-text-active' : ''}`}>
++            {label}
+           </span>
+         </div>
+-
+-        {active && (
+-          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
+-            <div className="absolute h-px w-full animate-[scan_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-axon-cyan/70 to-transparent" />
+-          </div>
+-        )}
+       </div>
+-
+-      <div
+-        className="absolute -bottom-8 h-10 w-36 rounded-full blur-xl transition-opacity"
+-        style={{
+-          background:
+-            'radial-gradient(ellipse, rgba(37,99,235,0.45) 0%, rgba(99,102,241,0.25) 50%, transparent 75%)',
+-          opacity: active ? 0.9 : 0.35,
+-        }}
+-      />
+     </div>
+   );
+ }
+diff --git a/src/components/axon-ui/lead-card.tsx b/src/components/axon-ui/lead-card.tsx
+index 37cb540..1477977 100644
+--- a/src/components/axon-ui/lead-card.tsx
++++ b/src/components/axon-ui/lead-card.tsx
+@@ -1,14 +1,16 @@
+ import Link from 'next/link';
+ import type { LeadWithMeta } from '@/lib/axon/types';
++import { appPath } from '@/lib/axon/app-path';
+ import { StatusBadge } from './status-badge';
+ 
+-export function LeadCard({ lead }: { lead: LeadWithMeta }) {
++export function LeadCard({ lead, basePath }: { lead: LeadWithMeta; basePath?: string }) {
+   const channel = lead.meta.channel || 'email';
+   const score = lead.meta.score;
++  const href = basePath ? appPath(`/leads/${lead.id}`, basePath) : `/leads/${lead.id}`;
+ 
+   return (
+     <Link
+-      href={`/leads/${lead.id}`}
++      href={href}
+       className="group block rounded-xl border border-axon-border bg-axon-surface p-5 transition hover:border-axon-gold/40 hover:bg-axon-elevated/50"
+     >
+       <div className="flex items-start justify-between gap-3">
+@@ -44,12 +46,13 @@ export function LeadCard({ lead }: { lead: LeadWithMeta }) {
+   );
+ }
+ 
+-export function LeadRow({ lead }: { lead: LeadWithMeta }) {
++export function LeadRow({ lead, basePath }: { lead: LeadWithMeta; basePath?: string }) {
+   const channel = lead.meta.channel || 'email';
++  const href = basePath ? appPath(`/leads/${lead.id}`, basePath) : `/leads/${lead.id}`;
+ 
+   return (
+     <Link
+-      href={`/leads/${lead.id}`}
++      href={href}
+       className="grid grid-cols-[100px_1fr_120px_100px_100px] items-center gap-4 border-b border-axon-border px-4 py-3 text-sm transition hover:bg-axon-elevated/40"
+     >
+       <span className="font-mono text-xs text-axon-gold">{lead.shortId}</span>
+diff --git a/src/components/axon-ui/lead-detail.tsx b/src/components/axon-ui/lead-detail.tsx
+index ea933a2..e3c2686 100644
+--- a/src/components/axon-ui/lead-detail.tsx
++++ b/src/components/axon-ui/lead-detail.tsx
+@@ -3,6 +3,7 @@
+ import { useRouter } from 'next/navigation';
+ import { useState } from 'react';
+ import type { LeadWithMeta } from '@/lib/axon/types';
++import { apiUrl } from '@/lib/axon/api-base';
+ import { StatusBadge } from './status-badge';
+ 
+ async function postAction(url: string) {
+@@ -45,14 +46,14 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
+             label={channel === 'email' ? 'Approve & Send Email' : 'Approve (LinkedIn)'}
+             loading={loading === 'approve'}
+             variant="primary"
+-            onClick={() => run('approve', `/api/leads/${lead.id}/approve`)}
++            onClick={() => run('approve', apiUrl(`/api/leads/${lead.id}/approve`))}
+           />
+         )}
+         {canSentLi && (
+           <ActionButton
+             label="Mark LinkedIn Sent"
+             loading={loading === 'sent-li'}
+-            onClick={() => run('sent-li', `/api/leads/${lead.id}/sent-li`)}
++            onClick={() => run('sent-li', apiUrl(`/api/leads/${lead.id}/sent-li`))}
+           />
+         )}
+         {canMarkWon && (
+@@ -60,7 +61,7 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
+             label="Mark Closed Won"
+             loading={loading === 'won'}
+             variant="success"
+-            onClick={() => run('won', `/api/leads/${lead.id}/won`)}
++            onClick={() => run('won', apiUrl(`/api/leads/${lead.id}/won`))}
+           />
+         )}
+         {canReject && (
+@@ -68,7 +69,7 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
+             label="Reject"
+             loading={loading === 'reject'}
+             variant="danger"
+-            onClick={() => run('reject', `/api/leads/${lead.id}/reject`)}
++            onClick={() => run('reject', apiUrl(`/api/leads/${lead.id}/reject`))}
+           />
+         )}
+       </div>
+diff --git a/src/components/axon-ui/notifications-panel.tsx b/src/components/axon-ui/notifications-panel.tsx
+new file mode 100644
+index 0000000..a9d88e1
+--- /dev/null
++++ b/src/components/axon-ui/notifications-panel.tsx
+@@ -0,0 +1,346 @@
++'use client';
++
++import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
++import type { AxonNotification, NotificationSettings } from '@/lib/axon/axon-types';
++
++type ScreenPhase = 'idle' | 'new' | 'from' | 'click' | 'urgent_flash';
++
++interface NotificationsPanelProps {
++  settings: NotificationSettings;
++  notifications: AxonNotification[];
++  onOpen?: (notification: AxonNotification) => void;
++  trigger?: { notification: AxonNotification; key: number } | null;
++  onUrgentStart?: () => void;
++  onUrgentEnd?: () => void;
++}
++
++export function NotificationsPanel({
++  settings,
++  notifications,
++  onOpen,
++  trigger,
++  onUrgentStart,
++  onUrgentEnd,
++}: NotificationsPanelProps) {
++  const [phase, setPhase] = useState<ScreenPhase>('idle');
++  const [active, setActive] = useState<AxonNotification | null>(null);
++  const [hoverIdle, setHoverIdle] = useState(false);
++  const [urgentRed, setUrgentRed] = useState(false);
++  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
++  const running = useRef(false);
++  const unread = notifications.filter((n) => !n.read);
++
++  const clearTimers = useCallback(() => {
++    timers.current.forEach(clearTimeout);
++    timers.current = [];
++  }, []);
++
++  const schedule = useCallback((fn: () => void, ms: number) => {
++    const t = setTimeout(fn, ms);
++    timers.current.push(t);
++  }, []);
++
++  const playUrgentSiren = useCallback(() => {
++    if (!settings.urgencySound || typeof window === 'undefined') return;
++    try {
++      const ctx = new AudioContext();
++      playFogHornSiren(ctx, settings.urgencyVolume);
++    } catch {
++      /* audio optional */
++    }
++  }, [settings.urgencySound, settings.urgencyVolume]);
++
++  const resetToIdle = useCallback(() => {
++    setPhase('idle');
++    setActive(null);
++    setUrgentRed(false);
++    running.current = false;
++    onUrgentEnd?.();
++  }, [onUrgentEnd]);
++
++  const runStandardChain = useCallback(() => {
++    setPhase('new');
++    schedule(() => setPhase('from'), 1400);
++    schedule(() => setPhase('click'), 2800);
++    schedule(() => resetToIdle(), 4200);
++  }, [resetToIdle, schedule]);
++
++  const runChain = useCallback(
++    (notification: AxonNotification, skipUrgentFlash = false) => {
++      if (!settings.enabled || running.current) return;
++
++      clearTimers();
++      running.current = true;
++      setActive(notification);
++
++      const isUrgent = notification.urgent && settings.urgencyEnabled;
++
++      if (isUrgent && !skipUrgentFlash) {
++        setPhase('urgent_flash');
++        setUrgentRed(true);
++        onUrgentStart?.();
++        playUrgentSiren();
++
++        const flashMs = Math.max(2800, settings.urgencyFlashSeconds * 1000);
++        schedule(() => {
++          setUrgentRed(false);
++          onUrgentEnd?.();
++          runStandardChain();
++        }, flashMs);
++        return;
++      }
++
++      runStandardChain();
++    },
++    [
++      clearTimers,
++      onUrgentEnd,
++      onUrgentStart,
++      playUrgentSiren,
++      runStandardChain,
++      schedule,
++      settings.enabled,
++      settings.urgencyEnabled,
++      settings.urgencyFlashSeconds,
++    ]
++  );
++
++  useEffect(() => {
++    if (trigger?.key) {
++      runChain(trigger.notification);
++    }
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [trigger?.key]);
++
++  useEffect(() => () => clearTimers(), [clearTimers]);
++
++  function handlePanelClick() {
++    if (phase === 'click' && active) {
++      clearTimers();
++      onOpen?.(active);
++      resetToIdle();
++    } else if (phase === 'idle' && unread[0]) {
++      runChain(unread[0], true);
++    }
++  }
++
++  const urgentText = active?.urgent && settings.urgencyEnabled;
++
++  return (
++    <section
++      className={`relative axon-card-3d axon-glass flex min-h-[120px] flex-col overflow-hidden rounded-2xl transition-colors duration-300 ${
++        urgentRed ? 'axon-notif-urgent-flash border-red-500/60' : 'border border-axon-border/50'
++      }`}
++    >
++      {unread.length > 0 && phase === 'idle' && (
++        <span className="absolute right-2 top-2 z-10 h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
++      )}
++
++      <header className="shrink-0 border-b border-axon-border/60 px-4 py-2">
++        <h2 className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">Notifications</h2>
++      </header>
++
++      <button
++        type="button"
++        onClick={handlePanelClick}
++        onMouseEnter={() => setHoverIdle(true)}
++        onMouseLeave={() => setHoverIdle(false)}
++        className="relative flex min-h-[100px] w-full flex-1 cursor-pointer self-stretch overflow-hidden p-0 text-center"
++      >
++        {phase === 'idle' && (
++          <>
++            <HeartbeatMonitor />
++            {hoverIdle && (
++              <p className="absolute inset-0 z-10 flex items-center justify-center bg-axon-bg/50 text-xs uppercase tracking-[0.2em] text-axon-cyan">
++                Click to open
++              </p>
++            )}
++          </>
++        )}
++
++        {phase === 'urgent_flash' && (
++          <p className="flex flex-1 items-center justify-center px-4 text-sm font-bold uppercase tracking-[0.25em] text-red-400 animate-pulse">
++            Urgent notification
++          </p>
++        )}
++
++        {phase === 'new' && (
++          <p
++            className={`flex flex-1 items-center justify-center px-4 text-sm font-semibold uppercase tracking-[0.3em] animate-notif-slide ${
++              urgentText ? 'text-red-400' : 'text-axon-cyan'
++            }`}
++          >
++            New notification
++          </p>
++        )}
++
++        {phase === 'from' && active && (
++          <p
++            className={`flex flex-1 items-center justify-center px-4 text-sm font-medium animate-notif-slide ${
++              urgentText ? 'text-red-300' : 'text-axon-blue-glow'
++            }`}
++          >
++            {active.source} — {active.title}
++          </p>
++        )}
++
++        {phase === 'click' && (
++          <p
++            className={`flex flex-1 items-center justify-center px-4 text-xs uppercase tracking-[0.35em] animate-notif-slide ${
++              urgentText ? 'text-red-400' : 'text-axon-text'
++            }`}
++          >
++            Click to open
++          </p>
++        )}
++      </button>
++    </section>
++  );
++}
++
++function buildHeartbeatPath(width: number, midY = 50): string {
++  const beatWidth = 180;
++  const segments = Math.max(2, Math.ceil(width / beatWidth) + 1);
++  let d = `M0,${midY}`;
++
++  for (let i = 0; i < segments; i++) {
++    const x = i * beatWidth;
++    if (x > width) break;
++    const peak = i % 2 === 0;
++    d += peak
++      ? ` L${x + 60},${midY} L${x + 78},${midY - 26} L${x + 96},${midY + 26} L${x + 114},${midY} L${Math.min(x + beatWidth, width)},${midY}`
++      : ` L${x + 60},${midY} L${x + 78},${midY - 14} L${x + 96},${midY + 18} L${x + 114},${midY} L${Math.min(x + beatWidth, width)},${midY}`;
++  }
++
++  d += ` L${width},${midY}`;
++  return d;
++}
++
++function HeartbeatMonitor() {
++  const containerRef = useRef<HTMLDivElement>(null);
++  const pathRef = useRef<SVGPathElement>(null);
++  const [width, setWidth] = useState(400);
++
++  useEffect(() => {
++    const node = containerRef.current;
++    if (!node) return;
++
++    const update = () => {
++      setWidth(Math.max(node.clientWidth, 120));
++    };
++
++    update();
++    const ro = new ResizeObserver(update);
++    ro.observe(node);
++    window.addEventListener('resize', update);
++    return () => {
++      ro.disconnect();
++      window.removeEventListener('resize', update);
++    };
++  }, []);
++
++  const pathD = useMemo(() => buildHeartbeatPath(width), [width]);
++
++  useEffect(() => {
++    const path = pathRef.current;
++    if (!path) return;
++    const len = path.getTotalLength();
++    path.style.setProperty('--hb-length', String(len));
++  }, [pathD, width]);
++
++  const gradId = useId().replace(/:/g, '');
++
++  return (
++    <div ref={containerRef} className="axon-heartbeat-wrap" aria-hidden>
++      <svg
++        className="axon-heartbeat-svg"
++        viewBox={`0 0 ${width} 100`}
++        preserveAspectRatio="none"
++      >
++        <defs>
++          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
++            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.15" />
++            <stop offset="35%" stopColor="#22d3ee" stopOpacity="0.85" />
++            <stop offset="65%" stopColor="#60a5fa" stopOpacity="0.9" />
++            <stop offset="100%" stopColor="#818cf8" stopOpacity="0.15" />
++          </linearGradient>
++        </defs>
++        <path
++          ref={pathRef}
++          className="axon-heartbeat-line"
++          d={pathD}
++          fill="none"
++          stroke={`url(#${gradId})`}
++          strokeWidth="2.5"
++          vectorEffect="non-scaling-stroke"
++        />
++      </svg>
++    </div>
++  );
++}
++
++function playFogHornBlast(
++  ctx: AudioContext,
++  startAt: number,
++  duration: number,
++  volume: number
++) {
++  const t0 = ctx.currentTime + startAt;
++  const t1 = t0 + duration;
++  const peakVol = volume * 0.22;
++
++  const master = ctx.createGain();
++  master.gain.setValueAtTime(0.0001, t0);
++  master.gain.exponentialRampToValueAtTime(peakVol, t0 + 0.1);
++  master.gain.setValueAtTime(peakVol * 0.88, t1 - 0.18);
++  master.gain.exponentialRampToValueAtTime(0.0001, t1);
++  master.connect(ctx.destination);
++
++  const filter = ctx.createBiquadFilter();
++  filter.type = 'lowpass';
++  filter.frequency.setValueAtTime(360, t0);
++  filter.frequency.linearRampToValueAtTime(260, t1);
++  filter.Q.value = 0.8;
++  filter.connect(master);
++
++  const layers: { baseHz: number; type: OscillatorType; mix: number }[] = [
++    { baseHz: 58, type: 'sine', mix: 0.5 },
++    { baseHz: 74, type: 'sine', mix: 0.35 },
++    { baseHz: 92, type: 'triangle', mix: 0.15 },
++  ];
++
++  for (const { baseHz, type, mix } of layers) {
++    const osc = ctx.createOscillator();
++    const layerGain = ctx.createGain();
++    osc.type = type;
++
++    osc.frequency.setValueAtTime(baseHz * 1.15, t0);
++    osc.frequency.exponentialRampToValueAtTime(baseHz * 0.72, t0 + duration * 0.38);
++    osc.frequency.exponentialRampToValueAtTime(baseHz * 1.42, t0 + duration * 0.72);
++    osc.frequency.exponentialRampToValueAtTime(baseHz * 0.95, t1);
++
++    layerGain.gain.value = mix;
++    osc.connect(layerGain);
++    layerGain.connect(filter);
++    osc.start(t0);
++    osc.stop(t1 + 0.08);
++  }
++}
++
++function playFogHornSiren(ctx: AudioContext, volume: number, blasts = 2) {
++  const blastDuration = 1.15;
++  const gap = 0.5;
++
++  for (let i = 0; i < blasts; i++) {
++    playFogHornBlast(ctx, i * (blastDuration + gap), blastDuration, volume);
++  }
++}
++
++export function playUrgentAlarmSound(volume = 0.35) {
++  try {
++    const ctx = new AudioContext();
++    playFogHornSiren(ctx, volume);
++  } catch {
++    /* optional */
++  }
++}
+diff --git a/src/components/axon-ui/panel-focus-view.tsx b/src/components/axon-ui/panel-focus-view.tsx
+new file mode 100644
+index 0000000..fde973a
+--- /dev/null
++++ b/src/components/axon-ui/panel-focus-view.tsx
+@@ -0,0 +1,66 @@
++'use client';
++
++import type { ReactNode } from 'react';
++
++export type FocusPanelId = 'briefing' | 'todo';
++
++interface PanelFocusViewProps {
++  active: FocusPanelId | null;
++  onClose: () => void;
++  briefing: ReactNode;
++  todo: ReactNode;
++  chatGhost: ReactNode;
++}
++
++export function PanelFocusView({
++  active,
++  onClose,
++  briefing,
++  todo,
++  chatGhost,
++}: PanelFocusViewProps) {
++  if (!active) return null;
++
++  const fromLeft = active === 'briefing';
++  const leftGhost = fromLeft ? chatGhost : briefing;
++  const center = fromLeft ? briefing : todo;
++  const rightGhost = fromLeft ? todo : chatGhost;
++
++  return (
++    <div className="fixed inset-0 z-50 flex items-center justify-center bg-axon-bg/75 backdrop-blur-md p-4">
++      <div className="flex w-full max-w-6xl items-center justify-center gap-4 perspective-[1200px]">
++        <div
++          className={`hidden w-[22%] shrink-0 opacity-30 blur-[1px] transition-all lg:block ${
++            fromLeft ? 'axon-panel-ghost-left' : 'axon-panel-ghost-left-subtle'
++          }`}
++        >
++          {leftGhost}
++        </div>
++
++        <div
++          className={`w-full max-w-2xl lg:w-[52%] min-h-[480px] ${
++            fromLeft ? 'axon-panel-focus-from-left' : 'axon-panel-focus-from-right'
++          }`}
++        >
++          {center}
++        </div>
++
++        <div
++          className={`hidden w-[22%] shrink-0 opacity-30 blur-[1px] transition-all lg:block ${
++            fromLeft ? 'axon-panel-ghost-right-subtle' : 'axon-panel-ghost-right'
++          }`}
++        >
++          {rightGhost}
++        </div>
++      </div>
++
++      <button
++        type="button"
++        onClick={onClose}
++        className="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-full border border-axon-blue/40 bg-axon-elevated/90 px-8 py-2.5 text-sm text-axon-cyan transition hover:border-axon-cyan hover:bg-axon-blue/20"
++      >
++        ← Back to command view
++      </button>
++    </div>
++  );
++}
+diff --git a/src/components/axon-ui/sidebar.tsx b/src/components/axon-ui/sidebar.tsx
+index 830072c..6e838f4 100644
+--- a/src/components/axon-ui/sidebar.tsx
++++ b/src/components/axon-ui/sidebar.tsx
+@@ -1,48 +1,92 @@
+-"use client";
++'use client';
+ 
+-import Link from "next/link";
+-import { usePathname } from "next/navigation";
++import { apiUrl } from '@/lib/axon/api-base';
++import { appPath } from '@/lib/axon/app-path';
++import Link from 'next/link';
++import { usePathname } from 'next/navigation';
++import { AxonTestNotificationButtons } from './axon-test-notification-buttons';
+ 
+ const NAV = [
+-  { suffix: "/dashboard", label: "Command", icon: "◈" },
++  { href: '/', label: 'AXON', icon: '◈' },
++  { href: '/tools/ni-outreach', label: 'Outreach', icon: '◎' },
++  { href: '/queue', label: 'Queue', icon: '▣' },
++  { href: '/pipeline', label: 'Pipeline', icon: '▤' },
++  { href: '/settings', label: 'Settings', icon: '⚙' },
+ ];
+ 
+-export function Sidebar({ basePath }: { basePath: string }) {
++function SignOutButton({ basePath }: { basePath?: string }) {
++  async function handleSignOut() {
++    await fetch(apiUrl('/api/auth/logout'), { method: 'POST' });
++    window.location.href = basePath ? appPath('/login', basePath) : apiUrl('/login');
++  }
++
++  return (
++    <button
++      type="button"
++      onClick={handleSignOut}
++      className="mt-2 w-full rounded-lg px-3 py-2 text-left text-xs text-axon-muted transition hover:bg-axon-elevated hover:text-axon-text"
++    >
++      Sign out
++    </button>
++  );
++}
++
++function resolveHref(href: string, basePath?: string): string {
++  return basePath ? appPath(href, basePath) : href;
++}
++
++function isActive(pathname: string, href: string, basePath?: string): boolean {
++  const resolved = resolveHref(href, basePath);
++  if (href === '/') {
++    if (basePath) {
++      return pathname === basePath || pathname === `${basePath}/dashboard`;
++    }
++    return pathname === '/';
++  }
++  return pathname === resolved || pathname.startsWith(`${resolved}/`);
++}
++
++export function Sidebar({ basePath }: { basePath?: string }) {
+   const pathname = usePathname();
+ 
+   return (
+     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-axon-border bg-axon-surface">
+       <div className="border-b border-axon-border px-6 py-5">
+-        <span className="text-xl font-semibold tracking-[0.2em] text-axon-blue-glow">AXON</span>
+-        <p className="mt-1 text-[10px] uppercase tracking-wider text-axon-muted">Command Center</p>
++        <div className="flex items-center gap-2">
++          <span className="text-xl font-semibold tracking-[0.2em] text-axon-blue-glow">AXON</span>
++        </div>
++        <p className="mt-1 text-xs text-axon-muted">Personalized Agentic Assistant</p>
+       </div>
+-      <nav className="flex-1 space-y-1 p-3">
++
++      <nav className="flex-1 space-y-1 px-3 py-4">
+         {NAV.map((item) => {
+-          const href = `${basePath}${item.suffix}`;
+-          const active = pathname === href || pathname.startsWith(`${href}/`);
++          const active = isActive(pathname, item.href, basePath);
++          const href = resolveHref(item.href, basePath);
+           return (
+-            <Link
+-              key={item.suffix}
+-              href={href}
+-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+-                active
+-                  ? "bg-axon-elevated text-axon-blue-glow"
+-                  : "text-axon-muted hover:bg-axon-elevated hover:text-axon-text"
+-              }`}
+-            >
+-              <span aria-hidden>{item.icon}</span>
+-              {item.label}
+-            </Link>
++            <div key={item.href}>
++              <Link
++                href={href}
++                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
++                  active
++                    ? 'bg-axon-blue/15 text-axon-cyan'
++                    : 'text-axon-muted hover:bg-axon-elevated/50 hover:text-axon-text'
++                }`}
++              >
++                <span className="text-base opacity-70">{item.icon}</span>
++                {item.label}
++              </Link>
++              {item.href === '/settings' && (
++                <div className="mt-3 border-t border-axon-border/60 pt-3">
++                  <AxonTestNotificationButtons />
++                </div>
++              )}
++            </div>
+           );
+         })}
+       </nav>
+-      <div className="border-t border-axon-border p-3">
+-        <Link
+-          href="/"
+-          className="block rounded-lg px-3 py-2 text-xs text-axon-muted transition hover:bg-axon-elevated hover:text-axon-text"
+-        >
+-          Back to Portal
+-        </Link>
++
++      <div className="border-t border-axon-border px-4 py-4">
++        <SignOutButton basePath={basePath} />
+       </div>
+     </aside>
+   );
+diff --git a/src/components/axon-ui/todo-panel.tsx b/src/components/axon-ui/todo-panel.tsx
+index a9b2b20..84beb34 100644
+--- a/src/components/axon-ui/todo-panel.tsx
++++ b/src/components/axon-ui/todo-panel.tsx
+@@ -7,9 +7,12 @@ interface TodoPanelProps {
+   items: TodoItem[];
+   autonomous: boolean;
+   onRefresh: () => void;
++  onTitleClick?: () => void;
++  compact?: boolean;
++  className?: string;
+ }
+ 
+-export function TodoPanel({ items, autonomous, onRefresh }: TodoPanelProps) {
++export function TodoPanel({ items, autonomous, onRefresh, onTitleClick, compact, className = '' }: TodoPanelProps) {
+   const open = items.filter((t) => !t.done);
+   const done = items.filter((t) => t.done);
+ 
+@@ -32,10 +35,25 @@ export function TodoPanel({ items, autonomous, onRefresh }: TodoPanelProps) {
+   }
+ 
+   return (
+-    <section className="axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden">
+-      <header className="border-b border-axon-border/60 px-4 py-3">
++    <section className={`axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden h-full ${className}`}>
++      <header
++        className={`relative z-10 border-b border-axon-border/60 px-5 py-4 ${onTitleClick ? 'cursor-pointer hover:bg-axon-blue/5' : ''}`}
++        onClick={onTitleClick}
++        onKeyDown={(e) => {
++          if (onTitleClick && (e.key === 'Enter' || e.key === ' ')) {
++            e.preventDefault();
++            onTitleClick();
++          }
++        }}
++        role={onTitleClick ? 'button' : undefined}
++        tabIndex={onTitleClick ? 0 : undefined}
++      >
+         <div className="flex items-center justify-between gap-2">
+-          <h2 className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">To-Do</h2>
++          <span
++            className={`text-left text-xs uppercase tracking-[0.2em] text-axon-blue-glow transition hover:text-axon-cyan ${onTitleClick ? 'hover:underline' : ''}`}
++          >
++            To-Do
++          </span>
+           {autonomous && (
+             <span className="rounded-full bg-axon-blue/20 px-2 py-0.5 text-[10px] text-axon-cyan animate-pulse-glow">
+               Autonomous
+@@ -47,7 +65,7 @@ export function TodoPanel({ items, autonomous, onRefresh }: TodoPanelProps) {
+         </p>
+       </header>
+ 
+-      <div className="flex-1 space-y-1 overflow-y-auto p-3 max-h-[280px]">
++      <div className={`flex-1 min-h-0 space-y-2 overflow-y-auto p-4 md:p-5 ${compact ? 'max-h-[280px]' : ''}`}>
+         {items.length === 0 ? (
+           <div className="flex flex-col items-center justify-center py-8 text-center">
+             <span className="text-2xl text-axon-blue/50 animate-float">☐</span>
+@@ -88,7 +106,7 @@ function TodoRow({
+ }) {
+   return (
+     <div
+-      className={`group flex items-start gap-2 rounded-lg border px-2 py-2 transition hover:border-axon-blue/30 ${
++      className={`group flex items-start gap-3 rounded-lg border px-3 py-2.5 transition hover:border-axon-blue/30 ${
+         done
+           ? 'border-axon-border/30 bg-axon-elevated/20 opacity-60'
+           : 'border-axon-border/50 bg-axon-elevated/40'
+diff --git a/src/components/axon-ui/tool-panel.tsx b/src/components/axon-ui/tool-panel.tsx
+index 6fb151c..e6c3fcd 100644
+--- a/src/components/axon-ui/tool-panel.tsx
++++ b/src/components/axon-ui/tool-panel.tsx
+@@ -2,13 +2,15 @@
+ 
+ import Link from 'next/link';
+ import type { AxonTool } from '@/lib/axon/axon-types';
++import { appPath } from '@/lib/axon/app-path';
+ 
+ interface ToolPanelProps {
+   tools: AxonTool[];
+   metrics?: Record<string, string | number>;
++  basePath?: string;
+ }
+ 
+-export function ToolPanel({ tools, metrics = {} }: ToolPanelProps) {
++export function ToolPanel({ tools, metrics = {}, basePath }: ToolPanelProps) {
+   return (
+     <section className="axon-card-3d rounded-2xl border border-axon-border/50 bg-axon-surface/70 axon-glass backdrop-blur-sm">
+       <div className="border-b border-axon-border/60 px-4 py-3">
+@@ -17,14 +19,22 @@ export function ToolPanel({ tools, metrics = {} }: ToolPanelProps) {
+       </div>
+       <div className="grid gap-2 p-3 sm:grid-cols-2">
+         {tools.map((tool) => (
+-          <ToolCard key={tool.slug} tool={tool} metric={metrics[tool.slug]} />
++          <ToolCard key={tool.slug} tool={tool} metric={metrics[tool.slug]} basePath={basePath} />
+         ))}
+       </div>
+     </section>
+   );
+ }
+ 
+-function ToolCard({ tool, metric }: { tool: AxonTool; metric?: string | number }) {
++function ToolCard({
++  tool,
++  metric,
++  basePath,
++}: {
++  tool: AxonTool;
++  metric?: string | number;
++  basePath?: string;
++}) {
+   const disabled = tool.status !== 'active';
+ 
+   const inner = (
+@@ -51,7 +61,8 @@ function ToolCard({ tool, metric }: { tool: AxonTool; metric?: string | number }
+   );
+ 
+   if (disabled) return inner;
+-  return <Link href={tool.href}>{inner}</Link>;
++  const href = basePath ? appPath(tool.href, basePath) : tool.href;
++  return <Link href={href}>{inner}</Link>;
+ }
+ 
+ function StatusPill({ status }: { status: AxonTool['status'] }) {
+diff --git a/src/components/axon-ui/tool-placeholder.tsx b/src/components/axon-ui/tool-placeholder.tsx
+index 3f42c19..f774771 100644
+--- a/src/components/axon-ui/tool-placeholder.tsx
++++ b/src/components/axon-ui/tool-placeholder.tsx
+@@ -1,15 +1,20 @@
+ import Link from 'next/link';
++import { appPath } from '@/lib/axon/app-path';
+ 
+ export function ToolPlaceholder({
+   title,
+   description,
++  basePath,
+ }: {
+   title: string;
+   description: string;
++  basePath?: string;
+ }) {
++  const homeHref = basePath ? appPath('/', basePath) : '/';
++
+   return (
+     <div className="space-y-6">
+-      <Link href="/" className="text-sm text-axon-muted hover:text-axon-gold">
++      <Link href={homeHref} className="text-sm text-axon-muted hover:text-axon-gold">
+         ← Back to AXON
+       </Link>
+       <div className="rounded-xl border border-dashed border-axon-border p-12 text-center">
+diff --git a/src/lib/axon/api-base.ts b/src/lib/axon/api-base.ts
+index 986fa88..74f7dac 100644
+--- a/src/lib/axon/api-base.ts
++++ b/src/lib/axon/api-base.ts
+@@ -1,4 +1,4 @@
+-/** Client/API URL — `/api/*` stays at site root; pages use optional AXON vanity base. */
++/** Client/API URL — API routes stay at site root; pages use optional AXON vanity base. */
+ export function apiUrl(path: string, _basePath = ""): string {
+   if (path.startsWith("/api/")) return path;
+   const base = _basePath || process.env.NEXT_PUBLIC_AXON_BASE_PATH || "";
+diff --git a/src/lib/axon/app-path.ts b/src/lib/axon/app-path.ts
+new file mode 100644
+index 0000000..9ffe121
+--- /dev/null
++++ b/src/lib/axon/app-path.ts
+@@ -0,0 +1,6 @@
++/** Prefix sub-routes under a portal vanity base path (/axon-{username}). */
++export function appPath(path: string, basePath: string): string {
++  const normalized = path.startsWith('/') ? path : `/${path}`;
++  if (normalized === '/') return `${basePath}/dashboard`;
++  return `${basePath}${normalized}`;
++}
+diff --git a/src/lib/axon/axon-orb-theme.ts b/src/lib/axon/axon-orb-theme.ts
+new file mode 100644
+index 0000000..ae878bf
+--- /dev/null
++++ b/src/lib/axon/axon-orb-theme.ts
+@@ -0,0 +1,33 @@
++export type AxonOrbVisualState =
++  | 'standby'
++  | 'online'
++  | 'listening'
++  | 'speaking'
++  | 'processing';
++
++export interface AxonOrbStatusMeta {
++  label: string;
++  dotClass: string;
++  pulseFast?: boolean;
++}
++
++export const AXON_ORB_STATUS: Record<AxonOrbVisualState, AxonOrbStatusMeta> = {
++  standby: { label: 'Idle', dotClass: 'axon-orb-status-dot--idle' },
++  online: { label: 'Active', dotClass: 'axon-orb-status-dot--active' },
++  listening: { label: 'Listening', dotClass: 'axon-orb-status-dot--listening' },
++  speaking: { label: 'Speaking', dotClass: 'axon-orb-status-dot--speaking' },
++  processing: { label: 'Thinking', dotClass: 'axon-orb-status-dot--thinking', pulseFast: true },
++};
++
++export function resolveAxonOrbState(
++  active: boolean,
++  listening?: boolean,
++  speaking?: boolean,
++  processing?: boolean
++): AxonOrbVisualState {
++  if (processing) return 'processing';
++  if (listening) return 'listening';
++  if (speaking) return 'speaking';
++  if (active) return 'online';
++  return 'standby';
++}
+diff --git a/src/lib/axon/axon-preferences.ts b/src/lib/axon/axon-preferences.ts
+new file mode 100644
+index 0000000..98df47f
+--- /dev/null
++++ b/src/lib/axon/axon-preferences.ts
+@@ -0,0 +1,124 @@
++import { getOperatorProfile, updateOperatorProfile } from './axon-profile';
++import {
++  DEFAULT_PREFERENCES,
++  type AxonNotification,
++  type AxonPreferences,
++  type HomeLayoutPrefs,
++  type NotificationSettings,
++} from './axon-types';
++
++function parsePreferences(contextData: Record<string, unknown> | null | undefined): AxonPreferences {
++  const raw = contextData?.preferences as Partial<AxonPreferences> | undefined;
++  if (!raw) return { ...DEFAULT_PREFERENCES };
++
++  return {
++    homeLayout: { ...DEFAULT_PREFERENCES.homeLayout, ...raw.homeLayout },
++    notifications: {
++      ...DEFAULT_PREFERENCES.notifications,
++      ...raw.notifications,
++      integrations: {
++        ...DEFAULT_PREFERENCES.notifications.integrations,
++        ...raw.notifications?.integrations,
++      },
++      urgencyRules: {
++        ...DEFAULT_PREFERENCES.notifications.urgencyRules,
++        ...raw.notifications?.urgencyRules,
++      },
++      customNotUrgent: raw.notifications?.customNotUrgent ?? [],
++    },
++    notificationsInbox: Array.isArray(raw.notificationsInbox) ? raw.notificationsInbox : [],
++  };
++}
++
++export async function getPreferences(operatorId = 'default'): Promise<AxonPreferences> {
++  const profile = await getOperatorProfile(operatorId);
++  return parsePreferences(profile.context_data);
++}
++
++async function savePreferences(operatorId: string, preferences: AxonPreferences) {
++  const profile = await getOperatorProfile(operatorId);
++  await updateOperatorProfile(operatorId, {
++    context_data: {
++      ...profile.context_data,
++      preferences,
++    },
++  });
++}
++
++export async function updateHomeLayout(
++  layout: HomeLayoutPrefs,
++  operatorId = 'default'
++): Promise<AxonPreferences> {
++  const prefs = await getPreferences(operatorId);
++  const next = { ...prefs, homeLayout: layout };
++  await savePreferences(operatorId, next);
++  return next;
++}
++
++export async function updateNotificationSettings(
++  settings: Partial<NotificationSettings>,
++  operatorId = 'default'
++): Promise<AxonPreferences> {
++  const prefs = await getPreferences(operatorId);
++  const next = {
++    ...prefs,
++    notifications: {
++      ...prefs.notifications,
++      ...settings,
++      integrations: { ...prefs.notifications.integrations, ...settings.integrations },
++      urgencyRules: { ...prefs.notifications.urgencyRules, ...settings.urgencyRules },
++    },
++  };
++  await savePreferences(operatorId, next);
++  return next;
++}
++
++export async function addNotification(
++  notification: Omit<AxonNotification, 'id' | 'read' | 'created_at'>,
++  operatorId = 'default'
++): Promise<AxonPreferences> {
++  const prefs = await getPreferences(operatorId);
++  const item: AxonNotification = {
++    ...notification,
++    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
++    read: false,
++    created_at: new Date().toISOString(),
++  };
++  const next = {
++    ...prefs,
++    notificationsInbox: [item, ...prefs.notificationsInbox].slice(0, 50),
++  };
++  await savePreferences(operatorId, next);
++  return next;
++}
++
++export async function markNotificationRead(id: string, operatorId = 'default') {
++  const prefs = await getPreferences(operatorId);
++  const next = {
++    ...prefs,
++    notificationsInbox: prefs.notificationsInbox.map((n) =>
++      n.id === id ? { ...n, read: true } : n
++    ),
++  };
++  await savePreferences(operatorId, next);
++  return next;
++}
++
++export function classifyUrgency(
++  source: string,
++  title: string,
++  settings: NotificationSettings
++): boolean {
++  if (!settings.urgencyEnabled) return false;
++  const haystack = `${source} ${title}`.toLowerCase();
++  if (settings.customNotUrgent.some((s) => haystack.includes(s.toLowerCase()))) return false;
++  if (haystack.includes('error') || haystack.includes('failed')) return settings.urgencyRules.systemError;
++  if (haystack.includes('won') || haystack.includes('closed')) return settings.urgencyRules.dealWon;
++  if (haystack.includes('approval') || haystack.includes('pending')) {
++    return settings.urgencyRules.pipelineApproval;
++  }
++  if (haystack.includes('reply') || haystack.includes('response')) {
++    return settings.urgencyRules.outreachReply;
++  }
++  return false;
++}
+diff --git a/src/lib/axon/axon-profile.ts b/src/lib/axon/axon-profile.ts
+index f34cb57..ddf7267 100644
+--- a/src/lib/axon/axon-profile.ts
++++ b/src/lib/axon/axon-profile.ts
+@@ -10,12 +10,7 @@ import {
+ } from './axon-types';
+ 
+ function getSupabaseKey() {
+-  return (
+-    process.env.SUPABASE_SERVICE_KEY ||
+-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+-    process.env.NI_BRAIN_SERVICE_ROLE_KEY ||
+-    ""
+-  );
++  return process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+ }
+ 
+ function client() {
+@@ -31,23 +26,11 @@ export async function getOperatorProfile(operatorId = OPERATOR_ID): Promise<Oper
+ 
+   if (rows?.[0]) return rows[0];
+ 
+-  try {
+-    const created = (await sbInsert('axon_operator_profiles', {
+-      operator_id: operatorId,
+-      tone_preset: DEFAULT_TONE_PRESET,
+-    })) as OperatorProfile;
+-    return created;
+-  } catch (error) {
+-    const message = error instanceof Error ? error.message : String(error);
+-    if (!message.includes('23505') && !message.includes('409')) throw error;
+-
+-    const existing = (await sbSelect(
+-      'axon_operator_profiles',
+-      `operator_id=eq.${operatorId}&select=*&limit=1`
+-    )) as OperatorProfile[];
+-    if (existing?.[0]) return existing[0];
+-    throw error;
+-  }
++  const created = (await sbInsert('axon_operator_profiles', {
++    operator_id: operatorId,
++    tone_preset: DEFAULT_TONE_PRESET,
++  })) as OperatorProfile;
++  return created;
+ }
+ 
+ export async function updateOperatorProfile(
+diff --git a/src/lib/axon/axon-types.ts b/src/lib/axon/axon-types.ts
+index 1ff507c..bb97410 100644
+--- a/src/lib/axon/axon-types.ts
++++ b/src/lib/axon/axon-types.ts
+@@ -140,6 +140,112 @@ export const DEFAULT_WORKSPACE: AxonWorkspace = {
+   todos_autonomous: false,
+ };
+ 
++export type HomeWidgetId =
++  | 'test_buttons'
++  | 'briefing'
++  | 'chat'
++  | 'todo'
++  | 'notifications'
++  | 'orb'
++  | 'controls';
++
++export interface HomeLayoutPrefs {
++  left: HomeWidgetId[];
++  center: HomeWidgetId[];
++  right: HomeWidgetId[];
++  hidden: HomeWidgetId[];
++}
++
++export interface NotificationSettings {
++  enabled: boolean;
++  urgencyEnabled: boolean;
++  urgencyFlashSeconds: number;
++  urgencySound: boolean;
++  urgencyVolume: number;
++  integrations: {
++    outreach: boolean;
++    telegram: boolean;
++    pipeline: boolean;
++    hermes: boolean;
++  };
++  urgencyRules: {
++    pipelineApproval: boolean;
++    dealWon: boolean;
++    systemError: boolean;
++    outreachReply: boolean;
++  };
++  customNotUrgent: string[];
++}
++
++export interface AxonNotification {
++  id: string;
++  source: string;
++  title: string;
++  body?: string;
++  urgent: boolean;
++  href?: string;
++  read: boolean;
++  created_at: string;
++}
++
++export interface AxonPreferences {
++  homeLayout: HomeLayoutPrefs;
++  notifications: NotificationSettings;
++  notificationsInbox: AxonNotification[];
++}
++
++export const DEFAULT_HOME_LAYOUT: HomeLayoutPrefs = {
++  left: ['test_buttons'],
++  center: ['chat', 'orb', 'controls'],
++  right: ['todo', 'notifications'],
++  hidden: ['briefing'],
++};
++
++/** Default visible layout — briefing on left column */
++export const DEFAULT_HOME_LAYOUT_VISIBLE: HomeLayoutPrefs = {
++  left: ['test_buttons', 'briefing'],
++  center: ['chat', 'orb', 'controls'],
++  right: ['todo', 'notifications'],
++  hidden: [],
++};
++
++export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
++  enabled: true,
++  urgencyEnabled: true,
++  urgencyFlashSeconds: 4,
++  urgencySound: true,
++  urgencyVolume: 0.35,
++  integrations: {
++    outreach: true,
++    telegram: true,
++    pipeline: true,
++    hermes: true,
++  },
++  urgencyRules: {
++    pipelineApproval: true,
++    dealWon: true,
++    systemError: true,
++    outreachReply: false,
++  },
++  customNotUrgent: [],
++};
++
++export const DEFAULT_PREFERENCES: AxonPreferences = {
++  homeLayout: DEFAULT_HOME_LAYOUT_VISIBLE,
++  notifications: DEFAULT_NOTIFICATION_SETTINGS,
++  notificationsInbox: [],
++};
++
++export const HOME_WIDGET_LABELS: Record<HomeWidgetId, string> = {
++  test_buttons: 'Test Controls',
++  briefing: 'Briefing',
++  chat: 'Command Chat',
++  todo: 'To-Do List',
++  notifications: 'Notifications',
++  orb: 'AXON Orb',
++  controls: 'Voice & Chat Controls',
++};
++
+ export const AXON_TOOLS: AxonTool[] = [
+   {
+     slug: 'ni-services-outreach',
+diff --git a/src/lib/axon/axon-web-chat.ts b/src/lib/axon/axon-web-chat.ts
+index f41bb86..1610ac3 100644
+--- a/src/lib/axon/axon-web-chat.ts
++++ b/src/lib/axon/axon-web-chat.ts
+@@ -49,17 +49,18 @@ function extractJson(text: string) {
+ export async function generateAxonReply(
+   userMessage: string,
+   channel: 'chat' | 'voice',
+-  history: ChatMessage[]
++  history: ChatMessage[],
++  operatorId = 'default'
+ ) {
+   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+   const { sbSelect } = createSupabaseClient(key);
+   const cfg = await loadConfig(sbSelect);
+ 
+   const [profile, signals, memories, workspace] = await Promise.all([
+-    getOperatorProfile(),
+-    fetchTopSignals(),
+-    fetchMemories(undefined, 15),
+-    getWorkspace(),
++    getOperatorProfile(operatorId),
++    fetchTopSignals(operatorId),
++    fetchMemories(operatorId, 15),
++    getWorkspace(operatorId),
+   ]);
+ 
+   const toneBlock = buildToneInstructions(profile.tone_preset, signals);
+@@ -93,12 +94,14 @@ Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand nam
+   ]);
+ 
+   const userMsg = await insertChatMessage({
++    operator_id: operatorId,
+     role: 'user',
+     content: userMessage,
+     channel,
+   });
+ 
+   const assistantMsg = await insertChatMessage({
++    operator_id: operatorId,
+     role: 'assistant',
+     content: reply,
+     channel,
+@@ -114,7 +117,8 @@ Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand nam
+         userMessage,
+         reply,
+         profile.tone_preset,
+-        workspace
++        workspace,
++        operatorId
+       )) ?? workspace;
+   } catch (err) {
+     console.error(err);
+@@ -128,7 +132,8 @@ async function analyzeAndLearn(
+   userMessage: string,
+   assistantReply: string,
+   currentPreset: TonePreset,
+-  currentWorkspace: Awaited<ReturnType<typeof getWorkspace>>
++  currentWorkspace: Awaited<ReturnType<typeof getWorkspace>>,
++  operatorId = 'default'
+ ) {
+   const system = `You analyze operator↔AXON conversations to extract communication learnings and workspace updates. Return JSON only.
+ 
+@@ -182,6 +187,7 @@ Return JSON:
+   for (const sig of parsed.signals || []) {
+     if (!sig.signal_key || !sig.signal_value) continue;
+     await upsertSignal({
++      operator_id: operatorId,
+       signal_type: sig.signal_type,
+       signal_key: sig.signal_key,
+       signal_value: sig.signal_value,
+@@ -192,6 +198,7 @@ Return JSON:
+   for (const mem of parsed.memories || []) {
+     if (!mem.content) continue;
+     await insertMemory({
++      operator_id: operatorId,
+       content: mem.content,
+       memory_type: mem.memory_type,
+       confidence: mem.confidence,
+@@ -201,19 +208,22 @@ Return JSON:
+   let workspace = currentWorkspace;
+ 
+   if (parsed.briefing_updates?.length) {
+-    workspace = await applyBriefingUpdates(parsed.briefing_updates);
++    workspace = await applyBriefingUpdates(parsed.briefing_updates, operatorId);
+   }
+ 
+   if (parsed.todo_updates?.length) {
+-    workspace = await applyTodoUpdates(parsed.todo_updates);
++    workspace = await applyTodoUpdates(parsed.todo_updates, operatorId);
+   }
+ 
+   const flags = parsed.workspace_flags;
+   if (flags && (flags.briefing_autonomous !== undefined || flags.todos_autonomous !== undefined)) {
+-    workspace = await setWorkspaceFlags({
+-      briefing_autonomous: flags.briefing_autonomous,
+-      todos_autonomous: flags.todos_autonomous,
+-    });
++    workspace = await setWorkspaceFlags(
++      {
++        briefing_autonomous: flags.briefing_autonomous,
++        todos_autonomous: flags.todos_autonomous,
++      },
++      operatorId
++    );
+   }
+ 
+   const adj = parsed.tone_adjustments;
+@@ -240,7 +250,7 @@ Return JSON:
+       next.avoid_phrases = [...next.avoid_phrases!.slice(-9), adj.avoid_phrase];
+     }
+ 
+-    await updateOperatorProfile('default', { tone_preset: next });
++    await updateOperatorProfile(operatorId, { tone_preset: next });
+   }
+ 
+   return workspace;
+diff --git a/src/lib/axon/operator.ts b/src/lib/axon/operator.ts
+new file mode 100644
+index 0000000..6ee5209
+--- /dev/null
++++ b/src/lib/axon/operator.ts
+@@ -0,0 +1,33 @@
++import "server-only";
++
++import { canEnterAxonPortal } from "@/lib/axon/access";
++import { createServerAuthClient } from "@/lib/supabase/server-auth";
++
++/** Portal username used as AXON operator_id in NI-Brain tables. */
++export async function resolveAxonOperatorId(): Promise<string | null> {
++  const supabase = await createServerAuthClient();
++  const {
++    data: { user },
++  } = await supabase.auth.getUser();
++
++  if (!user) return null;
++
++  const allowed = await canEnterAxonPortal(user.id);
++  if (!allowed) return null;
++
++  const { data: profile } = await supabase
++    .from("ni_portal_profiles")
++    .select("username")
++    .eq("id", user.id)
++    .maybeSingle();
++
++  return profile?.username?.trim().toLowerCase() ?? null;
++}
++
++export async function requireAxonOperatorId(): Promise<string> {
++  const operatorId = await resolveAxonOperatorId();
++  if (!operatorId) {
++    throw new Error("AXON access denied");
++  }
++  return operatorId;
++}
+diff --git a/src/lib/axon/portal-guard.ts b/src/lib/axon/portal-guard.ts
+new file mode 100644
+index 0000000..7dbe14e
+--- /dev/null
++++ b/src/lib/axon/portal-guard.ts
+@@ -0,0 +1,41 @@
++import { cookies } from 'next/headers';
++import { redirect } from 'next/navigation';
++import { canEnterAxonPortal } from '@/lib/axon/access';
++import { axonPublicPath } from '@/lib/axon/paths';
++import {
++  AXON_SESSION_COOKIE,
++  readAxonSessionFromCookieValue,
++} from '@/lib/axon/session';
++import { createServerAuthClient } from '@/lib/supabase/server-auth';
++
++/** Enforce NI portal auth + AXON session for all /axon/u/[username]/* routes. */
++export async function requireAxonPortalUser(username: string) {
++  const normalized = username.trim().toLowerCase();
++  const supabase = await createServerAuthClient();
++  const {
++    data: { user },
++  } = await supabase.auth.getUser();
++
++  if (!user) {
++    redirect(`/auth/signin?next=${axonPublicPath(normalized, '/dashboard')}`);
++  }
++
++  const { data: profile } = await supabase
++    .from('ni_portal_profiles')
++    .select('username')
++    .eq('id', user.id)
++    .maybeSingle();
++
++  const portalUsername = profile?.username?.trim().toLowerCase() ?? '';
++  if (portalUsername !== normalized) redirect('/axon');
++
++  const allowed = await canEnterAxonPortal(user.id);
++  if (!allowed) redirect('/axon');
++
++  const sessionToken = cookies().get(AXON_SESSION_COOKIE)?.value;
++  if (!readAxonSessionFromCookieValue(sessionToken, user.id)) {
++    redirect(`/api/axon/bootstrap?username=${encodeURIComponent(normalized)}`);
++  }
++
++  return { user, username: normalized, operatorId: normalized };
++}
+diff --git a/src/styles/axon.css b/src/styles/axon.css
+index 9f0120d..19a1311 100644
+--- a/src/styles/axon.css
++++ b/src/styles/axon.css
+@@ -37,3 +37,702 @@
+ .axon-gradient-btn {
+   background: linear-gradient(135deg, #2563eb 0%, #4338ca 100%);
+ }
++/* synced from AXON repo */
++.axon-grid-bg {
++    background-image:
++      linear-gradient(rgba(37, 99, 235, 0.035) 1px, transparent 1px),
++      linear-gradient(90deg, rgba(99, 102, 241, 0.035) 1px, transparent 1px);
++    background-size: 48px 48px;
++  }
++
++  .axon-glow {
++    box-shadow:
++      0 0 40px rgba(37, 99, 235, 0.14),
++      0 8px 32px rgba(99, 102, 241, 0.18);
++  }
++
++  .axon-glow-purple {
++    box-shadow:
++      0 0 60px rgba(96, 165, 250, 0.18),
++      0 12px 40px rgba(99, 102, 241, 0.28);
++  }
++
++  .axon-card-3d {
++    transform-style: preserve-3d;
++    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
++  }
++
++  .axon-card-3d:hover {
++    box-shadow:
++      0 16px 48px rgba(37, 99, 235, 0.22),
++      0 0 32px rgba(129, 140, 248, 0.14);
++  }
++
++  .axon-glass {
++    background: linear-gradient(
++      145deg,
++      rgba(16, 30, 51, 0.88) 0%,
++      rgba(10, 20, 36, 0.78) 55%,
++      rgba(67, 56, 202, 0.08) 100%
++    );
++    backdrop-filter: blur(14px);
++    border: 1px solid rgba(96, 165, 250, 0.14);
++  }
++
++  .axon-gradient-text {
++    @apply bg-gradient-to-r from-axon-blue-glow via-axon-cyan to-axon-purple-glow bg-clip-text text-transparent;
++  }
++
++  .axon-gradient-btn {
++    @apply bg-gradient-to-r from-axon-blue via-axon-violet to-axon-purple;
++  }
++
++  /* Holographic 3-monitor command rig */
++  .axon-holo-stage {
++    --holo-messages-h: clamp(240px, 38vh, 460px);
++    perspective: 1800px;
++    perspective-origin: 50% 38%;
++    transform-style: preserve-3d;
++    padding-top: 0.5rem;
++    overflow: visible;
++  }
++
++  .axon-holo-rig {
++    transform-style: preserve-3d;
++    overflow: visible;
++  }
++
++  .axon-holo-grid {
++    display: grid;
++    grid-template-columns: minmax(0, 1fr) minmax(0, 1.22fr) minmax(0, 1fr);
++    grid-template-rows: var(--holo-messages-h) auto auto;
++    gap: 1rem 1.5rem;
++    align-items: stretch;
++    transform-style: preserve-3d;
++    overflow: visible;
++  }
++
++  .axon-holo-cell {
++    position: relative;
++    transform-style: preserve-3d;
++    min-width: 0;
++    overflow: visible;
++  }
++
++  .axon-holo-cell > * {
++    position: relative;
++    z-index: 2;
++  }
++
++  .axon-holo-cell::before {
++    content: '';
++    position: absolute;
++    inset: -2px;
++    z-index: 1;
++    border-radius: 1.25rem;
++    border: 1px solid rgba(96, 165, 250, 0.18);
++    box-shadow:
++      0 0 40px rgba(37, 99, 235, 0.1),
++      inset 0 0 60px rgba(34, 211, 238, 0.03);
++    pointer-events: none;
++  }
++
++  .axon-holo-cell-left {
++    grid-column: 1;
++    grid-row: 1;
++    z-index: 4;
++    transform: rotateY(22deg) translateZ(-12px);
++    transform-origin: right center;
++  }
++
++  .axon-holo-cell-center {
++    grid-column: 2;
++    grid-row: 1 / 3;
++    z-index: 2;
++    transform: translateZ(20px);
++    transform-origin: center center;
++    pointer-events: none;
++  }
++
++  .axon-holo-cell-right-top {
++    grid-column: 3;
++    grid-row: 1;
++    z-index: 5;
++    transform: rotateY(-22deg) translateZ(-12px);
++    transform-origin: left center;
++  }
++
++  .axon-holo-cell-right-lower {
++    grid-column: 3;
++    grid-row: 2;
++    z-index: 4;
++    transform: rotateY(-18deg) translateZ(-8px);
++    transform-origin: left top;
++  }
++
++  .axon-holo-cell-left-lower {
++    grid-column: 1;
++    grid-row: 2;
++    min-height: 0;
++  }
++
++  .axon-holo-cell-orb {
++    grid-column: 2;
++    grid-row: 3;
++    transform: translateZ(72px);
++  }
++
++  .axon-holo-side-panel {
++    height: 100%;
++    max-height: var(--holo-messages-h);
++    min-height: 0;
++  }
++
++  .axon-holo-messages {
++    height: var(--holo-messages-h);
++    max-height: var(--holo-messages-h);
++    min-height: 0;
++    flex-shrink: 0;
++  }
++
++  .axon-holo-chat-shell {
++    display: flex;
++    flex-direction: column;
++    height: 100%;
++    min-height: 0;
++    pointer-events: auto;
++  }
++
++  .axon-holo-input-region {
++    flex-shrink: 0;
++    margin-top: 0;
++  }
++
++  .axon-holo-chat-card {
++    display: flex;
++    flex-direction: column;
++    min-height: 0;
++    overflow: hidden;
++  }
++
++  .axon-holo-panel {
++    width: 100%;
++    height: 100%;
++    min-height: 0;
++  }
++
++  .axon-holo-orb-deck {
++    display: flex;
++    flex-direction: column;
++    align-items: center;
++    gap: 0.75rem;
++    margin-top: 0.25rem;
++    padding-bottom: 0.5rem;
++    transform-style: preserve-3d;
++  }
++
++  .axon-holo-orb-zone {
++    display: flex;
++    min-height: 200px;
++    align-items: center;
++    justify-content: center;
++    position: relative;
++    z-index: 20;
++  }
++
++  .axon-orb-stack {
++    position: relative;
++  }
++
++  .axon-orb-root {
++    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
++    transform-style: preserve-3d;
++    overflow: visible;
++  }
++
++  .axon-orb-canvas {
++    inset: -4%;
++  }
++
++  .axon-orb-webgl {
++    width: 100% !important;
++    height: 100% !important;
++  }
++
++  .axon-orb-root.axon-orb-live {
++    filter: drop-shadow(0 0 28px rgba(79, 125, 255, 0.14));
++  }
++
++  .axon-orb-root.axon-orb-processing-state {
++    filter: drop-shadow(0 0 36px rgba(139, 92, 246, 0.22)) saturate(1.06);
++  }
++
++  .axon-holo-controls {
++    transform: translateZ(16px);
++  }
++
++  .axon-holo-controls .axon-orb-status-pill {
++    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
++  }
++
++  .axon-orb-status-text {
++    font-size: 0.62rem;
++    font-weight: 500;
++    letter-spacing: 0.14em;
++    text-transform: uppercase;
++    color: rgba(199, 210, 254, 0.88);
++  }
++
++  .axon-orb-status-dot {
++    display: inline-block;
++    height: 7px;
++    width: 7px;
++    border-radius: 9999px;
++    flex-shrink: 0;
++    animation: axon-orb-dot-pulse 2.6s ease-in-out infinite;
++  }
++
++  .axon-orb-status-dot--fast {
++    animation-duration: 0.85s;
++  }
++
++  .axon-orb-status-dot--idle {
++    background: rgba(100, 116, 139, 0.85);
++    box-shadow: 0 0 6px rgba(100, 116, 139, 0.35);
++  }
++
++  .axon-orb-status-dot--active {
++    background: rgba(52, 211, 153, 0.95);
++    box-shadow: 0 0 10px rgba(52, 211, 153, 0.65);
++  }
++
++  .axon-orb-status-dot--listening {
++    background: rgba(56, 189, 248, 0.95);
++    box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
++  }
++
++  .axon-orb-status-dot--speaking {
++    background: rgba(139, 92, 246, 0.95);
++    box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
++  }
++
++  .axon-orb-status-dot--thinking {
++    background: rgba(251, 191, 36, 0.95);
++    box-shadow: 0 0 10px rgba(251, 191, 36, 0.55);
++  }
++
++  .axon-orb-wordmark {
++    display: inline-flex;
++    align-items: center;
++    justify-content: center;
++    gap: 0.22em;
++    font-size: 1.35rem;
++    font-weight: 600;
++    letter-spacing: 0.08em;
++    line-height: 1;
++  }
++
++  .axon-orb-wordmark-letter {
++    display: inline-block;
++    background: linear-gradient(
++      160deg,
++      rgba(224, 232, 255, 0.98) 0%,
++      rgba(79, 125, 255, 0.95) 48%,
++      rgba(139, 92, 246, 0.98) 100%
++    );
++    background-size: 200% 200%;
++    -webkit-background-clip: text;
++    background-clip: text;
++    color: transparent;
++    animation: axon-orb-letter-shimmer 5s ease-in-out infinite;
++    filter: drop-shadow(0 0 12px rgba(79, 125, 255, 0.22));
++    transition: transform 0.35s ease, filter 0.35s ease;
++  }
++
++  .axon-orb-wordmark-live .axon-orb-wordmark-letter {
++    filter: drop-shadow(0 0 16px rgba(139, 92, 246, 0.38));
++  }
++
++  .axon-orb-tagline {
++    font-size: 0.58rem;
++    font-weight: 400;
++    letter-spacing: 0.38em;
++    text-indent: 0.38em;
++    text-transform: uppercase;
++    color: rgba(122, 143, 168, 0.75);
++  }
++
++  @keyframes axon-orb-letter-shimmer {
++    0%,
++    100% {
++      background-position: 0% 50%;
++      transform: translateY(0);
++    }
++    50% {
++      background-position: 100% 50%;
++      transform: translateY(-1px);
++    }
++  }
++
++  .axon-orb-static-fallback {
++    background: radial-gradient(
++      circle at 50% 44%,
++      rgba(74, 124, 155, 0.1) 0%,
++      rgba(30, 48, 72, 0.05) 45%,
++      transparent 72%
++    );
++  }
++
++  .axon-orb-static-core {
++    background: radial-gradient(
++      circle at 36% 30%,
++      rgba(195, 210, 230, 0.75) 0%,
++      rgba(58, 98, 132, 0.82) 36%,
++      rgba(6, 12, 22, 0.98) 100%
++    );
++    box-shadow:
++      0 0 32px rgba(74, 124, 155, 0.18),
++      inset 0 0 20px rgba(148, 178, 205, 0.12);
++  }
++
++  @keyframes axon-orb-dot-pulse {
++    0%,
++    100% {
++      opacity: 0.5;
++      transform: scale(0.88);
++    }
++    50% {
++      opacity: 1;
++      transform: scale(1.12);
++    }
++  }
++
++  .axon-holo-grid-no-left {
++    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
++  }
++
++  .axon-holo-grid-no-left .axon-holo-cell-center,
++  .axon-holo-grid-no-left .axon-holo-cell-orb {
++    grid-column: 1;
++  }
++
++  .axon-holo-grid-no-left .axon-holo-cell-right-top,
++  .axon-holo-grid-no-left .axon-holo-cell-right-lower {
++    grid-column: 2;
++  }
++
++  .axon-holo-grid-no-right {
++    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
++  }
++
++  .axon-holo-grid-no-right .axon-holo-cell-center,
++  .axon-holo-grid-no-right .axon-holo-cell-orb {
++    grid-column: 2;
++  }
++
++  .axon-holo-grid-no-right .axon-holo-cell-left {
++    grid-column: 1;
++  }
++
++  .axon-holo-grid-single {
++    grid-template-columns: minmax(0, 1fr);
++    max-width: 720px;
++    margin-inline: auto;
++  }
++
++  .axon-holo-grid-single .axon-holo-cell-center,
++  .axon-holo-grid-single .axon-holo-cell-orb {
++    grid-column: 1;
++  }
++
++  @media (max-width: 1279px) {
++    .axon-holo-stage {
++      --holo-messages-h: clamp(220px, 34vh, 400px);
++    }
++
++    .axon-holo-grid {
++      gap: 1rem;
++    }
++  }
++
++  @media (max-width: 1023px) {
++    .axon-holo-stage {
++      --holo-messages-h: auto;
++    }
++
++    .axon-holo-grid {
++      display: flex;
++      flex-direction: column;
++      gap: 1.25rem;
++    }
++
++    .axon-holo-cell-left,
++    .axon-holo-cell-center,
++    .axon-holo-cell-right-top,
++    .axon-holo-cell-right-lower,
++    .axon-holo-cell-left-lower,
++    .axon-holo-cell-orb,
++    .axon-holo-orb-deck,
++    .axon-holo-controls {
++      transform: none;
++      pointer-events: auto;
++    }
++
++    .axon-holo-side-panel,
++    .axon-holo-messages {
++      max-height: none;
++      min-height: 280px;
++    }
++  }
++
++  @media (max-width: 639px) {
++    .axon-holo-side-panel,
++    .axon-holo-messages {
++      min-height: 220px;
++    }
++
++    .axon-holo-orb-zone {
++      min-height: 180px;
++    }
++  }
++
++  /* Legacy lab classes — kept for panel focus view */
++  .axon-lab-stage {
++    perspective: 1800px;
++    perspective-origin: 50% 38%;
++    transform-style: preserve-3d;
++  }
++@keyframes scan {
++  0% {
++    top: 0;
++    opacity: 0;
++  }
++  10% {
++    opacity: 1;
++  }
++  90% {
++    opacity: 1;
++  }
++  100% {
++    top: 100%;
++    opacity: 0;
++  }
++}
++
++@keyframes float {
++  0%,
++  100% {
++    transform: translateY(0) rotateX(0deg);
++  }
++  50% {
++    transform: translateY(-10px) rotateX(3deg);
++  }
++}
++
++@keyframes pulse-glow {
++  0%,
++  100% {
++    opacity: 0.35;
++    transform: scale(1);
++  }
++  50% {
++    opacity: 0.75;
++    transform: scale(1.04);
++  }
++}
++
++@keyframes drift {
++  0% {
++    transform: translate(0, 0) scale(1);
++  }
++  33% {
++    transform: translate(12px, -8px) scale(1.02);
++  }
++  66% {
++    transform: translate(-8px, 6px) scale(0.98);
++  }
++  100% {
++    transform: translate(0, 0) scale(1);
++  }
++}
++
++@keyframes shimmer {
++  0% {
++    background-position: -200% center;
++  }
++  100% {
++    background-position: 200% center;
++  }
++}
++
++@keyframes arc-pulse {
++  0%,
++  100% {
++    opacity: 0.25;
++    stroke-dashoffset: 0;
++  }
++  50% {
++    opacity: 0.55;
++    stroke-dashoffset: 24;
++  }
++}
++
++@keyframes arc-spin {
++  from {
++    transform: rotateX(72deg) rotateZ(0deg);
++  }
++  to {
++    transform: rotateX(72deg) rotateZ(360deg);
++  }
++}
++
++.animate-float {
++  animation: float 6s ease-in-out infinite;
++}
++
++.animate-drift {
++  animation: drift 12s ease-in-out infinite;
++}
++
++.animate-pulse-glow {
++  animation: pulse-glow 4s ease-in-out infinite;
++}
++
++.animate-arc-spin {
++  animation: arc-spin 48s linear infinite;
++}
++
++/* AXON locked color scheme — navy + electric blue + cyan + indigo/purple */
++
++@keyframes notif-slide {
++  from {
++    opacity: 0;
++    transform: translateY(8px);
++  }
++  to {
++    opacity: 1;
++    transform: translateY(0);
++  }
++}
++
++.animate-notif-slide {
++  animation: notif-slide 0.45s ease-out;
++}
++
++.axon-notif-urgent-flash {
++  animation: urgent-flash 0.45s ease-in-out infinite;
++}
++
++@keyframes urgent-flash {
++  0%,
++  100% {
++    background-color: rgba(127, 29, 29, 0.35);
++  }
++  50% {
++    background-color: rgba(220, 38, 38, 0.55);
++  }
++}
++
++.axon-heartbeat-line {
++  stroke-dasharray: var(--hb-length, 1000);
++  animation: heartbeat 2.4s linear infinite;
++}
++
++@keyframes heartbeat {
++  0% {
++    stroke-dashoffset: var(--hb-length, 1000);
++  }
++  100% {
++    stroke-dashoffset: 0;
++  }
++}
++
++.axon-heartbeat-wrap {
++  position: absolute;
++  inset: 0;
++  width: 100%;
++  height: 100%;
++  overflow: hidden;
++}
++
++.axon-heartbeat-svg {
++  display: block;
++  width: 100%;
++  height: 100%;
++}
++
++@keyframes axon-orb-pulse-ring {
++  0% {
++    transform: scale(0.85);
++    opacity: 0.7;
++  }
++  100% {
++    transform: scale(1.35);
++    opacity: 0;
++  }
++}
++
++.axon-orb-spin-ring {
++  animation: orb-spin 3s linear infinite;
++}
++
++@keyframes orb-spin {
++  from {
++    transform: rotate(0deg);
++  }
++  to {
++    transform: rotate(360deg);
++  }
++}
++
++.axon-panel-focus-from-left {
++  animation: panel-focus-in-left 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
++  transform-origin: left center;
++}
++
++.axon-panel-focus-from-right {
++  animation: panel-focus-in-right 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
++  transform-origin: right center;
++}
++
++@keyframes panel-focus-in-left {
++  from {
++    opacity: 0;
++    transform: perspective(900px) rotateY(-22deg) translateX(-8%) scale(0.9);
++  }
++  to {
++    opacity: 1;
++    transform: perspective(900px) rotateY(0deg) translateX(0) scale(1.04);
++  }
++}
++
++@keyframes panel-focus-in-right {
++  from {
++    opacity: 0;
++    transform: perspective(900px) rotateY(22deg) translateX(8%) scale(0.9);
++  }
++  to {
++    opacity: 1;
++    transform: perspective(900px) rotateY(0deg) translateX(0) scale(1.04);
++  }
++}
++
++.axon-panel-ghost-left {
++  transform: perspective(800px) rotateY(16deg) scale(0.88);
++  transform-origin: right center;
++}
++
++.axon-panel-ghost-right {
++  transform: perspective(800px) rotateY(-16deg) scale(0.88);
++  transform-origin: left center;
++}
++
++.axon-panel-ghost-left-subtle {
++  transform: perspective(800px) rotateY(8deg) scale(0.9);
++  transform-origin: right center;
++}
++
++.axon-panel-ghost-right-subtle {
++  transform: perspective(800px) rotateY(-8deg) scale(0.9);
++  transform-origin: left center;
++}
+diff --git a/tailwind.config.ts b/tailwind.config.ts
+index 2a36aed..4055999 100644
+--- a/tailwind.config.ts
++++ b/tailwind.config.ts
+@@ -43,9 +43,16 @@ const config: Config = {
+           muted: "#7a8fa8",
+           text: "#e8f0fa",
+           gold: "#c9a962",
++          "gold-dim": "#8a7340",
+           "blue-glow": "#60a5fa",
++          "blue-bright": "#3b82f6",
+           blue: "#2563eb",
+           cyan: "#22d3ee",
++          purple: "#6366f1",
++          "purple-deep": "#4338ca",
++          "purple-glow": "#818cf8",
++          violet: "#4f46e5",
++          teal: "#2dd4bf",
+           danger: "#f07178",
+           success: "#34d399",
+         },
+-- 
+2.43.0
+
