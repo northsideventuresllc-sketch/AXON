@@ -59,14 +59,17 @@ export async function insertChatMessage(msg: {
   content: string;
   channel?: ChatMessage['channel'];
   metadata?: Record<string, unknown>;
+  session_id?: string;
 }) {
   const { sbInsert } = client();
+  const metadata = { ...(msg.metadata || {}) };
+  if (msg.session_id) metadata.session_id = msg.session_id;
   return sbInsert('axon_chat_messages', {
     operator_id: msg.operator_id || OPERATOR_ID,
     role: msg.role,
     content: msg.content,
     channel: msg.channel || 'chat',
-    metadata: msg.metadata || {},
+    metadata,
   }) as Promise<ChatMessage>;
 }
 
