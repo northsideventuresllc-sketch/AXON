@@ -1,3 +1,4 @@
+import { AxonChangeCodeForm } from '@/components/axon/AxonChangeCodeForm';
 import { AxonHomeSettings } from '@/components/axon-ui/axon-home-settings';
 import { AxonNotificationSettings } from '@/components/axon-ui/axon-notification-settings';
 import { AxonResetSettings } from '@/components/axon-ui/axon-reset-settings';
@@ -33,6 +34,8 @@ export default async function AxonSettingsPage({ params }: { params: { username:
 
       <AxonHomeSettings initial={preferences.homeLayout} />
       <AxonNotificationSettings initial={preferences.notifications} />
+
+      <AxonChangeCodeForm />
 
       <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">
         <h2 className="text-sm font-medium">Communication Profile</h2>

@@ -59,7 +59,7 @@ export function PanelFocusView({
         onClick={onClose}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-full border border-axon-blue/40 bg-axon-elevated/90 px-8 py-2.5 text-sm text-axon-cyan transition hover:border-axon-cyan hover:bg-axon-blue/20"
       >
-        ← Back to command view
+        ← BACK TO COMMAND CENTER
       </button>
     </div>
   );

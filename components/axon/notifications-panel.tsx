@@ -44,7 +44,7 @@ export function NotificationsPanel({
     if (!settings.urgencySound || typeof window === 'undefined') return;
     try {
       const ctx = new AudioContext();
-      playFogHornSiren(ctx, settings.urgencyVolume);
+      playUrgentAlarm(ctx, settings.urgencyVolume);
     } catch {
       /* audio optional */
     }
@@ -279,67 +279,60 @@ function HeartbeatMonitor() {
   );
 }
 
-function playFogHornBlast(
+function playAlarmTone(
   ctx: AudioContext,
   startAt: number,
   duration: number,
+  frequency: number,
   volume: number
 ) {
   const t0 = ctx.currentTime + startAt;
   const t1 = t0 + duration;
-  const peakVol = volume * 0.22;
+  const peakVol = volume * 0.55;
 
   const master = ctx.createGain();
   master.gain.setValueAtTime(0.0001, t0);
-  master.gain.exponentialRampToValueAtTime(peakVol, t0 + 0.1);
-  master.gain.setValueAtTime(peakVol * 0.88, t1 - 0.18);
+  master.gain.exponentialRampToValueAtTime(peakVol, t0 + 0.015);
+  master.gain.setValueAtTime(peakVol, t1 - 0.04);
   master.gain.exponentialRampToValueAtTime(0.0001, t1);
   master.connect(ctx.destination);
 
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(360, t0);
-  filter.frequency.linearRampToValueAtTime(260, t1);
-  filter.Q.value = 0.8;
-  filter.connect(master);
+  const osc = ctx.createOscillator();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(frequency, t0);
+  osc.connect(master);
+  osc.start(t0);
+  osc.stop(t1 + 0.02);
 
-  const layers: { baseHz: number; type: OscillatorType; mix: number }[] = [
-    { baseHz: 58, type: 'sine', mix: 0.5 },
-    { baseHz: 74, type: 'sine', mix: 0.35 },
-    { baseHz: 92, type: 'triangle', mix: 0.15 },
-  ];
-
-  for (const { baseHz, type, mix } of layers) {
-    const osc = ctx.createOscillator();
-    const layerGain = ctx.createGain();
-    osc.type = type;
-
-    osc.frequency.setValueAtTime(baseHz * 1.15, t0);
-    osc.frequency.exponentialRampToValueAtTime(baseHz * 0.72, t0 + duration * 0.38);
-    osc.frequency.exponentialRampToValueAtTime(baseHz * 1.42, t0 + duration * 0.72);
-    osc.frequency.exponentialRampToValueAtTime(baseHz * 0.95, t1);
-
-    layerGain.gain.value = mix;
-    osc.connect(layerGain);
-    layerGain.connect(filter);
-    osc.start(t0);
-    osc.stop(t1 + 0.08);
-  }
+  const harmonic = ctx.createOscillator();
+  const harmonicGain = ctx.createGain();
+  harmonic.type = 'sine';
+  harmonic.frequency.setValueAtTime(frequency * 2, t0);
+  harmonicGain.gain.value = 0.35;
+  harmonic.connect(harmonicGain);
+  harmonicGain.connect(master);
+  harmonic.start(t0);
+  harmonic.stop(t1 + 0.02);
 }
 
-function playFogHornSiren(ctx: AudioContext, volume: number, blasts = 2) {
-  const blastDuration = 1.15;
-  const gap = 0.5;
+/** Piercing two-tone alarm — alternating high beeps, clearly audible vs fog-horn hum. */
+function playUrgentAlarm(ctx: AudioContext, volume: number, cycles = 5) {
+  const toneDuration = 0.28;
+  const gap = 0.12;
+  const lowHz = 880;
+  const highHz = 1100;
 
-  for (let i = 0; i < blasts; i++) {
-    playFogHornBlast(ctx, i * (blastDuration + gap), blastDuration, volume);
+  for (let i = 0; i < cycles; i++) {
+    const base = i * (toneDuration * 2 + gap * 2);
+    playAlarmTone(ctx, base, toneDuration, lowHz, volume);
+    playAlarmTone(ctx, base + toneDuration + gap, toneDuration, highHz, volume);
   }
 }
 
 export function playUrgentAlarmSound(volume = 0.35) {
   try {
     const ctx = new AudioContext();
-    playFogHornSiren(ctx, volume);
+    playUrgentAlarm(ctx, volume);
   } catch {
     /* optional */
   }

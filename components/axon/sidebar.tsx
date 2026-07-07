@@ -15,6 +15,8 @@ const NAV = [
   { href: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
+const AXON_HOME_URL = 'https://northsideintelligence.com/axon';
+
 function SignOutButton({ basePath }: { basePath?: string }) {
   async function handleSignOut() {
     await fetch(apiUrl('/api/auth/logout'), { method: 'POST' });
@@ -25,9 +27,9 @@ function SignOutButton({ basePath }: { basePath?: string }) {
     <button
       type="button"
       onClick={handleSignOut}
-      className="mt-2 w-full rounded-lg px-3 py-2 text-left text-xs text-axon-muted transition hover:bg-axon-elevated hover:text-axon-text"
+      className="mt-2 w-full rounded-lg px-3 py-2 text-left text-xs uppercase tracking-[0.12em] text-axon-muted transition hover:bg-axon-elevated hover:text-axon-text"
     >
-      Sign out
+      SIGN OUT
     </button>
   );
 }
@@ -86,7 +88,9 @@ export function Sidebar({ basePath }: { basePath?: string }) {
         })}
 
         <div className="mt-4 border-t border-axon-border/60 pt-4">
-          <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.2em] text-axon-muted">ITs</p>
+          <p className="mb-2 px-3 text-[10px] uppercase tracking-[0.2em] text-axon-muted">
+            Intelligence Tools
+          </p>
           <div className="space-y-1">
             {IT_QUICK_LINKS.map((tool) => (
               <a
@@ -94,10 +98,9 @@ export function Sidebar({ basePath }: { basePath?: string }) {
                 href={tool.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-axon-muted transition hover:bg-axon-elevated/50 hover:text-axon-text"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-axon-muted transition hover:bg-axon-elevated/50 hover:text-axon-text"
               >
                 <span>{tool.name}</span>
-                <span className="shrink-0 font-mono text-[10px] text-axon-blue-glow">{tool.price}</span>
               </a>
             ))}
           </div>
@@ -105,6 +108,35 @@ export function Sidebar({ basePath }: { basePath?: string }) {
       </nav>
 
       <div className="border-t border-axon-border px-4 py-4">
+        <div className="space-y-1">
+          <a
+            href={AXON_HOME_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-axon-muted transition hover:bg-axon-elevated hover:text-axon-cyan"
+          >
+            <span className="text-base opacity-70">⌂</span>
+            AXON Home
+          </a>
+          {basePath && (
+            <>
+              <Link
+                href={resolveHref('/', basePath)}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-axon-muted transition hover:bg-axon-elevated hover:text-axon-cyan"
+              >
+                <span className="text-base opacity-70">◈</span>
+                My AXON Dashboard
+              </Link>
+              <Link
+                href="/"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs uppercase tracking-[0.1em] text-axon-muted transition hover:bg-axon-elevated hover:text-axon-cyan"
+              >
+                <span className="text-base opacity-70">←</span>
+                Back to NI Portal
+              </Link>
+            </>
+          )}
+        </div>
         <SignOutButton basePath={basePath} />
       </div>
     </aside>

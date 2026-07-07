@@ -29,7 +29,7 @@ export function BriefingPanel({ items, autonomous, onRefresh, onTitleClick, comp
   }
 
   return (
-    <section className={`axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden h-full ${className}`}>
+    <section className={`axon-card-3d axon-glass axon-holo-side-card flex flex-col rounded-2xl overflow-hidden h-full ${className}`}>
       <header className="border-b border-axon-border/60 px-5 py-4">
         <div className="flex items-center justify-between gap-2">
           <button

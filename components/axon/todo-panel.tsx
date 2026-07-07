@@ -35,7 +35,7 @@ export function TodoPanel({ items, autonomous, onRefresh, onTitleClick, compact,
   }
 
   return (
-    <section className={`axon-card-3d axon-glass flex flex-col rounded-2xl overflow-hidden h-full ${className}`}>
+    <section className={`axon-card-3d axon-glass axon-holo-side-card flex flex-col rounded-2xl overflow-hidden h-full ${className}`}>
       <header
         className={`relative z-10 border-b border-axon-border/60 px-5 py-4 ${onTitleClick ? 'cursor-pointer hover:bg-axon-blue/5' : ''}`}
         onClick={onTitleClick}

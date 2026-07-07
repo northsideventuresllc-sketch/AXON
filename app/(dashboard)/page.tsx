@@ -24,14 +24,14 @@ export default async function AxonHomePage() {
 
   return (
     <div className="relative space-y-8">
-      <header className="overflow-visible pb-2 pt-1 text-center lg:text-left">
+      <header className="mx-auto max-w-3xl overflow-visible pb-2 pt-1 text-center">
         <p className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">
           Northside Intelligence
         </p>
         <h1 className="mt-2 text-2xl font-semibold leading-tight axon-gradient-text sm:text-3xl">
           AXON
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-axon-muted">
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-axon-muted">
           Northside Intelligence&apos;s State of the Art Personalized Agentic Assistant
         </p>
       </header>

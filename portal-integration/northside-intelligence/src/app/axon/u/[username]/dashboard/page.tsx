@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { AxonChangeCodeForm } from '@/components/axon/AxonChangeCodeForm';
 import { AxonInterface } from '@/components/axon-ui/axon-interface';
 import { ToolPanel } from '@/components/axon-ui/tool-panel';
 import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
@@ -11,6 +10,8 @@ import { fetchPipelineStats } from '@/lib/axon/leads';
 import { axonPublicPath } from '@/lib/axon/paths';
 
 export const dynamic = 'force-dynamic';
+
+const AXON_HOME_URL = 'https://northsideintelligence.com/axon';
 
 export default async function AxonUserDashboardPage({
   params,
@@ -33,17 +34,25 @@ export default async function AxonUserDashboardPage({
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">
-            Northside Intelligence
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold axon-gradient-text sm:text-3xl">AXON</h1>
-          <p className="mt-2 text-sm text-axon-muted">Operator: @{username}</p>
+      <header className="mx-auto max-w-3xl text-center">
+        <p className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">
+          Northside Intelligence
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold axon-gradient-text sm:text-3xl">AXON</h1>
+        <p className="mt-2 text-sm text-axon-muted">Operator: @{username}</p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs uppercase tracking-[0.1em]">
+          <a href={AXON_HOME_URL} className="text-axon-blue-glow hover:underline">
+            AXON Home
+          </a>
+          <span className="text-axon-border">|</span>
+          <Link href={`${basePath}/dashboard`} className="text-axon-blue-glow hover:underline">
+            My AXON Dashboard
+          </Link>
+          <span className="text-axon-border">|</span>
+          <Link href="/" className="text-axon-blue-glow hover:underline">
+            Back to NI Portal
+          </Link>
         </div>
-        <Link href="/" className="text-sm text-axon-blue-glow hover:underline">
-          Back to Portal
-        </Link>
       </header>
 
       <AxonInterface
@@ -60,8 +69,6 @@ export default async function AxonUserDashboardPage({
       />
 
       <ToolPanel tools={AXON_TOOLS} metrics={metrics} basePath={basePath} />
-
-      <AxonChangeCodeForm />
     </div>
   );
 }

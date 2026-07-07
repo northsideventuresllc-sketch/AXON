@@ -69,6 +69,19 @@
       0 0 32px rgba(129, 140, 248, 0.14);
   }
 
+  .axon-holo-side-panel:hover .axon-holo-side-card,
+  .axon-holo-side-card:hover {
+    box-shadow:
+      0 16px 48px rgba(37, 99, 235, 0.22),
+      0 0 32px rgba(129, 140, 248, 0.14);
+  }
+
+  .axon-holo-chat-shell:hover {
+    box-shadow:
+      0 16px 48px rgba(37, 99, 235, 0.22),
+      0 0 32px rgba(129, 140, 248, 0.14);
+  }
+
   .axon-glass {
     background: linear-gradient(
       145deg,

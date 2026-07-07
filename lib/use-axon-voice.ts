@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { VOICE_HINTS } from '@/lib/axon-types';
 
 interface SpeechRecognitionEventLike {
@@ -25,15 +25,32 @@ declare global {
   }
 }
 
+function pickVoice(voiceId: string): SpeechSynthesisVoice | undefined {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return undefined;
+  const hint = VOICE_HINTS[voiceId] || VOICE_HINTS.default;
+  const voices = window.speechSynthesis.getVoices();
+  return (
+    voices.find((v) => v.name.toLowerCase().includes(voiceId === 'uk' ? 'uk' : '') && v.lang.startsWith(hint.lang || 'en')) ||
+    voices.find((v) => v.lang.startsWith(hint.lang || 'en')) ||
+    voices.find((v) => v.lang.startsWith('en'))
+  );
+}
+
 export function useAxonVoice(inputMode: 'chat' | 'voice', voiceId: string, readAloud: boolean) {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [ttsSupported, setTtsSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    setVoiceSupported(!!SR);
+    setTtsSupported(!!window.speechSynthesis);
+
     if (!SR) return;
 
     const rec = new SR();
@@ -49,39 +66,60 @@ export function useAxonVoice(inputMode: 'chat' | 'voice', voiceId: string, readA
     recognitionRef.current = rec;
   }, [voiceId]);
 
-  function startListening() {
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    const prime = () => {
+      window.speechSynthesis.getVoices();
+    };
+    prime();
+    window.speechSynthesis.addEventListener('voiceschanged', prime);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', prime);
+  }, []);
+
+  const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
     setTranscript('');
     setListening(true);
-    recognitionRef.current.start();
-  }
+    try {
+      recognitionRef.current.start();
+    } catch {
+      setListening(false);
+    }
+  }, []);
 
-  function stopListening() {
+  const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
     setListening(false);
-  }
+  }, []);
 
-  function speak(text: string) {
-    if (!readAloud || typeof window === 'undefined' || !window.speechSynthesis) return;
+  const speak = useCallback(
+    (text: string) => {
+      if (!readAloud || typeof window === 'undefined' || !window.speechSynthesis) return;
 
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    const hint = VOICE_HINTS[voiceId] || VOICE_HINTS.default;
-    utter.pitch = hint.pitch ?? 1;
-    utter.rate = hint.rate ?? 0.95;
-    utter.lang = hint.lang || 'en-US';
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      const hint = VOICE_HINTS[voiceId] || VOICE_HINTS.default;
+      utter.pitch = hint.pitch ?? 1;
+      utter.rate = hint.rate ?? 0.95;
+      utter.lang = hint.lang || 'en-US';
 
-    const voices = window.speechSynthesis.getVoices();
-    const match = voices.find((v) => v.lang.startsWith(hint.lang || 'en'));
-    if (match) utter.voice = match;
+      const voice = pickVoice(voiceId);
+      if (voice) utter.voice = voice;
 
-    synthRef.current = utter;
-    window.speechSynthesis.speak(utter);
-  }
+      utter.onend = () => {
+        synthRef.current = null;
+      };
 
-  function stopSpeaking() {
+      synthRef.current = utter;
+      window.speechSynthesis.speak(utter);
+    },
+    [readAloud, voiceId]
+  );
+
+  const stopSpeaking = useCallback(() => {
     window.speechSynthesis?.cancel();
-  }
+    synthRef.current = null;
+  }, []);
 
   return {
     listening,
@@ -91,8 +129,8 @@ export function useAxonVoice(inputMode: 'chat' | 'voice', voiceId: string, readA
     stopListening,
     speak,
     stopSpeaking,
-    voiceSupported: typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition),
-    ttsSupported: typeof window !== 'undefined' && !!window.speechSynthesis,
+    voiceSupported,
+    ttsSupported,
   };
 }
 
