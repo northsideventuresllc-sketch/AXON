@@ -118,7 +118,7 @@ export function mergeMessages(existing: ChatMessage[], incoming: ChatMessage[]):
   const map = new Map<string, ChatMessage>();
   for (const m of existing) map.set(m.id, m);
   for (const m of incoming) map.set(m.id, m);
-  return [...map.values()].sort(
+  return Array.from(map.values()).sort(
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
 }
