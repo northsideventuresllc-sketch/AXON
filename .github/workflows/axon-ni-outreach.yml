@@ -42,6 +42,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          RESEND_REPLY_TO_EMAIL: ${{ secrets.RESEND_REPLY_TO_EMAIL }}
           AXON_GEMINI_DELAY_MS: '2500'
           AXON_OUTREACH_MAX: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.max || '5' }}
         run: node scripts/axon-ni-outreach.mjs

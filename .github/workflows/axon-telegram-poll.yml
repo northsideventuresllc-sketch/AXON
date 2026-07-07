@@ -36,5 +36,6 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          RESEND_REPLY_TO_EMAIL: ${{ secrets.RESEND_REPLY_TO_EMAIL }}
           AXON_WEBHOOK_URL: ${{ secrets.AXON_WEBHOOK_URL }}
         run: node scripts/axon-telegram-poll.mjs
