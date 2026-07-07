@@ -1,11 +1,14 @@
 import {
+  buildOperatorAvoidPatterns,
   buildTrainingPromptBlock,
   fetchOutreachTrainingSignals,
+  getOutreachIcpChecklistMeta,
   leadHadDraftEdits,
   loadOutreachTrainingPrompt,
   logOutreachApproveSignal,
   logOutreachAutoRejectSignal,
   summarizeOutreachTraining,
+  summarizeIcpDropStages,
 } from './outreach-learn.mjs';
 import { getClient } from './leads';
 import { OPERATOR_ID } from './axon-types';
@@ -20,13 +23,23 @@ export interface OutreachTrainingSummary {
   topRejectReasons: OutreachRejectReasonCount[];
   editFieldCounts: Record<string, number>;
   approvals: { unchanged: number; edited: number; total: number };
+  icpDropCount: number;
+  icpDropStages: Record<string, number>;
   active: boolean;
+}
+
+export interface OutreachIcpChecklistMeta {
+  minScore: number;
+  todayQueries: Array<{ query: string; industry: string; searchQuery: string; segment?: string }>;
 }
 
 export interface OutreachTrainingPayload {
   summary: OutreachTrainingSummary;
   promptBlock: string;
+  operatorAvoidPatterns: string[];
 }
+
+export { getOutreachIcpChecklistMeta };
 
 export async function getOutreachTrainingSummary(
   options: { limit?: number; days?: number } = {}
@@ -62,5 +75,7 @@ export {
   loadOutreachTrainingPrompt,
   logOutreachApproveSignal,
   logOutreachAutoRejectSignal,
+  buildOperatorAvoidPatterns,
   summarizeOutreachTraining,
+  summarizeIcpDropStages,
 };

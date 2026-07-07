@@ -22,6 +22,9 @@ export interface LeadMeta {
   rejected_by?: string | null;
   rejected_via?: string | null;
   auto_rejected_reason?: string | null;
+  auto_rejected?: string | null;
+  auto_rejected_at?: string | null;
+  icp_scan?: { icp_fit?: boolean; segment?: string; industry?: string } | null;
   raw?: string;
 }
 

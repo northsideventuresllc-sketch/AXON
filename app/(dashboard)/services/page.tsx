@@ -28,9 +28,10 @@ export default function ServicesPage() {
       <section className="rounded-xl border border-axon-border bg-axon-surface p-6">
         <h2 className="text-sm font-medium">Daily SERP Queries ({SEARCH_QUERIES.length} rotating)</h2>
         <ul className="mt-4 space-y-2">
-          {SEARCH_QUERIES.map((q, i) => (
-            <li key={i} className="text-sm text-axon-muted">
-              <span className="font-mono text-xs text-axon-gold">{i + 1}.</span> {q}
+          {SEARCH_QUERIES.map((entry, i) => (
+            <li key={entry.query} className="text-sm text-axon-muted">
+              <span className="font-mono text-xs text-axon-gold">{i + 1}.</span> {entry.query}
+              <span className="ml-2 text-xs opacity-70">({entry.industry})</span>
             </li>
           ))}
         </ul>

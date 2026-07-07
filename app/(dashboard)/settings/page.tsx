@@ -110,6 +110,12 @@ export default async function SettingsPage() {
                 <dt className="text-axon-muted">Unchanged</dt>
                 <dd className="font-mono">{outreachTraining.approvals.unchanged}</dd>
               </div>
+              {outreachTraining.icpDropCount > 0 && (
+                <div>
+                  <dt className="text-axon-muted">ICP drops</dt>
+                  <dd className="font-mono">{outreachTraining.icpDropCount}</dd>
+                </div>
+              )}
             </dl>
           </div>
         ) : (

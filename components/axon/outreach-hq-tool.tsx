@@ -8,6 +8,8 @@ import type { OutreachTrainingSummary } from '@/lib/outreach-learn';
 import { LeadCard, LeadRow } from './lead-card';
 import { GoalProgress, PipelineBreakdown, StatsCards } from './stats-cards';
 import { OutreachTrainingPanel } from './outreach-training-panel';
+import { OutreachIcpChecklist } from './outreach-icp-checklist';
+import { OutreachGenerateLeads } from './outreach-generate-leads';
 import { STATUS_ORDER } from '@/lib/types';
 import { appPath } from '@/lib/paths';
 import { consumeToolLaunch } from '@/lib/axon-user-tools';
@@ -26,6 +28,8 @@ interface OutreachHqToolProps {
   stats: PipelineStats;
   leads: LeadWithMeta[];
   training: OutreachTrainingSummary;
+  todayQueries: Array<{ query: string; industry: string; searchQuery: string }>;
+  minScore: number;
   basePath?: string;
   initialTab?: OutreachHqTab;
   pipelineFilter?: string;
@@ -35,6 +39,8 @@ export function OutreachHqTool({
   stats,
   leads,
   training,
+  todayQueries,
+  minScore,
   basePath,
   initialTab = 'overview',
   pipelineFilter,
@@ -47,7 +53,12 @@ export function OutreachHqTool({
   const tab = tabParam && TABS.some((t) => t.id === tabParam) ? tabParam : initialTab;
   const pending = leads.filter((l) => l.status === 'pending_approval');
   const recent = leads.slice(0, 6);
-  const filtered = pipelineFilter ? leads.filter((l) => l.status === pipelineFilter) : leads;
+  const filtered = pipelineFilter
+    ? pipelineFilter === 'icp_auto'
+      ? leads.filter((l) => l.meta.auto_rejected === 'icp_violation')
+      : leads.filter((l) => l.status === pipelineFilter)
+    : leads;
+  const icpAutoRejectedCount = leads.filter((l) => l.meta.auto_rejected === 'icp_violation').length;
 
   const [showLaunch, setShowLaunch] = useState(false);
 
@@ -109,6 +120,13 @@ export function OutreachHqTool({
 
           {tab === 'overview' && (
             <>
+              <OutreachGenerateLeads stats={stats} />
+              <OutreachIcpChecklist
+                minScore={minScore}
+                todayQueries={todayQueries}
+                training={training}
+                icpAutoRejectedCount={icpAutoRejectedCount}
+              />
               <OutreachTrainingPanel summary={training} />
               <StatsCards stats={stats} />
               <div className="grid gap-6 lg:grid-cols-2">
@@ -177,6 +195,14 @@ export function OutreachHqTool({
               </div>
               <div className="flex flex-wrap gap-2">
                 <FilterPill href={pipelineHref()} label="All" active={!pipelineFilter} count={leads.length} />
+                {icpAutoRejectedCount > 0 && (
+                  <FilterPill
+                    href={pipelineHref('icp_auto')}
+                    label="ICP auto-rejected"
+                    active={pipelineFilter === 'icp_auto'}
+                    count={icpAutoRejectedCount}
+                  />
+                )}
                 {STATUS_ORDER.map((status) => {
                   const count = leads.filter((l) => l.status === status).length;
                   if (count === 0) return null;

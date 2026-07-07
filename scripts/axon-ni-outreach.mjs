@@ -2,21 +2,28 @@
 /**
  * AXON Phase 1 — NI Services outreach engine
  * find → score → draft → queue → Telegram notify
+ * ICP refactor: 8-step pipeline wired in lib/icp-config + lib/icp-filter
  */
 import { randomUUID } from 'node:crypto';
 import { haikuScoreAndDraft, scanProspect } from '../lib/ai.mjs';
 import { loadConfig } from '../lib/config.mjs';
 import {
   MAX_DRAFTS_PER_DAY,
-  SEARCH_QUERIES,
+  MIN_OUTREACH_SCORE,
   SOURCE,
   formatNotes,
   parseNotes,
+  pickQueriesForDay,
   shortId,
   todayUtc,
 } from '../lib/constants.mjs';
-import { jobBoardReason, leadRejectReason, rejectPendingJobBoardLeads } from '../lib/icp-filter.mjs';
-import { loadOutreachTrainingPrompt } from '../lib/outreach-learn.mjs';
+import {
+  postScanRejectReason,
+  preScanRejectReason,
+  rejectPendingIcpViolations,
+  scanIcpRejectReason,
+} from '../lib/icp-filter.mjs';
+import { loadOutreachTrainingPrompt, logOutreachIcpDropSignal } from '../lib/outreach-learn.mjs';
 import { searchProspects } from '../lib/serpapi.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { recordDraftNotification } from '../lib/telegram-handler.mjs';
@@ -41,11 +48,16 @@ async function existingHandles(sbSelect) {
   return new Set((rows || []).map((r) => (r.handle || '').toLowerCase()));
 }
 
-function pickQueries() {
-  const dayIndex = new Date().getUTCDay();
-  const primary = SEARCH_QUERIES[dayIndex % SEARCH_QUERIES.length];
-  const secondary = SEARCH_QUERIES[(dayIndex + 3) % SEARCH_QUERIES.length];
-  return [primary, secondary];
+async function logIcpDrop(sbInsert, { reason, stage, label, dryRun }) {
+  if (dryRun || !sbInsert) {
+    console.log(`ICP drop (${stage}): ${label} — ${reason}`);
+    return;
+  }
+  try {
+    await logOutreachIcpDropSignal(sbInsert, { reason, stage, label });
+  } catch {
+    console.log(`ICP drop (${stage}): ${label} — ${reason}`);
+  }
 }
 
 async function main() {
@@ -56,24 +68,29 @@ async function main() {
   const cfg = await loadConfig(sbSelect);
 
   let trainingBlock = '';
+  let operatorAvoidPatterns = [];
   try {
     const training = await loadOutreachTrainingPrompt({ sbSelect, sbInsert });
     trainingBlock = training.promptBlock;
+    operatorAvoidPatterns = training.operatorAvoidPatterns || [];
     if (training.summary.active) {
       console.log(
         `Training mode: ${training.summary.signalCount} signal(s) — injecting into draft prompt`
       );
     }
+    if (operatorAvoidPatterns.length) {
+      console.log(`ICP operator avoid patterns: ${operatorAvoidPatterns.length}`);
+    }
   } catch (err) {
     console.warn(`Training signals load failed (continuing): ${err.message}`);
   }
 
-  // ICP sweep: clear job-board noise already sitting in the approval queue
+  // Step 8 — ICP sweep on pending queue
   try {
-    const swept = await rejectPendingJobBoardLeads({ sbSelect, sbPatch, sbInsert }, SOURCE, {
+    const swept = await rejectPendingIcpViolations({ sbSelect, sbPatch, sbInsert }, SOURCE, {
       dryRun: cfg.dryRun,
     });
-    if (swept.length) console.log(`ICP sweep: auto-rejected ${swept.length} job-board lead(s)`);
+    if (swept.length) console.log(`ICP sweep: auto-rejected ${swept.length} lead(s)`);
   } catch (err) {
     console.warn(`ICP sweep failed (continuing): ${err.message}`);
   }
@@ -88,20 +105,19 @@ async function main() {
   }
 
   const known = await existingHandles(sbSelect);
-  const queries = pickQueries();
+  const queryEntries = pickQueriesForDay();
   let prospects = [];
 
-  for (const q of queries) {
-    console.log(`SERPAPI: ${q}`);
+  for (const entry of queryEntries) {
+    console.log(`SERPAPI [${entry.industry}]: ${entry.searchQuery}`);
     try {
-      const batch = await searchProspects(cfg.serpApiKey, q, 8);
-      prospects.push(...batch);
+      const batch = await searchProspects(cfg.serpApiKey, entry.searchQuery, 8);
+      prospects.push(...batch.map((p) => ({ ...p, _queryIndustry: entry.industry })));
     } catch (err) {
-      console.warn(`SERPAPI failed for "${q}": ${err.message}`);
+      console.warn(`SERPAPI failed for "${entry.searchQuery}": ${err.message}`);
     }
   }
 
-  // Dedupe by title+link
   const seen = new Set();
   prospects = prospects.filter((p) => {
     const key = `${p.title}|${p.link}`.toLowerCase();
@@ -110,23 +126,31 @@ async function main() {
     return true;
   });
 
-  // ICP pre-filter: never scan/draft job-board aggregate posts
-  prospects = prospects.filter((p) => {
-    const reason = jobBoardReason(p);
+  // Step 3 — pre-scan hard filter
+  const preFiltered = [];
+  for (const prospect of prospects) {
+    const reason = preScanRejectReason(prospect, { operatorAvoidPatterns });
     if (reason) {
-      console.log(`ICP drop (${reason})`);
-      return false;
+      await logIcpDrop(sbInsert, {
+        reason,
+        stage: 'pre_scan',
+        label: prospect.title?.slice(0, 60) || 'prospect',
+        dryRun: cfg.dryRun,
+      });
+      continue;
     }
-    return true;
-  });
+    preFiltered.push(prospect);
+  }
+  prospects = preFiltered;
 
-  console.log(`Prospects from search (after ICP filter): ${prospects.length}`);
+  console.log(`Prospects from search (after ICP pre-filter): ${prospects.length}`);
 
   let created = 0;
   const runMax = Number.parseInt(process.env.AXON_OUTREACH_MAX || '5', 10);
   const perRunCap = Number.isFinite(runMax) && runMax > 0 ? runMax : 5;
   const maxPerRun = Math.min(remaining, perRunCap);
   console.log(`Max this run: ${maxPerRun} (cap ${perRunCap}, daily remaining ${remaining})`);
+
   for (const prospect of prospects) {
     if (created >= maxPerRun) break;
 
@@ -135,13 +159,32 @@ async function main() {
       console.log(`Scan via ${scan._scan_source}: ${prospect.title?.slice(0, 60) || 'prospect'}`);
     }
 
+    const scanReject = scanIcpRejectReason(scan);
+    if (scanReject) {
+      await logIcpDrop(sbInsert, {
+        reason: scanReject,
+        stage: 'scan_gate',
+        label: scan.company || prospect.title,
+        dryRun: cfg.dryRun,
+      });
+      continue;
+    }
+
     const company = (scan.company || prospect.title || '').trim();
     if (!company || known.has(company.toLowerCase())) continue;
 
-    // ICP post-scan check: scan can resolve the "company" to the job board itself
-    const icpReject = leadRejectReason({ company, sourceLink: prospect.link });
-    if (icpReject) {
-      console.log(`ICP drop post-scan (${icpReject})`);
+    const postReject = postScanRejectReason({
+      company,
+      sourceLink: prospect.link,
+      scan,
+    });
+    if (postReject) {
+      await logIcpDrop(sbInsert, {
+        reason: postReject,
+        stage: 'post_scan',
+        label: company,
+        dryRun: cfg.dryRun,
+      });
       continue;
     }
 
@@ -153,8 +196,13 @@ async function main() {
       continue;
     }
 
-    if ((draft.score ?? 0) < 55) {
-      console.log(`Skip low score (${draft.score}): ${company}`);
+    if ((draft.score ?? 0) < MIN_OUTREACH_SCORE) {
+      await logIcpDrop(sbInsert, {
+        reason: `low score (${draft.score ?? 0} < ${MIN_OUTREACH_SCORE})`,
+        stage: 'post_score',
+        label: company,
+        dryRun: cfg.dryRun,
+      });
       continue;
     }
 
@@ -162,7 +210,12 @@ async function main() {
     const draftBody =
       channel === 'email' ? (draft.email_body || '').trim() : (draft.linkedin_dm || '').trim();
     if (!draftBody) {
-      console.warn(`Skip empty draft body: ${company}`);
+      await logIcpDrop(sbInsert, {
+        reason: 'empty draft body',
+        stage: 'post_draft',
+        label: company,
+        dryRun: cfg.dryRun,
+      });
       continue;
     }
 
@@ -175,12 +228,17 @@ async function main() {
       source_link: prospect.link,
       serp_title: prospect.title,
       scan_source: scan._scan_source || 'unknown',
+      icp_scan: {
+        icp_fit: scan.icp_fit ?? true,
+        segment: scan.segment,
+        industry: scan.industry,
+      },
     };
 
     const row = {
       id: randomUUID(),
       handle: company,
-      niche: scan.industry || scan.niche || 'general',
+      niche: scan.industry || scan.niche || prospect._queryIndustry || 'general',
       target_group: draft.target_group || scan.segment || 'smb',
       why_match_fit: draft.why_match_fit || scan.fit_summary || '',
       comment_draft: channel === 'email' ? draftBody : '',
@@ -213,17 +271,8 @@ async function main() {
         const notifyLead = { ...inserted, _meta: meta };
         if (!notifyLead._meta.score) notifyLead._meta = { ...parseNotes(inserted.notes), ...meta };
         const draftText = formatDraftMessage(notifyLead, sid);
-        await telegramSend(
-          cfg.telegramToken,
-          cfg.telegramChatId,
-          draftText,
-          false
-        );
-        await recordDraftNotification(
-          { sbSelect, sbInsert, sbPatch },
-          cfg.telegramChatId,
-          draftText
-        );
+        await telegramSend(cfg.telegramToken, cfg.telegramChatId, draftText, false);
+        await recordDraftNotification({ sbSelect, sbInsert, sbPatch }, cfg.telegramChatId, draftText);
       } catch (err) {
         console.warn(`Telegram notify failed for ${sid}: ${err.message}`);
       }
