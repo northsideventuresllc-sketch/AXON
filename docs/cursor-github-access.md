@@ -48,8 +48,25 @@ Automated sync when AXON UI changes on `main` — no Cloud Agent push required.
 
 1. `https://github.com/northsideventuresllc-sketch/AXON/settings/secrets/actions`
 2. **New repository secret**
-3. Name: `NI_GITHUB_PAT`
-4. Value: the PAT from step 1
+3. Name: **`NI_GITHUB_PAT`** (exact name — the workflow looks for this)
+4. Value: paste the **token string** (starts with `github_pat_…`), not the token’s name or ID
+
+Changing the PAT’s repository scope to “all repos” is not enough by itself — you must **paste the token into this secret**.
+
+### 2b. Optional — Cloud Agent direct push
+
+To let a Cloud Agent push without Actions, add the same token in your **Cursor Cloud Environment** secrets:
+
+- Name: `NI_GITHUB_PAT`
+- Value: same `github_pat_…` string
+
+Then the agent can run:
+
+```bash
+export NI_GITHUB_PAT='github_pat_…'   # or rely on env injection
+node scripts/sync-portal-ui.mjs /path/to/northside-intelligence
+bash scripts/push-ni-portal.sh /path/to/northside-intelligence
+```
 
 ### 3. Run sync
 
