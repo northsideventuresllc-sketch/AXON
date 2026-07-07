@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { OutreachHqTool } from '@/components/axon-ui/outreach-hq-tool';
 import { fetchLeads, fetchPipelineStats } from '@/lib/axon/leads';
+import { getOutreachTrainingSummary } from '@/lib/axon/outreach-learn';
 import { axonPublicPath } from '@/lib/axon/paths';
 import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
 
@@ -16,7 +17,11 @@ export default async function AxonNiOutreachPage({
   const { username } = await requireAxonPortalUser(params.username);
   const basePath = axonPublicPath(username);
   const { tab, status } = searchParams;
-  const [stats, leads] = await Promise.all([fetchPipelineStats(), fetchLeads(500)]);
+  const [stats, leads, training] = await Promise.all([
+    fetchPipelineStats(),
+    fetchLeads(500),
+    getOutreachTrainingSummary(),
+  ]);
   const initialTab =
     tab === 'queue' || tab === 'pipeline' || tab === 'overview' ? tab : 'overview';
 
@@ -25,6 +30,7 @@ export default async function AxonNiOutreachPage({
       <OutreachHqTool
         stats={stats}
         leads={leads}
+        training={training}
         basePath={basePath}
         initialTab={initialTab}
         pipelineFilter={tab === 'pipeline' ? status : undefined}

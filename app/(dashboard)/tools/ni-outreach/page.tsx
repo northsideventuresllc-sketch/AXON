@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { fetchLeads, fetchPipelineStats } from '@/lib/leads';
+import { getOutreachTrainingSummary } from '@/lib/outreach-learn';
 import { OutreachHqTool } from '@/components/axon/outreach-hq-tool';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,11 @@ export default async function NiOutreachToolPage({
   searchParams: Promise<{ tab?: string; status?: string }>;
 }) {
   const { tab, status } = await searchParams;
-  const [stats, leads] = await Promise.all([fetchPipelineStats(), fetchLeads(500)]);
+  const [stats, leads, training] = await Promise.all([
+    fetchPipelineStats(),
+    fetchLeads(500),
+    getOutreachTrainingSummary(),
+  ]);
   const initialTab =
     tab === 'queue' || tab === 'pipeline' || tab === 'overview' ? tab : 'overview';
 
@@ -19,6 +24,7 @@ export default async function NiOutreachToolPage({
       <OutreachHqTool
         stats={stats}
         leads={leads}
+        training={training}
         initialTab={initialTab}
         pipelineFilter={tab === 'pipeline' ? status : undefined}
       />

@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
 import { loadConfig } from '@/lib/config.mjs';
-import { parseNotes } from '@/lib/constants.mjs';
+import { parseNotes, shortId } from '@/lib/constants.mjs';
 import { resendSend } from '@/lib/resend.mjs';
 import { fetchLeadById, getClient, updateLeadStatus } from '@/lib/leads';
-import { shortId } from '@/lib/constants.mjs';
+import { recordOutreachApproval } from '@/lib/outreach-learn';
+
+async function logApproval(id: string) {
+  try {
+    await recordOutreachApproval(id);
+  } catch {
+    /* training signal is best-effort */
+  }
+}
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -25,6 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (meta.channel === 'linkedin' || !send) {
       await updateLeadStatus(id, { status: 'approved' });
+      await logApproval(id);
       const suffix =
         meta.channel === 'linkedin'
           ? ' (LinkedIn). Copy the DM and send manually, then mark as sent.'
@@ -37,6 +46,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const to = meta.contact_email;
     if (!to) {
       await updateLeadStatus(id, { status: 'approved' });
+      await logApproval(id);
       return NextResponse.json({
         message: `Approved ${shortId(id)} but no contact email — send manually.`,
       });
@@ -44,6 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (!cfg.resendKey) {
       await updateLeadStatus(id, { status: 'approved' });
+      await logApproval(id);
       return NextResponse.json({
         message: `Approved ${shortId(id)} but Resend not configured — send manually.`,
       });
@@ -57,6 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     await updateLeadStatus(id, { status: 'sent', dm_sent: true });
+    await logApproval(id);
     return NextResponse.json({ message: `Email sent to ${to} for ${lead.handle}` });
   } catch (err) {
     return NextResponse.json(
