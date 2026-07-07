@@ -17,6 +17,11 @@ export interface LeadMeta {
   contact_email?: string | null;
   source_link?: string;
   serp_title?: string;
+  rejected_reason?: string | null;
+  rejected_at?: string | null;
+  rejected_by?: string | null;
+  rejected_via?: string | null;
+  auto_rejected_reason?: string | null;
   raw?: string;
 }
 
