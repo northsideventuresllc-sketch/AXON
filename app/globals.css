@@ -718,3 +718,79 @@
   transform: perspective(800px) rotateY(-8deg) scale(0.9);
   transform-origin: left center;
 }
+
+/* Previous chats — 3D card flip on command window */
+.axon-chats-flip-scene {
+  perspective: 1400px;
+  perspective-origin: 50% 42%;
+}
+
+.axon-chats-flip-card {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  min-height: 100%;
+}
+
+.axon-chats-flip-card.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.axon-chats-flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.axon-chats-flip-front {
+  position: relative;
+  z-index: 2;
+}
+
+.axon-chats-flip-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  z-index: 1;
+}
+
+.axon-chats-flip-card.is-flipped .axon-chats-flip-front {
+  pointer-events: none;
+}
+
+.axon-chats-flip-card:not(.is-flipped) .axon-chats-flip-back {
+  pointer-events: none;
+}
+
+.axon-chats-session-list {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-axon-blue) 35%, transparent) transparent;
+}
+
+.axon-chats-nav-link {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-axon-cyan);
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.axon-chats-nav-link:hover {
+  color: var(--color-axon-blue-glow);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--color-axon-cyan) 45%, transparent);
+}
+
+@keyframes axon-chats-flip-in {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateX(88deg) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(900px) rotateX(0deg) translateY(0);
+  }
+}
+
+.axon-chats-flip-back .axon-chats-session-list {
+  animation: axon-chats-flip-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

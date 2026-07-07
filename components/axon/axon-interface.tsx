@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { JarvisOrb } from './jarvis-orb';
 import { AxonOrbStatus } from './axon-orb-status';
 import { BriefingPanel } from './briefing-panel';
@@ -8,6 +8,7 @@ import { TodoPanel } from './todo-panel';
 import { AxonLabFloor } from './axon-lab-floor';
 import { NotificationsPanel } from './notifications-panel';
 import { PanelFocusView, type FocusPanelId } from './panel-focus-view';
+import { PreviousChatsFlip } from './previous-chats-flip';
 import {
   AXON_VOICES,
   type AxonNotification,
@@ -17,6 +18,14 @@ import {
   type HomeWidgetId,
   type InputMode,
 } from '@/lib/axon-types';
+import {
+  createSessionId,
+  getLatestSessionId,
+  getMessagesForSession,
+  groupMessagesIntoSessions,
+  mergeMessages,
+  tagMessageWithSession,
+} from '@/lib/axon-chat-sessions';
 import { useAxonVoice } from '@/lib/use-axon-voice';
 import { apiUrl } from '@/lib/api-base';
 
@@ -38,7 +47,18 @@ export function AxonInterface({
   initialPreferences,
   initialProfile,
 }: AxonInterfaceProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [allMessages, setAllMessages] = useState<ChatMessage[]>(initialMessages);
+  const [activeSessionId, setActiveSessionId] = useState(
+    () => getLatestSessionId(initialMessages) || createSessionId()
+  );
+  const [chatsFlipped, setChatsFlipped] = useState(false);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const messages = useMemo(
+    () => getMessagesForSession(allMessages, activeSessionId),
+    [allMessages, activeSessionId]
+  );
+  const sessions = useMemo(() => groupMessagesIntoSessions(allMessages), [allMessages]);
+  const latestSessionId = useMemo(() => getLatestSessionId(allMessages), [allMessages]);
   const [workspace, setWorkspace] = useState<AxonWorkspace>(initialWorkspace);
   const [preferences, setPreferences] = useState<AxonPreferences>(initialPreferences);
   const [input, setInput] = useState('');
@@ -72,8 +92,47 @@ export function AxonInterface({
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoadingSessions(true);
+    fetch(apiUrl('/api/axon/chat?limit=200'))
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled || !data.messages?.length) return;
+        setAllMessages((prev) => {
+          const merged = mergeMessages(prev, data.messages as ChatMessage[]);
+          const latest = getLatestSessionId(merged);
+          setActiveSessionId((current) => {
+            if (getMessagesForSession(merged, current).length > 0) return current;
+            return latest || current;
+          });
+          return merged;
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSessions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const openPreviousChats = useCallback(() => {
+    setChatsFlipped(true);
+  }, []);
+
+  const backToCurrentChat = useCallback(() => {
+    if (latestSessionId) setActiveSessionId(latestSessionId);
+    setChatsFlipped(false);
+  }, [latestSessionId]);
+
+  const selectChatSession = useCallback((sessionId: string) => {
+    setActiveSessionId(sessionId);
+    setChatsFlipped(false);
+  }, []);
+
+  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, loading, chatsFlipped]);
 
   useEffect(() => {
     if (voice.transcript && !loading) setInput(voice.transcript);
@@ -108,30 +167,37 @@ export function AxonInterface({
     setLoading(true);
     setInput('');
 
-    const optimistic: ChatMessage = {
-      id: `temp-${Date.now()}`,
-      operator_id: 'default',
-      role: 'user',
-      content: text.trim(),
-      channel: inputMode,
-      metadata: {},
-      created_at: new Date().toISOString(),
-    };
-    setMessages((m) => [...m, optimistic]);
+    const optimistic: ChatMessage = tagMessageWithSession(
+      {
+        id: `temp-${Date.now()}`,
+        operator_id: 'default',
+        role: 'user',
+        content: text.trim(),
+        channel: inputMode,
+        metadata: {},
+        created_at: new Date().toISOString(),
+      },
+      activeSessionId
+    );
+    setAllMessages((m) => [...m, optimistic]);
 
     try {
       const res = await fetch(apiUrl('/api/axon/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text.trim(), channel: inputMode }),
+        body: JSON.stringify({
+          message: text.trim(),
+          channel: inputMode,
+          sessionId: activeSessionId,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setMessages((m) => [
+      setAllMessages((m) => [
         ...m.filter((x) => x.id !== optimistic.id),
-        data.userMsg,
-        data.assistantMsg,
+        tagMessageWithSession(data.userMsg, activeSessionId),
+        tagMessageWithSession(data.assistantMsg, activeSessionId),
       ]);
 
       if (data.workspace) setWorkspace(data.workspace);
@@ -143,18 +209,21 @@ export function AxonInterface({
         setTimeout(() => setSpeaking(false), Math.min(data.reply.length * 55, 15000));
       }
     } catch (err) {
-      setMessages((m) => [
+      setAllMessages((m) => [
         ...m.filter((x) => x.id !== optimistic.id),
         optimistic,
-        {
-          id: `sys-${Date.now()}`,
-          operator_id: 'default',
-          role: 'assistant',
-          content: err instanceof Error ? err.message : 'Something went wrong.',
-          channel: inputMode,
-          metadata: {},
-          created_at: new Date().toISOString(),
-        },
+        tagMessageWithSession(
+          {
+            id: `sys-${Date.now()}`,
+            operator_id: 'default',
+            role: 'assistant',
+            content: err instanceof Error ? err.message : 'Something went wrong.',
+            channel: inputMode,
+            metadata: {},
+            created_at: new Date().toISOString(),
+          },
+          activeSessionId
+        ),
       ]);
     } finally {
       setLoading(false);
@@ -180,8 +249,18 @@ export function AxonInterface({
     />
   );
 
+  const chatFlipProps = {
+    flipped: chatsFlipped,
+    sessions,
+    activeSessionId,
+    loadingSessions,
+    onOpenPrevious: openPreviousChats,
+    onBack: backToCurrentChat,
+    onSelectSession: selectChatSession,
+  };
+
   const desktopChatShell = (
-    <div className="axon-holo-chat-shell axon-card-3d relative rounded-2xl border border-axon-border/50 axon-glass">
+    <PreviousChatsFlip {...chatFlipProps} className="axon-holo-chat-shell relative h-full min-h-0">
       {urgentChatOverlay && (
         <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-red-950/90 animate-pulse">
           <p className="text-lg font-bold uppercase tracking-[0.3em] text-red-400">Urgent notification</p>
@@ -190,7 +269,7 @@ export function AxonInterface({
       <div className="relative shrink-0 border-b border-axon-border/50 px-4 py-2.5">
         <p className="text-[10px] uppercase tracking-[0.25em] text-axon-blue-glow">Command Interface</p>
       </div>
-      <div ref={scrollRef} className="axon-holo-messages space-y-3 overflow-y-auto p-4 sm:p-5">
+      <div ref={scrollRef} className="axon-holo-messages min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
         {messages.length === 0 && !loading && (
           <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
             <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
@@ -254,20 +333,20 @@ export function AxonInterface({
           </div>
         )}
       </form>
-    </div>
+    </PreviousChatsFlip>
   );
 
-  const chatMessagesBlock = (
-    <div className="axon-holo-chat-card axon-card-3d relative flex flex-col rounded-t-2xl border border-axon-border/50 axon-glass">
+  const chatPanel = (
+    <PreviousChatsFlip {...chatFlipProps} className="w-full">
       {urgentChatOverlay && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-t-2xl bg-red-950/90 animate-pulse">
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-red-950/90 animate-pulse">
           <p className="text-lg font-bold uppercase tracking-[0.3em] text-red-400">Urgent notification</p>
         </div>
       )}
-      <div className="shrink-0 border-b border-axon-border/50 px-4 py-2.5">
+      <div className="relative shrink-0 border-b border-axon-border/50 px-4 py-2.5">
         <p className="text-[10px] uppercase tracking-[0.25em] text-axon-blue-glow">Command Interface</p>
       </div>
-      <div ref={scrollRef} className="axon-holo-messages flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+      <div ref={scrollRef} className="axon-holo-messages min-h-[280px] flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
         {messages.length === 0 && !loading && (
           <div className="flex h-full flex-col items-center justify-center text-center text-sm text-axon-muted">
             <p>Good to see you. I&apos;m AXON — your personalized agentic assistant.</p>
@@ -284,64 +363,54 @@ export function AxonInterface({
           </div>
         )}
       </div>
-    </div>
-  );
-
-  const chatInputBlock = (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        sendMessage(input);
-      }}
-      className="axon-holo-input-region axon-card-3d rounded-b-2xl border border-axon-border/50 border-t border-axon-border/60 axon-glass p-4"
-    >
-      {inputMode === 'voice' ? (
-        <div className="flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={voice.listening ? voice.stopListening : voice.startListening}
-            className={`rounded-xl border px-4 py-3 text-sm font-medium ${
-              voice.listening
-                ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
-                : 'border-axon-border hover:border-axon-blue-glow/40'
-            }`}
-          >
-            {voice.listening ? 'Stop listening' : 'Tap to speak'}
-          </button>
-          {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
-          <button
-            type="submit"
-            disabled={!input.trim() || loading}
-            className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
-          >
-            Send voice message
-          </button>
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Talk to AXON…"
-            className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-blue-glow/50"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || loading}
-            className="rounded-lg axon-gradient-btn px-5 py-3 text-sm text-white disabled:opacity-40"
-          >
-            Send
-          </button>
-        </div>
-      )}
-    </form>
-  );
-
-  const chatPanel = (
-    <div className="flex flex-col">
-      {chatMessagesBlock}
-      {chatInputBlock}
-    </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          sendMessage(input);
+        }}
+        className="axon-holo-input-region shrink-0 border-t border-axon-border/60 p-4"
+      >
+        {inputMode === 'voice' ? (
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={voice.listening ? voice.stopListening : voice.startListening}
+              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+                voice.listening
+                  ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
+                  : 'border-axon-border hover:border-axon-blue-glow/40'
+              }`}
+            >
+              {voice.listening ? 'Stop listening' : 'Tap to speak'}
+            </button>
+            {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+              className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
+            >
+              Send voice message
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Talk to AXON…"
+              className="flex-1 rounded-lg border border-axon-border bg-axon-elevated/80 px-4 py-3 text-sm outline-none focus:border-axon-blue-glow/50"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+              className="rounded-lg axon-gradient-btn px-5 py-3 text-sm text-white disabled:opacity-40"
+            >
+              Send
+            </button>
+          </div>
+        )}
+      </form>
+    </PreviousChatsFlip>
   );
 
   const chatGhost = (
