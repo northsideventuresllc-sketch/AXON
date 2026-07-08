@@ -24,6 +24,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (channel === 'linkedin') {
       const account = resolveSocialAccount(settings, body.fromAccountId);
+      if (!account) {
+        return NextResponse.json(
+          { error: 'Connect a social profile URL under Outreach Channels first' },
+          { status: 400 }
+        );
+      }
       const message = String(body.message || lead.dm_draft || '').trim();
       if (!message) {
         return NextResponse.json({ error: 'DM message is required' }, { status: 400 });
@@ -31,7 +37,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
       const nextMeta = {
         ...meta,
-        sent_from_account: `${account.platform}:${account.handle}`,
+        sent_from_account: account.profileUrl,
+        sent_from_handle: account.handle,
         sent_at: new Date().toISOString(),
       };
 
@@ -45,7 +52,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       await recordOutreachSend(id, {
         channel: 'linkedin',
         payload: {
-          from: account.handle,
+          from: account.profileUrl,
+          handle: account.handle,
           platform: account.platform,
           message,
           to: lead.handle,
@@ -53,7 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       });
 
       return NextResponse.json({
-        message: `LinkedIn DM marked sent for ${lead.handle} (${shortId(id)}) from ${account.handle}`,
+        message: `LinkedIn DM marked sent for ${lead.handle} (${shortId(id)}) from ${account.profileUrl}`,
       });
     }
 
