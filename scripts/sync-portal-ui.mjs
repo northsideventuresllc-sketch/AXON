@@ -81,6 +81,12 @@ const LIB_FILES = [
   'use-axon-tool-display-names.ts',
   'use-axon-voice.ts',
   'leads.ts',
+  'config.mjs',
+  'supabase.mjs',
+  'resend.mjs',
+  'resend.d.ts',
+  'outreach-learn-core.d.ts',
+  'telegram.mjs',
 ];
 
 /** Removed from AXON — delete from portal on sync to avoid .ts/.mjs resolution collisions. */
@@ -112,6 +118,10 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/outreach-reject'/g, "from '@/lib/axon/outreach-reject'")
     .replace(/from '@\/lib\/outreach-learn'/g, "from '@/lib/axon/outreach-learn'")
     .replace(/from '@\/lib\/outreach-settings'/g, "from '@/lib/axon/outreach-settings'")
+    .replace(/from '@\/lib\/outreach-lifecycle'/g, "from '@/lib/axon/outreach-lifecycle'")
+    .replace(/from '@\/lib\/config\.mjs'/g, "from '@/lib/axon/config.mjs'")
+    .replace(/from '@\/lib\/constants\.mjs'/g, "from '@/lib/axon/constants.mjs'")
+    .replace(/from '@\/lib\/resend\.mjs'/g, "from '@/lib/axon/resend.mjs'")
     .replace(/from '@\/lib\/axon-quick-links'/g, "from '@/lib/axon/axon-quick-links'")
     .replace(/from '@\/lib\/use-axon-quick-links'/g, "from '@/lib/axon/use-axon-quick-links'")
     .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")

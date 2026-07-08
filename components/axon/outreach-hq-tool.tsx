@@ -101,7 +101,7 @@ export function OutreachHqTool({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ids: [...selectedIds],
+          ids: Array.from(selectedIds),
           action,
           status: action === 'status' ? bulkStatus : undefined,
         }),
