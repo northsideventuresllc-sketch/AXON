@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { loadConfig } from '@/lib/config.mjs';
 import { parseNotes, shortId } from '@/lib/constants.mjs';
+import { ensureEmailCanSend } from '@/lib/email-domain-sync.mjs';
 import { resendSend } from '@/lib/resend.mjs';
 import { fetchLeadById, getClient, updateLeadStatus } from '@/lib/leads';
 import { recordOutreachApproval } from '@/lib/outreach-learn';
+import { getOutreachSettings, resolveSendEmail } from '@/lib/outreach-settings';
 
 async function logApproval(id: string) {
   try {
@@ -60,11 +62,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       });
     }
 
+    const settings = await getOutreachSettings();
+    const sendAccount = resolveSendEmail(settings);
+    const domainCheck = await ensureEmailCanSend(cfg.resendKey, sendAccount.email);
+    if (!domainCheck.ok) {
+      return NextResponse.json(
+        {
+          error: domainCheck.message,
+          code: domainCheck.code || 'domain_not_verified',
+          canReplace: domainCheck.canReplace,
+        },
+        { status: 409 }
+      );
+    }
+
     const subject = meta.email_subject || `NORTHSiDE Intelligence — ${lead.handle}`;
     await resendSend(cfg, {
       to,
       subject,
       html: lead.comment_draft || '',
+      from: sendAccount.email,
+      replyTo: settings.emails.find((e) => e.isDefaultReceive)?.email,
     });
 
     await updateLeadStatus(id, { status: 'sent', dm_sent: true });

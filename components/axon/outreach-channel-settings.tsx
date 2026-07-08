@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import type {
   OutreachEmailAccount,
+  OutreachEmailDomain,
   OutreachSettings,
   OutreachSocialAccount,
   SocialPlatform,
 } from '@/lib/outreach-settings';
 import {
   formatSocialAccountSummary,
-  newEmailAccount,
   newSocialAccount,
   parseSocialProfileUrl,
 } from '@/lib/outreach-settings';
@@ -46,6 +46,21 @@ export function OutreachChannelSettings() {
   const [newSocialLabel, setNewSocialLabel] = useState('');
   const [connectError, setConnectError] = useState<string | null>(null);
   const [blockedDeleteNotice, setBlockedDeleteNotice] = useState<string | null>(null);
+  const [domainBusy, setDomainBusy] = useState(false);
+  const [replacePrompt, setReplacePrompt] = useState<{
+    email: string;
+    currentDomains: Array<{ name: string; status: string }>;
+  } | null>(null);
+
+  async function refreshDomains() {
+    try {
+      const res = await fetch(apiUrl('/api/axon/outreach/email-domain'));
+      const data = await res.json();
+      if (res.ok && data.settings) setSettings(data.settings);
+    } catch {
+      /* best-effort background sync */
+    }
+  }
 
   function showBlockedDeleteNotice(kind: 'email' | 'social') {
     setBlockedDeleteNotice(
@@ -59,6 +74,7 @@ export function OutreachChannelSettings() {
       const res = await fetch(apiUrl('/api/axon/outreach/settings'));
       const data = await res.json();
       setSettings(data.settings);
+      await refreshDomains();
     } finally {
       setLoading(false);
     }
@@ -67,6 +83,76 @@ export function OutreachChannelSettings() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!settings) return;
+    const pending = Object.values(settings.emailDomains || {}).some(
+      (d) => d.status && !['verified', 'partially_verified'].includes(d.status)
+    );
+    if (!pending) return;
+    const timer = setInterval(refreshDomains, 20000);
+    return () => clearInterval(timer);
+  }, [settings]);
+
+  async function connectEmail(replaceExisting = false) {
+    if (!newEmail.trim()) return;
+    setDomainBusy(true);
+    setConnectError(null);
+    setMessage(null);
+    try {
+      const res = await fetch(apiUrl('/api/axon/outreach/email-domain'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newEmail.trim(), replaceExisting }),
+      });
+      const data = await res.json();
+      if (res.status === 409 && data.canReplace) {
+        setReplacePrompt({
+          email: newEmail.trim(),
+          currentDomains: data.currentDomains || [],
+        });
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || 'Connect failed');
+      setSettings(data.settings);
+      setNewEmail('');
+      setNewEmailLabel('');
+      setReplacePrompt(null);
+      setMessage(
+        data.domain?.status === 'verified'
+          ? 'Email connected — domain verified. Ready to send.'
+          : 'Email connected — add the DNS records below. AXON will keep checking automatically.'
+      );
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : 'Connect failed');
+    } finally {
+      setDomainBusy(false);
+    }
+  }
+
+  async function verifyDomain(domain: string) {
+    setDomainBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch(apiUrl('/api/axon/outreach/email-domain'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification check failed');
+      setSettings(data.settings);
+      setMessage(
+        data.domain?.status === 'verified'
+          ? `${domain} is verified — you can send outreach email.`
+          : `Verification check queued for ${domain}. DNS can take up to 15 minutes.`
+      );
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Verification failed');
+    } finally {
+      setDomainBusy(false);
+    }
+  }
 
   async function save(next: OutreachSettings) {
     setSaving(true);
@@ -113,11 +199,7 @@ export function OutreachChannelSettings() {
   }
 
   function addEmail() {
-    if (!settings || !newEmail.trim()) return;
-    const account = newEmailAccount({ email: newEmail.trim(), label: newEmailLabel.trim() || newEmail.trim() });
-    save({ ...settings, emails: [...settings.emails, account] });
-    setNewEmail('');
-    setNewEmailLabel('');
+    connectEmail(false);
   }
 
   function connectSocial() {
@@ -197,14 +279,33 @@ export function OutreachChannelSettings() {
       {blockedDeleteNotice && (
         <BlockedDeleteDialog message={blockedDeleteNotice} onClose={() => setBlockedDeleteNotice(null)} />
       )}
+      {replacePrompt && (
+        <ReplaceDomainDialog
+          email={replacePrompt.email}
+          currentDomains={replacePrompt.currentDomains}
+          busy={domainBusy}
+          onCancel={() => setReplacePrompt(null)}
+          onConfirm={() => connectEmail(true)}
+        />
+      )}
       <section className="rounded-xl border border-axon-border bg-axon-surface p-5 space-y-6">
       <div>
         <h2 className="text-lg font-medium">Outreach Channels</h2>
         <p className="mt-1 text-sm text-axon-muted">
-          Configure emails AXON can send from and receive replies at. Connect social accounts by pasting
-          your profile or page URL — AXON does not guess usernames.
+          Connect an email and AXON registers your domain with Resend automatically — no Resend
+          dashboard visits. Add DNS records at your domain host once; verification syncs in the
+          background.
         </p>
       </div>
+
+      {Object.values(settings.emailDomains || {}).map((domain) => (
+        <DomainStatusPanel
+          key={domain.domain}
+          domain={domain}
+          busy={domainBusy}
+          onVerify={() => verifyDomain(domain.domain)}
+        />
+      ))}
 
       <div className="space-y-3">
         <h3 className="text-xs uppercase tracking-wider text-axon-muted">Email list</h3>
@@ -219,8 +320,8 @@ export function OutreachChannelSettings() {
         ))}
         <div className="flex flex-wrap gap-2">
           <input
-            type="email"
-            placeholder="email@domain.com or Name <email@domain.com>"
+            type="text"
+            placeholder="JB <jb@northsideintelligence.com>"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
             className="min-w-[200px] flex-1 rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm"
@@ -235,11 +336,13 @@ export function OutreachChannelSettings() {
           <button
             type="button"
             onClick={addEmail}
-            className="rounded-lg border border-axon-border px-3 py-2 text-sm hover:bg-axon-elevated"
+            disabled={domainBusy || !newEmail.trim()}
+            className="rounded-lg border border-axon-gold/50 bg-axon-gold/10 px-3 py-2 text-sm text-axon-gold disabled:opacity-50"
           >
-            Add email
+            {domainBusy ? 'Connecting…' : 'Connect email'}
           </button>
         </div>
+        {connectError && <p className="text-sm text-axon-danger">{connectError}</p>}
       </div>
 
       <div className="space-y-3">
@@ -346,6 +449,109 @@ export function OutreachChannelSettings() {
   );
 }
 
+function DomainStatusPanel({
+  domain,
+  busy,
+  onVerify,
+}: {
+  domain: OutreachEmailDomain;
+  busy: boolean;
+  onVerify: () => void;
+}) {
+  const verified = domain.status === 'verified' || domain.status === 'partially_verified';
+  const statusColor = verified
+    ? 'text-axon-teal border-axon-teal/40 bg-axon-teal/5'
+    : domain.status === 'failed'
+      ? 'text-axon-danger border-axon-danger/40 bg-axon-danger/5'
+      : 'text-axon-gold border-axon-gold/40 bg-axon-gold/5';
+
+  return (
+    <div className={`rounded-lg border p-4 space-y-3 ${statusColor}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium">{domain.domain}</p>
+          <p className="text-xs capitalize opacity-80">
+            Resend: {domain.status || 'not_started'}
+            {domain.syncedAt ? ` · synced ${new Date(domain.syncedAt).toLocaleString()}` : ''}
+          </p>
+        </div>
+        {!verified && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onVerify}
+            className="rounded-lg border border-current px-3 py-1.5 text-xs disabled:opacity-50"
+          >
+            Check verification
+          </button>
+        )}
+      </div>
+      {domain.error && <p className="text-xs">{domain.error}</p>}
+      {!verified && domain.records?.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wider opacity-80">DNS records (add at your domain host)</p>
+          {domain.records.map((record, i) => (
+            <div key={`${record.type}-${record.name}-${i}`} className="rounded border border-axon-border/40 bg-axon-elevated/40 p-2 text-xs font-mono">
+              <div className="flex flex-wrap gap-2 text-axon-muted">
+                <span>{record.type}</span>
+                <span>{record.name}</span>
+                {record.priority != null && <span>priority {record.priority}</span>}
+                <span className="capitalize">{record.status}</span>
+              </div>
+              <p className="mt-1 break-all text-axon-text">{record.value}</p>
+            </div>
+          ))}
+          <p className="text-xs opacity-70">
+            AXON polls Resend automatically — you do not need to return to resend.com after adding these.
+          </p>
+        </div>
+      )}
+      {verified && (
+        <p className="text-xs">Domain verified — outreach email can send from any address @{domain.domain}.</p>
+      )}
+    </div>
+  );
+}
+
+function ReplaceDomainDialog({
+  email,
+  currentDomains,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  email: string;
+  currentDomains: Array<{ name: string; status: string }>;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md rounded-2xl border border-axon-gold/40 bg-axon-surface p-6 shadow-2xl">
+        <h3 className="text-lg font-semibold text-axon-gold">Replace Resend sending domain?</h3>
+        <p className="mt-2 text-sm text-axon-muted">
+          Your Resend plan allows one domain. Connecting <strong>{email}</strong> will remove{' '}
+          {currentDomains.map((d) => d.name).join(', ')} from Resend.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-axon-border px-4 py-2 text-sm">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onConfirm}
+            className="rounded-lg border border-axon-gold/50 bg-axon-gold/10 px-4 py-2 text-sm text-axon-gold disabled:opacity-50"
+          >
+            {busy ? 'Replacing…' : 'Replace & connect'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BlockedDeleteDialog({ message, onClose }: { message: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -391,6 +597,11 @@ function EmailRow({
       <div className="min-w-0">
         <p className="text-sm font-medium">{email.label}</p>
         <p className="truncate text-xs text-axon-muted">{email.email}</p>
+        {email.domainStatus && (
+          <p className={`text-[10px] capitalize ${email.domainStatus === 'verified' ? 'text-axon-teal' : 'text-axon-gold'}`}>
+            {email.domain} · {email.domainStatus}
+          </p>
+        )}
       </div>
       <div className="flex flex-wrap gap-2">
         <SelectBtn active={email.isDefaultSend} label="Send" onClick={onDefaultSend} />
