@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { LeadWithMeta } from '@/lib/types';
 import type { OutreachSettings } from '@/lib/outreach-settings';
+import { formatSocialAccountSummary } from '@/lib/outreach-settings';
 import { apiUrl } from '@/lib/api-base';
 
 export interface SendModalPayload {
@@ -68,7 +69,8 @@ export function OutreachSendModal({
         setSignatureText(s.signature?.text || '');
         const sendDefault = s.emails.find((e) => e.isDefaultSend)?.id;
         const recvDefault = s.emails.find((e) => e.isDefaultReceive)?.id;
-        const socialDefault = s.socialAccounts.find((a) => a.isDefault)?.id;
+        const socialDefault = s.socialAccounts.find((a) => a.isDefault && a.profileUrl)?.id
+          ?? s.socialAccounts.find((a) => a.profileUrl)?.id;
         setFromEmailId(sendDefault);
         setReplyToEmailId(recvDefault);
         setFromAccountId(socialDefault);
@@ -143,7 +145,8 @@ export function OutreachSendModal({
 
   const sendEmail = settings?.emails.find((e) => e.id === fromEmailId);
   const replyEmail = settings?.emails.find((e) => e.id === replyToEmailId);
-  const socialAccount = settings?.socialAccounts.find((a) => a.id === fromAccountId);
+  const connectedSocial = settings?.socialAccounts.filter((a) => a.profileUrl) ?? [];
+  const socialAccount = connectedSocial.find((a) => a.id === fromAccountId) ?? connectedSocial[0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -259,24 +262,32 @@ export function OutreachSendModal({
             <>
               <div className="grid gap-3 sm:grid-cols-2">
                 <InfoRow label="To (prospect)" value={lead.handle} />
-                <InfoRow label="From account" value={socialAccount?.handle || '—'} />
+                <InfoRow
+                  label="From account"
+                  value={socialAccount ? `@${socialAccount.handle}` : '—'}
+                  href={socialAccount?.profileUrl}
+                />
               </div>
 
-              {settings && (
+              {settings && connectedSocial.length > 0 ? (
                 <div className="space-y-3 rounded-lg border border-axon-border/60 bg-axon-elevated/40 p-3">
-                  <p className="text-xs uppercase tracking-wider text-axon-muted">Send from account</p>
+                  <p className="text-xs uppercase tracking-wider text-axon-muted">Send from connected account</p>
                   <div className="flex flex-wrap gap-2">
-                    {settings.socialAccounts.map((account) => (
+                    {connectedSocial.map((account) => (
                       <SelectChip
                         key={account.id}
                         active={fromAccountId === account.id}
                         label={account.label}
-                        sub={`${account.platform} · ${account.handle}`}
+                        sub={formatSocialAccountSummary(account)}
                         onClick={() => setFromAccountId(account.id)}
                       />
                     ))}
                   </div>
                 </div>
+              ) : (
+                <p className="text-sm text-axon-danger">
+                  Connect a social profile under Outreach Channels before sending DMs.
+                </p>
               )}
 
               <label className="block space-y-1.5">
@@ -290,8 +301,21 @@ export function OutreachSendModal({
               </label>
 
               <p className="text-xs text-axon-muted">
-                Copy this message into {channel === 'linkedin' ? 'LinkedIn' : 'your DM platform'} after
-                confirming. AXON will log the final text for tone learning.
+                Copy this message into {socialAccount?.platform === 'linkedin' ? 'LinkedIn' : 'your connected platform'}{' '}
+                {socialAccount?.profileUrl ? (
+                  <>
+                    from{' '}
+                    <a
+                      href={socialAccount.profileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-axon-teal hover:underline"
+                    >
+                      your profile
+                    </a>
+                  </>
+                ) : null}{' '}
+                after confirming. AXON logs the final text for tone learning.
               </p>
             </>
           )}
@@ -315,7 +339,7 @@ export function OutreachSendModal({
           <button
             type="button"
             onClick={send}
-            disabled={loading}
+            disabled={loading || (!isEmail && connectedSocial.length === 0)}
             className="rounded-lg border border-axon-gold/50 bg-axon-gold/10 px-4 py-2 text-sm font-medium text-axon-gold hover:bg-axon-gold/20 disabled:opacity-50"
           >
             {loading ? 'Sending…' : approveFirst ? 'Approve & Send' : 'Send'}
@@ -326,11 +350,17 @@ export function OutreachSendModal({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <div className="rounded-lg border border-axon-border/50 bg-axon-elevated/30 px-3 py-2">
       <p className="text-[10px] uppercase tracking-wider text-axon-muted">{label}</p>
-      <p className="mt-0.5 truncate text-sm">{value}</p>
+      {href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="mt-0.5 block truncate text-sm text-axon-teal hover:underline">
+          {value}
+        </a>
+      ) : (
+        <p className="mt-0.5 truncate text-sm">{value}</p>
+      )}
     </div>
   );
 }
