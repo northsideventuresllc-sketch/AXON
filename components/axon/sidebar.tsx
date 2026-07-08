@@ -10,6 +10,7 @@ import { AxonToolsNav } from './axon-tools-nav';
 
 const NAV = [
   { href: '/', label: 'AXON', icon: '◈' },
+  { href: '/ventures/match-fit', label: 'Match Fit', icon: '🏋' },
   { href: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
