@@ -21,6 +21,7 @@ const AXON_ROOT = join(__dirname, '..');
 const INTEGRATION_ROOT = join(AXON_ROOT, 'portal-integration/northside-intelligence');
 
 const COMPONENT_FILES = [
+  'match-fit-venture-hub.tsx',
   'dispatch-queue-panel.tsx',
   'axon-ambient-bg.tsx',
   'axon-home-settings.tsx',
@@ -56,6 +57,7 @@ const COMPONENT_FILES = [
 ];
 
 const LIB_FILES = [
+  'match-fit-hub.ts',
   'agent-dispatch.ts',
   'axon-chat-sessions.ts',
   'axon-orb-theme.ts',
