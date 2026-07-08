@@ -32,6 +32,7 @@ on:
       - 'lib/outreach-run-core.mjs'
       - 'lib/icp-config.mjs'
       - 'lib/constants.mjs'
+      - 'lib/github-pat.mjs'
       - 'app/api/axon/outreach/**'
       - 'app/api/axon/dispatch/**'
       - 'lib/axon-quick-links.ts'

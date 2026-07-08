@@ -79,6 +79,7 @@ const LIB_FILES = [
   'outreach-run-core.mjs',
   'icp-config.mjs',
   'constants.mjs',
+  'github-pat.mjs',
   'axon-quick-links.ts',
   'use-axon-quick-links.ts',
   'types.ts',
