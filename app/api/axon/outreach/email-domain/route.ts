@@ -112,7 +112,6 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const email = String(body.email || '').trim();
-    const replaceExisting = body.replaceExisting === true;
 
     const parsed = parseEmailAddress(email);
     if (parsed.error) {
@@ -122,7 +121,7 @@ export async function POST(req: Request) {
     const apiKey = await loadResendKey();
     let settings = await getOutreachSettings();
 
-    const sync = await syncResendDomain(apiKey, parsed.domain, { replaceExisting });
+    const sync = await syncResendDomain(apiKey, parsed.domain);
 
     if (sync.action === 'blocked') {
       return NextResponse.json(
@@ -227,7 +226,7 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const fromEmail = String(body.fromEmail || '').trim();
     const apiKey = await loadResendKey();
-    const check = await ensureEmailCanSend(apiKey, fromEmail, { replaceExisting: body.replaceExisting === true });
+    const check = await ensureEmailCanSend(apiKey, fromEmail);
     return NextResponse.json(check, { status: check.ok ? 200 : 409 });
   } catch (err) {
     return NextResponse.json(

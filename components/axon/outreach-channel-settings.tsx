@@ -47,10 +47,6 @@ export function OutreachChannelSettings() {
   const [connectError, setConnectError] = useState<string | null>(null);
   const [blockedDeleteNotice, setBlockedDeleteNotice] = useState<string | null>(null);
   const [domainBusy, setDomainBusy] = useState(false);
-  const [replacePrompt, setReplacePrompt] = useState<{
-    email: string;
-    currentDomains: Array<{ name: string; status: string }>;
-  } | null>(null);
 
   async function refreshDomains() {
     try {
@@ -94,7 +90,7 @@ export function OutreachChannelSettings() {
     return () => clearInterval(timer);
   }, [settings]);
 
-  async function connectEmail(replaceExisting = false) {
+  async function connectEmail() {
     if (!newEmail.trim()) return;
     setDomainBusy(true);
     setConnectError(null);
@@ -103,21 +99,13 @@ export function OutreachChannelSettings() {
       const res = await fetch(apiUrl('/api/axon/outreach/email-domain'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newEmail.trim(), replaceExisting }),
+        body: JSON.stringify({ email: newEmail.trim() }),
       });
       const data = await res.json();
-      if (res.status === 409 && data.canReplace) {
-        setReplacePrompt({
-          email: newEmail.trim(),
-          currentDomains: data.currentDomains || [],
-        });
-        return;
-      }
       if (!res.ok) throw new Error(data.error || 'Connect failed');
       setSettings(data.settings);
       setNewEmail('');
       setNewEmailLabel('');
-      setReplacePrompt(null);
       setMessage(
         data.domain?.status === 'verified'
           ? 'Email connected — domain verified. Ready to send.'
@@ -199,7 +187,7 @@ export function OutreachChannelSettings() {
   }
 
   function addEmail() {
-    connectEmail(false);
+    connectEmail();
   }
 
   function connectSocial() {
@@ -279,22 +267,13 @@ export function OutreachChannelSettings() {
       {blockedDeleteNotice && (
         <BlockedDeleteDialog message={blockedDeleteNotice} onClose={() => setBlockedDeleteNotice(null)} />
       )}
-      {replacePrompt && (
-        <ReplaceDomainDialog
-          email={replacePrompt.email}
-          currentDomains={replacePrompt.currentDomains}
-          busy={domainBusy}
-          onCancel={() => setReplacePrompt(null)}
-          onConfirm={() => connectEmail(true)}
-        />
-      )}
       <section className="rounded-xl border border-axon-border bg-axon-surface p-5 space-y-6">
       <div>
         <h2 className="text-lg font-medium">Outreach Channels</h2>
         <p className="mt-1 text-sm text-axon-muted">
-          Connect an email and AXON registers your domain with Resend automatically — no Resend
-          dashboard visits. Add DNS records at your domain host once; verification syncs in the
-          background.
+          Connect an email on the NORTHSiDE Intelligence Resend account (not Match Fit). AXON
+          registers your domain via API — add DNS once at your domain host; verification syncs
+          automatically.
         </p>
       </div>
 
@@ -509,45 +488,6 @@ function DomainStatusPanel({
       {verified && (
         <p className="text-xs">Domain verified — outreach email can send from any address @{domain.domain}.</p>
       )}
-    </div>
-  );
-}
-
-function ReplaceDomainDialog({
-  email,
-  currentDomains,
-  busy,
-  onCancel,
-  onConfirm,
-}: {
-  email: string;
-  currentDomains: Array<{ name: string; status: string }>;
-  busy: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-axon-gold/40 bg-axon-surface p-6 shadow-2xl">
-        <h3 className="text-lg font-semibold text-axon-gold">Replace Resend sending domain?</h3>
-        <p className="mt-2 text-sm text-axon-muted">
-          Your Resend plan allows one domain. Connecting <strong>{email}</strong> will remove{' '}
-          {currentDomains.map((d) => d.name).join(', ')} from Resend.
-        </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="rounded-lg border border-axon-border px-4 py-2 text-sm">
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onConfirm}
-            className="rounded-lg border border-axon-gold/50 bg-axon-gold/10 px-4 py-2 text-sm text-axon-gold disabled:opacity-50"
-          >
-            {busy ? 'Replacing…' : 'Replace & connect'}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

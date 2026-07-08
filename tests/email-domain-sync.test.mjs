@@ -8,7 +8,7 @@ assert.ok(parseEmailAddress('bad').error);
 
 const planErr = parseResendDomainError({ message: 'Your plan includes 1 domain. Upgrade to add more.' });
 assert.equal(planErr.code, 'domain_plan_limit');
-assert.equal(planErr.canReplace, true);
+assert.equal(planErr.canReplace, false);
 
 assert.equal(isDomainVerified('verified'), true);
 assert.equal(isDomainVerified('pending'), false);
