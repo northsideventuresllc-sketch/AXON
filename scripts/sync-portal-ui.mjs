@@ -132,6 +132,8 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/use-axon-quick-links'/g, "from '@/lib/axon/use-axon-quick-links'")
     .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")
     .replace(/from '@\/lib\/use-axon-tool-display-names'/g, "from '@/lib/axon/use-axon-tool-display-names'")
+    .replace(/from '@\/lib\/agent-dispatch'/g, "from '@/lib/axon/agent-dispatch'")
+    .replace(/from '@\/lib\/match-fit-hub'/g, "from '@/lib/axon/match-fit-hub'")
     .replace(/from '@\/lib\/paths'/g, "from '@/lib/axon/app-path'");
 }
 
