@@ -73,6 +73,12 @@ export function AxonInterface({
   const scrollRef = useRef<HTMLDivElement>(null);
   const voice = useAxonVoice(inputMode, voiceId, readAloud);
 
+  const toggleVoiceListening = useCallback(() => {
+    if (inputMode !== 'voice') return;
+    if (voice.listening) voice.stopListening();
+    else voice.startListening();
+  }, [inputMode, voice]);
+
   const layout = preferences.homeLayout;
   const isVisible = (id: HomeWidgetId) => !layout.hidden.includes(id);
 
@@ -294,27 +300,13 @@ export function AxonInterface({
         className="axon-holo-input-region shrink-0 border-t border-axon-border/60 p-4"
       >
         {inputMode === 'voice' ? (
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={voice.listening ? voice.stopListening : voice.startListening}
-              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
-                voice.listening
-                  ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
-                  : 'border-axon-border hover:border-axon-blue-glow/40'
-              }`}
-            >
-              {voice.listening ? 'Stop listening' : 'Tap to speak'}
-            </button>
-            {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
-            >
-              Send voice message
-            </button>
-          </div>
+          <VoiceInputControls
+            input={input}
+            loading={loading}
+            listening={voice.listening}
+            onToggleListening={toggleVoiceListening}
+            onSend={() => sendMessage(input)}
+          />
         ) : (
           <div className="flex gap-2">
             <input
@@ -371,27 +363,13 @@ export function AxonInterface({
         className="axon-holo-input-region shrink-0 border-t border-axon-border/60 p-4"
       >
         {inputMode === 'voice' ? (
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={voice.listening ? voice.stopListening : voice.startListening}
-              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
-                voice.listening
-                  ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
-                  : 'border-axon-border hover:border-axon-blue-glow/40'
-              }`}
-            >
-              {voice.listening ? 'Stop listening' : 'Tap to speak'}
-            </button>
-            {input && <p className="text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
-            >
-              Send voice message
-            </button>
-          </div>
+          <VoiceInputControls
+            input={input}
+            loading={loading}
+            listening={voice.listening}
+            onToggleListening={toggleVoiceListening}
+            onSend={() => sendMessage(input)}
+          />
         ) : (
           <div className="flex gap-2">
             <input
@@ -475,8 +453,12 @@ export function AxonInterface({
             speaking={speaking}
             processing={loading}
             size="large"
+            interactive={inputMode === 'voice'}
+            onActivate={inputMode === 'voice' ? toggleVoiceListening : undefined}
           />,
-          zone === 'orb-deck' ? 'axon-holo-orb-zone w-full' : 'flex justify-center py-6'
+          zone === 'orb-deck'
+            ? `axon-holo-orb-zone w-full ${inputMode === 'voice' ? 'axon-holo-orb-zone--voice' : ''}`
+            : 'flex justify-center py-6'
         );
       case 'controls':
         return wrap(
@@ -538,8 +520,18 @@ export function AxonInterface({
                 </select>
               </label>
             </div>
+            {inputMode === 'voice' && (
+              <VoiceInputControls
+                input={input}
+                loading={loading}
+                listening={voice.listening}
+                onToggleListening={toggleVoiceListening}
+                onSend={() => sendMessage(input)}
+                compact
+              />
+            )}
           </div>,
-          zone === 'orb-deck' ? 'w-full' : 'relative z-40 pb-4'
+          zone === 'orb-deck' ? 'axon-holo-orb-deck-controls w-full' : 'relative z-40 pb-4'
         );
       default:
         return null;
@@ -648,6 +640,47 @@ export function AxonInterface({
         chatGhost={chatGhost}
       />
     </>
+  );
+}
+
+function VoiceInputControls({
+  input,
+  loading,
+  listening,
+  onToggleListening,
+  onSend,
+  compact = false,
+}: {
+  input: string;
+  loading: boolean;
+  listening: boolean;
+  onToggleListening: () => void;
+  onSend: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`flex w-full flex-col gap-3 ${compact ? 'max-w-md' : ''}`}>
+      <button
+        type="button"
+        onClick={onToggleListening}
+        className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+          listening
+            ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
+            : 'border-axon-border hover:border-axon-blue-glow/40'
+        }`}
+      >
+        {listening ? 'Stop listening' : 'Tap to speak'}
+      </button>
+      {input && <p className="text-center text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
+      <button
+        type="button"
+        onClick={onSend}
+        disabled={!input.trim() || loading}
+        className="rounded-lg axon-gradient-btn px-4 py-2 text-sm text-white disabled:opacity-40"
+      >
+        Send voice message
+      </button>
+    </div>
   );
 }
 
