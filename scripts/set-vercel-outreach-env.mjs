@@ -5,7 +5,7 @@
  */
 const TEAM_ID = 'team_dD8iOW15WOUr27k3QeswFBac';
 const PROJECTS = ['workspace', 'northside-intelligence'];
-const KEYS = ['AXON_GITHUB_PAT', 'GITHUB_PAT'];
+const KEYS = ['AXON_GITHUB_PAT', 'GITHUB_PAT', 'GH_PAT'];
 
 const vercelToken = process.env.VERCEL_TOKEN;
 const githubPat = process.env.GITHUB_PAT || process.env.AXON_GITHUB_PAT;
