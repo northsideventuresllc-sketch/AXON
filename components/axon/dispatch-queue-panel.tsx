@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { apiUrl } from '@/lib/api-base';
 
 type DispatchItem = {
   id: string;
@@ -21,6 +22,9 @@ const STATUS_LABEL: Record<string, string> = {
   blocked: 'Blocked',
 };
 
+const QUEUE_API = apiUrl('/api/axon/dispatch/queue');
+const FIRE_API = apiUrl('/api/axon/dispatch/fire');
+
 export function DispatchQueuePanel() {
   const [items, setItems] = useState<DispatchItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +36,7 @@ export function DispatchQueuePanel() {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch('/api/dispatch/queue');
+      const r = await fetch(QUEUE_API);
       const data = await r.json();
       if (!data.ok) throw new Error(data.error || 'load failed');
       setItems(data.items || []);
@@ -52,7 +56,7 @@ export function DispatchQueuePanel() {
     setMessage(null);
     setError(null);
     try {
-      const r = await fetch('/api/dispatch/fire', { method: 'POST', body: '{}' });
+      const r = await fetch(FIRE_API, { method: 'POST', body: '{}' });
       const data = await r.json();
       if (!data.ok) throw new Error(data.error || 'fire failed');
       setMessage(data.message || 'Dispatch started — check Telegram for summary');
@@ -69,7 +73,7 @@ export function DispatchQueuePanel() {
     setMessage(null);
     setError(null);
     try {
-      const r = await fetch('/api/dispatch/fire', {
+      const r = await fetch(FIRE_API, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ code }),
@@ -160,7 +164,7 @@ export function DispatchQueuePanel() {
               {!items.length && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-axon-muted">
-                    Queue empty — Hermes seeds it each morning from the weekly agenda.
+                    Queue empty — Hermes seeds it 3× daily from the weekly agenda.
                   </td>
                 </tr>
               )}

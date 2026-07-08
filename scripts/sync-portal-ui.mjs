@@ -21,6 +21,7 @@ const AXON_ROOT = join(__dirname, '..');
 const INTEGRATION_ROOT = join(AXON_ROOT, 'portal-integration/northside-intelligence');
 
 const COMPONENT_FILES = [
+  'dispatch-queue-panel.tsx',
   'axon-ambient-bg.tsx',
   'axon-home-settings.tsx',
   'axon-interface.tsx',
@@ -55,6 +56,7 @@ const COMPONENT_FILES = [
 ];
 
 const LIB_FILES = [
+  'agent-dispatch.ts',
   'axon-chat-sessions.ts',
   'axon-orb-theme.ts',
   'axon-preferences.ts',
@@ -97,6 +99,8 @@ const STALE_LIB_FILES = [
 ];
 
 const API_FILES = [
+  'dispatch/fire/route.ts',
+  'dispatch/queue/route.ts',
   'preferences/route.ts',
   'reset/route.ts',
   'outreach/[id]/route.ts',
