@@ -133,6 +133,35 @@ export interface AxonWorkspace {
   last_todo_refresh?: string;
 }
 
+export type ResearchLane = 'ai_models' | 'open_source' | 'neuroscience';
+
+export interface ResearchFinding {
+  id: string;
+  operator_id: string;
+  research_lane: ResearchLane;
+  title: string;
+  summary: string;
+  source_urls: string[];
+  implementation_hint?: string | null;
+  priority: BriefingPriority;
+  status: 'new' | 'reviewed' | 'implemented' | 'dismissed';
+  jspace_relevance?: string | null;
+  brain_gap_category?: string | null;
+  created_at: string;
+}
+
+export interface JspaceConcept {
+  id: string;
+  label: string;
+  detail?: string;
+  module: string;
+  priority: BriefingPriority;
+  source: string;
+  evidence_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export const DEFAULT_WORKSPACE: AxonWorkspace = {
   briefing: [],
   todos: [],

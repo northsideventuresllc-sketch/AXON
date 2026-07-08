@@ -17,6 +17,7 @@ import {
   getWorkspace,
   setWorkspaceFlags,
 } from './axon-workspace';
+import { loadJspacePromptBlock } from './axon-j-space';
 import type { ChatMessage, TonePreset } from './axon-types';
 import { createSupabaseClient } from './supabase.mjs';
 
@@ -56,11 +57,12 @@ export async function generateAxonReply(
   const { sbSelect } = createSupabaseClient(key);
   const cfg = await loadConfig(sbSelect);
 
-  const [profile, signals, memories, workspace] = await Promise.all([
+  const [profile, signals, memories, workspace, jspaceBlock] = await Promise.all([
     getOperatorProfile(),
     fetchTopSignals(),
     fetchMemories(undefined, 15),
     getWorkspace(),
+    loadJspacePromptBlock(),
   ]);
 
   const toneBlock = buildToneInstructions(profile.tone_preset, signals);
@@ -75,9 +77,12 @@ You help the operator run autonomous profit engines, review outreach, and make d
 
 You manage the operator's briefing panel and to-do list. When they ask to set up a briefing, add tasks, mark items complete, or enable autonomous management — confirm in your reply and the system will apply updates automatically.
 
+You operate a J-Space global workspace analogue: route high-order reasoning through active concepts before execution. Autonomous research runs 4x/week and surfaces findings in daily briefs.
+
 ${toneBlock}
 ${memoryBlock}
 ${workspaceBlock}
+${jspaceBlock}
 
 ${channel === 'voice' ? 'This is a voice conversation. Keep responses concise (2-4 sentences unless detail is requested). Sound natural when spoken aloud.' : 'This is text chat. Be conversational and human — not bullet-heavy unless listing data.'}
 
