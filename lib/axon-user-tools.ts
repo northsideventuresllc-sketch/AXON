@@ -11,6 +11,13 @@ export interface AxonUserTool {
 /** Built-in AXON tools surfaced under sidebar "AXON's Tools". */
 export const AXON_USER_TOOLS: AxonUserTool[] = [
   {
+    slug: 'manager-dispatch',
+    defaultDisplayName: 'Manager Dispatch',
+    href: '/tools/dispatch',
+    icon: '⚡',
+    sourceType: 'custom',
+  },
+  {
     slug: 'ni-outreach',
     defaultDisplayName: 'NI Outreach HQ',
     href: '/tools/ni-outreach',
