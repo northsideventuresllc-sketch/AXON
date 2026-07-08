@@ -45,6 +45,13 @@ export function OutreachChannelSettings() {
   const [newSocialUrl, setNewSocialUrl] = useState('');
   const [newSocialLabel, setNewSocialLabel] = useState('');
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [blockedDeleteNotice, setBlockedDeleteNotice] = useState<string | null>(null);
+
+  function showBlockedDeleteNotice(kind: 'email' | 'social') {
+    setBlockedDeleteNotice(
+      kind === 'email' ? 'CAN NOT DELETE DEFAULT EMAIL' : 'CAN NOT DELETE DEFAULT SOCIAL MEDIA'
+    );
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -136,12 +143,24 @@ export function OutreachChannelSettings() {
   }
 
   function removeEmail(id: string) {
-    if (!settings || settings.emails.length <= 1) return;
+    if (!settings) return;
+    const email = settings.emails.find((e) => e.id === id);
+    if (!email) return;
+    if (email.isDefaultSend || email.isDefaultReceive) {
+      showBlockedDeleteNotice('email');
+      return;
+    }
     save({ ...settings, emails: settings.emails.filter((e) => e.id !== id) });
   }
 
   function removeSocial(id: string) {
     if (!settings) return;
+    const account = settings.socialAccounts.find((a) => a.id === id);
+    if (!account) return;
+    if (account.isDefault) {
+      showBlockedDeleteNotice('social');
+      return;
+    }
     save({ ...settings, socialAccounts: settings.socialAccounts.filter((a) => a.id !== id) });
   }
 
@@ -174,7 +193,11 @@ export function OutreachChannelSettings() {
   const connectedSocial = settings.socialAccounts.filter((a) => a.profileUrl);
 
   return (
-    <section className="rounded-xl border border-axon-border bg-axon-surface p-5 space-y-6">
+    <>
+      {blockedDeleteNotice && (
+        <BlockedDeleteDialog message={blockedDeleteNotice} onClose={() => setBlockedDeleteNotice(null)} />
+      )}
+      <section className="rounded-xl border border-axon-border bg-axon-surface p-5 space-y-6">
       <div>
         <h2 className="text-lg font-medium">Outreach Channels</h2>
         <p className="mt-1 text-sm text-axon-muted">
@@ -319,6 +342,36 @@ export function OutreachChannelSettings() {
 
       {message && <p className="text-sm text-axon-muted">{message}</p>}
     </section>
+    </>
+  );
+}
+
+function BlockedDeleteDialog({ message, onClose }: { message: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="blocked-delete-title"
+        className="w-full max-w-md rounded-2xl border border-axon-danger/40 bg-axon-surface p-6 shadow-2xl"
+      >
+        <h3 id="blocked-delete-title" className="text-lg font-semibold text-axon-danger">
+          {message}
+        </h3>
+        <p className="mt-2 text-sm text-axon-muted">
+          Set another account as default before removing this one.
+        </p>
+        <div className="mt-5 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-axon-border px-4 py-2 text-sm hover:bg-axon-elevated"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
