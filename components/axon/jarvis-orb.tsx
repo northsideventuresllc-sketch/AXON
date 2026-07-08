@@ -15,6 +15,9 @@ interface JarvisOrbProps {
   speaking?: boolean;
   processing?: boolean;
   size?: 'default' | 'large';
+  /** When true, orb accepts pointer input (voice mode). */
+  interactive?: boolean;
+  onActivate?: () => void;
 }
 
 export function JarvisOrb({
@@ -23,6 +26,8 @@ export function JarvisOrb({
   speaking,
   processing,
   size = 'large',
+  interactive = false,
+  onActivate,
 }: JarvisOrbProps) {
   const state = resolveAxonOrbState(active, listening, speaking, processing);
   const status = AXON_ORB_STATUS[state];
@@ -31,9 +36,9 @@ export function JarvisOrb({
 
   return (
     <div
-      className={`axon-orb-stack mx-auto w-full select-none touch-none ${
-        size === 'large' ? 'max-w-[300px] sm:max-w-[360px]' : 'max-w-[240px]'
-      }`}
+      className={`axon-orb-stack mx-auto w-full select-none ${
+        interactive ? 'touch-none' : 'pointer-events-none'
+      } ${size === 'large' ? 'max-w-[300px] sm:max-w-[360px]' : 'max-w-[240px]'}`}
     >
       <div
         className={`axon-orb-root relative aspect-square w-full ${
@@ -50,7 +55,8 @@ export function JarvisOrb({
             quality="high"
             breathing
             breathingIntensity={0.85}
-            interactive
+            interactive={interactive}
+            onPointerPulse={onActivate}
             ariaLabel={`AXON orb — ${status.label}`}
             className="axon-orb-webgl"
           />

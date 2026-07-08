@@ -245,6 +245,12 @@
     transform-style: preserve-3d;
   }
 
+  .axon-holo-orb-deck-controls {
+    position: relative;
+    z-index: 30;
+    pointer-events: auto;
+  }
+
   .axon-holo-orb-zone {
     display: flex;
     min-height: 200px;
@@ -252,6 +258,12 @@
     justify-content: center;
     position: relative;
     z-index: 20;
+    pointer-events: none;
+  }
+
+  .axon-holo-orb-zone.axon-holo-orb-zone--voice {
+    pointer-events: auto;
+    cursor: pointer;
   }
 
   .axon-orb-stack {
