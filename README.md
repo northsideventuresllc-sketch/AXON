@@ -14,7 +14,7 @@
 | **Web UI (standalone)** | `workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/axon` — password login via `AXON_DASHBOARD_SECRET` |
 | **Telegram** | Chat with AXON like a normal AI assistant. Slash commands for pipeline actions. Drafts land nightly. |
 | **NI-Brain** | `ni_brain_outreach` where `source = axon_ni_services` |
-| **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Telegram Poll / AXON Telegram Setup |
+| **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Self-Research / AXON Telegram Poll / AXON Telegram Setup |
 
 Set `NEXT_PUBLIC_BASE_PATH=/axon` on the standalone Vercel **workspace** project.
 
@@ -92,6 +92,8 @@ npm install
 npm run dev            # web UI at http://localhost:3000
 npm run outreach:dry   # no writes
 npm run outreach       # live run
+npm run research:dry   # autonomous research (no writes)
+npm run research       # live research → briefings
 npm run telegram:poll  # process Telegram commands once
 npm run telegram:setup # register slash commands
 ```
@@ -103,7 +105,10 @@ npm run telegram:setup # register slash commands
 | Workflow | Cron (UTC) | EST |
 |----------|------------|-----|
 | AXON NI Outreach | `30 7 * * *` | 2:30 AM (after Hermes 2 AM) |
+| AXON Self-Research | `0 11 * * 1,3,5,6` | 6:00 AM Mon/Wed/Fri/Sat |
 | AXON Telegram Poll | `*/15 * * * *` | Every 15 min fallback (skips when webhook active) |
+
+**J-Space & self-learning:** See `docs/axon-j-space.md` — autonomous research surfaces in daily briefs.
 
 ---
 

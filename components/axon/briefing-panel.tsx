@@ -46,7 +46,7 @@ export function BriefingPanel({ items, autonomous, onRefresh, onTitleClick, comp
           )}
         </div>
         <p className="mt-1 text-[11px] text-axon-muted">
-          Ask AXON to build or refresh your daily briefing
+          Daily brief includes autonomous research (4x/week) + pipeline priorities
         </p>
       </header>
 
