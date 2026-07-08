@@ -3,6 +3,8 @@ export type LeadStatus =
   | 'approved'
   | 'sent'
   | 'dead'
+  | 'archived'
+  | 'purged'
   | 'closed_won'
   | 'Lead'
   | string;
@@ -24,6 +26,15 @@ export interface LeadMeta {
   auto_rejected_reason?: string | null;
   auto_rejected?: string | null;
   auto_rejected_at?: string | null;
+  archived_at?: string | null;
+  archived_from?: string | null;
+  purged_at?: string | null;
+  handle_blocked?: boolean;
+  blocked_handle?: string | null;
+  sent_from_email?: string | null;
+  sent_reply_to?: string | null;
+  sent_from_account?: string | null;
+  sent_at?: string | null;
   icp_scan?: { icp_fit?: boolean; segment?: string; industry?: string } | null;
   raw?: string;
 }
@@ -71,6 +82,8 @@ export const STATUS_LABELS: Record<string, string> = {
   approved: 'Approved',
   sent: 'Sent',
   dead: 'Rejected',
+  archived: 'Archived',
+  purged: 'Purged',
   closed_won: 'Closed Won',
   Lead: 'Lead',
 };
@@ -81,4 +94,14 @@ export const STATUS_ORDER = [
   'sent',
   'closed_won',
   'dead',
+  'archived',
+] as const;
+
+export const BULK_STATUS_OPTIONS = [
+  'pending_approval',
+  'approved',
+  'sent',
+  'dead',
+  'archived',
+  'closed_won',
 ] as const;

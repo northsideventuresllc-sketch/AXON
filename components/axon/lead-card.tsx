@@ -48,15 +48,40 @@ export function LeadCard({ lead, basePath }: { lead: LeadWithMeta; basePath?: st
   );
 }
 
-export function LeadRow({ lead, basePath }: { lead: LeadWithMeta; basePath?: string }) {
+export function LeadRow({
+  lead,
+  basePath,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
+}: {
+  lead: LeadWithMeta;
+  basePath?: string;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+}) {
   const channel = lead.meta.channel || 'email';
   const href = basePath ? appPath(`/leads/${lead.id}`, basePath) : `/leads/${lead.id}`;
 
-  return (
-    <Link
-      href={href}
-      className="grid grid-cols-[100px_1fr_120px_100px_100px] items-center gap-4 border-b border-axon-border px-4 py-3 text-sm transition hover:bg-axon-elevated/40"
-    >
+  const gridClass = selectable
+    ? 'grid-cols-[40px_100px_1fr_120px_100px_100px]'
+    : 'grid-cols-[100px_1fr_120px_100px_100px]';
+
+  const content = (
+    <>
+      {selectable && (
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={(e) => {
+            e.stopPropagation();
+            onToggleSelect?.();
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="h-4 w-4 accent-axon-gold"
+        />
+      )}
       <span className="font-mono text-xs text-axon-gold">{lead.shortId}</span>
       <div className="min-w-0">
         <div className="flex items-center gap-2">
@@ -68,6 +93,31 @@ export function LeadRow({ lead, basePath }: { lead: LeadWithMeta; basePath?: str
       <span className="text-xs capitalize text-axon-muted">{channel}</span>
       <span className="font-mono text-xs">{lead.meta.score ?? '—'}</span>
       <StatusBadge status={lead.status} />
+    </>
+  );
+
+  if (selectable) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggleSelect}
+        onKeyDown={(e) => e.key === 'Enter' && onToggleSelect?.()}
+        className={`grid ${gridClass} cursor-pointer items-center gap-4 border-b border-axon-border px-4 py-3 text-sm transition hover:bg-axon-elevated/40 ${
+          selected ? 'bg-axon-gold/5' : ''
+        }`}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className={`grid ${gridClass} items-center gap-4 border-b border-axon-border px-4 py-3 text-sm transition hover:bg-axon-elevated/40`}
+    >
+      {content}
     </Link>
   );
 }

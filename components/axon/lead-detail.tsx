@@ -6,6 +6,7 @@ import type { LeadWithMeta } from '@/lib/types';
 import { apiUrl } from '@/lib/api-base';
 import { StatusBadge } from './status-badge';
 import { IcpFitBadge } from './icp-fit-badge';
+import { OutreachSendModal } from './outreach-send-modal';
 
 interface DraftState {
   emailSubject: string;
@@ -48,6 +49,8 @@ async function postAction(url: string, body?: Record<string, unknown>) {
   return data;
 }
 
+type SendModalState = { open: boolean; approveFirst: boolean };
+
 export function LeadActions({ lead }: { lead: LeadWithMeta }) {
   const router = useRouter();
   const channel = lead.meta.channel || 'email';
@@ -56,6 +59,7 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [sendModal, setSendModal] = useState<SendModalState>({ open: false, approveFirst: false });
 
   useEffect(() => {
     const next = toDraftState(lead);
@@ -73,8 +77,10 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
 
   const canEdit = ['pending_approval', 'approved'].includes(lead.status);
   const canApprove = lead.status === 'pending_approval';
+  const canSend =
+    (lead.status === 'approved' || lead.status === 'pending_approval') &&
+    (channel === 'email' ? true : channel === 'linkedin');
   const canReject = ['pending_approval', 'approved'].includes(lead.status);
-  const canSentLi = channel === 'linkedin' && ['approved', 'pending_approval'].includes(lead.status);
   const canMarkWon = ['sent', 'approved'].includes(lead.status);
 
   const run = useCallback(
@@ -108,6 +114,12 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
     setDraft(saved);
     setMessage(null);
   }
+
+  function openSendModal(approveFirst: boolean) {
+    setSendModal({ open: true, approveFirst });
+  }
+
+  const sendMode = channel === 'linkedin' ? 'linkedin' : 'email';
 
   return (
     <div className="space-y-4">
@@ -182,25 +194,22 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
                 )
               }
             />
-            {channel === 'email' && (
+            {canSend && (
               <ActionButton
                 label="Approve & Send"
                 loading={loading === 'approve-send'}
                 variant="primary"
-                onClick={() =>
-                  run('approve-send', () =>
-                    postAction(apiUrl(`/api/leads/${lead.id}/approve`), { send: true })
-                  )
-                }
+                onClick={() => openSendModal(true)}
               />
             )}
           </>
         )}
-        {canSentLi && (
+        {lead.status === 'approved' && canSend && (
           <ActionButton
-            label="Mark LinkedIn Sent"
-            loading={loading === 'sent-li'}
-            onClick={() => run('sent-li', () => postAction(apiUrl(`/api/leads/${lead.id}/sent-li`)))}
+            label={channel === 'linkedin' ? 'Send DM' : 'Send Email'}
+            loading={loading === 'send'}
+            variant="primary"
+            onClick={() => openSendModal(false)}
           />
         )}
         {canMarkWon && (
@@ -244,6 +253,18 @@ export function LeadActions({ lead }: { lead: LeadWithMeta }) {
           {message}
         </p>
       )}
+
+      <OutreachSendModal
+        lead={lead}
+        mode={sendMode}
+        open={sendModal.open}
+        approveFirst={sendModal.approveFirst}
+        onClose={() => setSendModal({ open: false, approveFirst: false })}
+        onSent={(msg) => {
+          setMessage(msg);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }
@@ -318,6 +339,20 @@ export function LeadDetailView({ lead }: { lead: LeadWithMeta }) {
               {lead.meta.rejected_at ? ` · ${new Date(lead.meta.rejected_at).toLocaleString()}` : ''}
             </p>
           )}
+          <p className="mt-2 text-xs text-axon-muted">
+            Rejected leads auto-archive after 72 hours, then purge after 7 days in archive (record kept
+            to prevent duplicates).
+          </p>
+        </section>
+      )}
+
+      {lead.status === 'archived' && (
+        <section className="rounded-xl border border-axon-border bg-axon-elevated/40 p-5">
+          <h2 className="text-xs uppercase tracking-wider text-axon-muted">Archived</h2>
+          <p className="mt-2 text-sm text-axon-muted">
+            Archived {lead.meta.archived_at ? new Date(lead.meta.archived_at).toLocaleString() : '—'}.
+            Permanently removed from pipeline after 7 days; handle stays blocked.
+          </p>
         </section>
       )}
 

@@ -3,9 +3,11 @@ import {
   MAX_DRAFTS_PER_DAY,
   SOURCE,
   parseNotes,
+  formatNotes,
   shortId,
   todayUtc,
 } from './constants.mjs';
+import { filterVisibleLeads, sweepLeadLifecycle } from './outreach-lifecycle';
 import type { Lead, LeadWithMeta, PipelineStats } from './types';
 import { GOAL_TARGET } from './types';
 
@@ -26,12 +28,17 @@ export function enrichLead(lead: Lead): LeadWithMeta {
 }
 
 export async function fetchLeads(limit = 200): Promise<LeadWithMeta[]> {
+  try {
+    await sweepLeadLifecycle();
+  } catch {
+    /* lifecycle sweep is best-effort */
+  }
   const { sbSelect } = getClient();
   const rows = (await sbSelect(
     'ni_brain_outreach',
-    `source=eq.${SOURCE}&select=*&order=created_at.desc&limit=${limit}`
+    `source=eq.${SOURCE}&status=neq.purged&select=*&order=created_at.desc&limit=${limit}`
   )) as Lead[];
-  return (rows || []).map(enrichLead);
+  return filterVisibleLeads((rows || []).map(enrichLead));
 }
 
 export async function fetchLeadById(id: string): Promise<LeadWithMeta | null> {
@@ -86,6 +93,38 @@ export async function fetchPipelineStats(): Promise<PipelineStats> {
 export async function updateLeadStatus(id: string, patch: Partial<Lead>) {
   const { sbPatch } = getClient();
   return sbPatch('ni_brain_outreach', `id=eq.${id}`, patch);
+}
+
+export async function updateLeadNotes(id: string, meta: Record<string, unknown>) {
+  return updateLeadStatus(id, { notes: formatNotes(meta) });
+}
+
+export async function bulkUpdateLeads(
+  ids: string[],
+  patch: Partial<Lead> & { metaPatch?: Record<string, unknown> }
+) {
+  const { sbSelect, sbPatch } = getClient();
+  const { metaPatch, ...leadPatch } = patch;
+  const results: string[] = [];
+
+  for (const id of ids) {
+    if (metaPatch) {
+      const rows = (await sbSelect(
+        'ni_brain_outreach',
+        `source=eq.${SOURCE}&id=eq.${id}&select=notes&limit=1`
+      )) as { notes: string | null }[];
+      const meta = { ...parseNotes(rows?.[0]?.notes), ...metaPatch };
+      await sbPatch('ni_brain_outreach', `id=eq.${id}`, {
+        ...leadPatch,
+        notes: formatNotes(meta),
+      });
+    } else {
+      await sbPatch('ni_brain_outreach', `id=eq.${id}`, leadPatch);
+    }
+    results.push(id);
+  }
+
+  return results;
 }
 
 export async function addWaitlistEmail(email: string) {

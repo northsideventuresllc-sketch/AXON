@@ -24,6 +24,7 @@ import {
   scanIcpRejectReason,
 } from '../lib/icp-filter.mjs';
 import { loadOutreachTrainingPrompt, logOutreachIcpDropSignal } from '../lib/outreach-learn-core.mjs';
+import { sweepOutreachLeadLifecycle } from '../lib/outreach-lifecycle-core.mjs';
 import { searchProspects } from '../lib/serpapi.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { recordDraftNotification } from '../lib/telegram-handler.mjs';
@@ -43,9 +44,19 @@ async function countTodayDrafts(sbSelect) {
 async function existingHandles(sbSelect) {
   const rows = await sbSelect(
     'ni_brain_outreach',
-    `source=eq.${SOURCE}&select=handle&limit=500`
+    `source=eq.${SOURCE}&select=handle,status,notes&limit=1000`
   );
-  return new Set((rows || []).map((r) => (r.handle || '').toLowerCase()));
+  const handles = new Set();
+  for (const row of rows || []) {
+    const handle = (row.handle || '').toLowerCase();
+    if (!handle) continue;
+    handles.add(handle);
+    if (row.status === 'purged') {
+      const meta = parseNotes(row.notes);
+      if (meta.blocked_handle) handles.add(String(meta.blocked_handle).toLowerCase());
+    }
+  }
+  return handles;
 }
 
 async function logIcpDrop(sbInsert, { reason, stage, label, dryRun }) {
@@ -66,6 +77,15 @@ async function main() {
     process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
   );
   const cfg = await loadConfig(sbSelect);
+
+  try {
+    const sweep = await sweepOutreachLeadLifecycle({ sbSelect, sbPatch });
+    if (sweep.archived || sweep.purged) {
+      console.log(`Lifecycle sweep: archived=${sweep.archived}, purged=${sweep.purged}`);
+    }
+  } catch (err) {
+    console.warn(`Lifecycle sweep failed (continuing): ${err.message}`);
+  }
 
   let trainingBlock = '';
   let operatorAvoidPatterns = [];
