@@ -40,7 +40,8 @@ jobs:
           SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY_NI: ${{ secrets.RESEND_API_KEY_NI }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY_NI }}
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
           AXON_GEMINI_DELAY_MS: '2500'
           AXON_OUTREACH_MAX: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.max || '5' }}
