@@ -7,10 +7,12 @@ import {
   loadOutreachTrainingPrompt,
   logOutreachApproveSignal,
   logOutreachAutoRejectSignal,
+  logOutreachSendSignal,
   summarizeOutreachTraining,
   summarizeIcpDropStages,
 } from './outreach-learn-core.mjs';
 import { getClient } from './leads';
+import { upsertSignal } from './axon-profile';
 import { OPERATOR_ID } from './axon-types';
 
 export interface OutreachRejectReasonCount {
@@ -68,6 +70,57 @@ export async function recordOutreachApproval(
   });
 }
 
+export async function recordOutreachSend(
+  leadId: string,
+  options: {
+    channel?: 'email' | 'linkedin';
+    payload: Record<string, unknown>;
+    operatorId?: string;
+  }
+): Promise<void> {
+  const { sbInsert } = getClient();
+  const operatorId = options.operatorId || OPERATOR_ID;
+  const field = options.channel === 'linkedin' ? 'sent_dm' : 'sent_email';
+  await sbInsert('axon_tool_edit_signals', {
+    tool_slug: 'ni-outreach',
+    resource_type: 'outreach',
+    resource_id: leadId,
+    field_name: field,
+    before_value: null,
+    after_value: JSON.stringify(options.payload),
+    operator_id: operatorId,
+  });
+
+  try {
+    const body =
+      options.channel === 'linkedin'
+        ? String(options.payload.message || '')
+        : String(options.payload.body || '');
+    const opener = body.split(/\n/)[0]?.slice(0, 120) || '';
+    if (opener) {
+      await upsertSignal({
+        operator_id: operatorId,
+        signal_type: 'phrasing',
+        signal_key: `outreach_opener_${options.channel || 'email'}`,
+        signal_value: opener,
+        weight_delta: 0.4,
+      });
+    }
+    const signOff = body.split(/\n/).slice(-2).join(' ').slice(0, 120);
+    if (signOff && signOff !== opener) {
+      await upsertSignal({
+        operator_id: operatorId,
+        signal_type: 'tone',
+        signal_key: `outreach_signoff_${options.channel || 'email'}`,
+        signal_value: signOff,
+        weight_delta: 0.3,
+      });
+    }
+  } catch {
+    /* communication signals are best-effort */
+  }
+}
+
 export {
   buildTrainingPromptBlock,
   fetchOutreachTrainingSignals,
@@ -75,6 +128,7 @@ export {
   loadOutreachTrainingPrompt,
   logOutreachApproveSignal,
   logOutreachAutoRejectSignal,
+  logOutreachSendSignal,
   buildOperatorAvoidPatterns,
   summarizeOutreachTraining,
   summarizeIcpDropStages,

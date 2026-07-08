@@ -7,6 +7,8 @@ const STYLES: Record<string, string> = {
   sent: 'bg-axon-teal/15 text-axon-teal border-axon-teal/30',
   closed_won: 'bg-axon-success/15 text-axon-success border-axon-success/30',
   dead: 'bg-axon-danger/15 text-axon-danger border-axon-danger/30',
+  archived: 'bg-axon-muted/15 text-axon-muted border-axon-muted/30',
+  purged: 'bg-axon-elevated text-axon-muted border-axon-border',
   Lead: 'bg-axon-muted/15 text-axon-muted border-axon-muted/30',
 };
 
