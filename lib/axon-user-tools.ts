@@ -12,7 +12,7 @@ export interface AxonUserTool {
 export const AXON_USER_TOOLS: AxonUserTool[] = [
   {
     slug: 'manager-dispatch',
-    defaultDisplayName: 'Manager Dispatch',
+    defaultDisplayName: 'Repo Manager Dispatch',
     href: '/tools/dispatch',
     icon: '⚡',
     sourceType: 'custom',

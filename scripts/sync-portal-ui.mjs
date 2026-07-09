@@ -22,7 +22,11 @@ const INTEGRATION_ROOT = join(AXON_ROOT, 'portal-integration/northside-intellige
 
 const COMPONENT_FILES = [
   'match-fit-venture-hub.tsx',
+  'match-fit-admin-tool.tsx',
   'dispatch-queue-panel.tsx',
+  'follow-up-tool.tsx',
+  'hermes-sync-tool.tsx',
+  'deal-tracker-tool.tsx',
   'axon-ambient-bg.tsx',
   'axon-home-settings.tsx',
   'axon-interface.tsx',
