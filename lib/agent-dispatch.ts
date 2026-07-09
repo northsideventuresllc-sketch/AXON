@@ -3,7 +3,6 @@
  * Patch: _AI/axon-patches/dispatch-one-click/
  */
 import { createClient } from '@supabase/supabase-js';
-import { GITHUB_PAT_ENV_HINT, resolveGithubPat } from './github-pat.mjs';
 
 const SUPABASE_URL =
   process.env.NI_BRAIN_SUPABASE_URL ||
@@ -47,8 +46,8 @@ export async function fetchDispatchQueue(limit = 50): Promise<DispatchRow[]> {
 }
 
 export async function triggerHermesDispatch(code?: string) {
-  const token = await resolveGithubPat();
-  if (!token) throw new Error(`GitHub PAT not configured for dispatch fire — ${GITHUB_PAT_ENV_HINT}`);
+  const token = process.env.GH_PAT || process.env.GITHUB_TOKEN;
+  if (!token) throw new Error('GH_PAT not configured for dispatch fire');
   const body: { ref: string; inputs?: Record<string, string> } = { ref: 'main' };
   if (code) {
     body.inputs = { fire_only: 'true', seed_only: 'false', code };
