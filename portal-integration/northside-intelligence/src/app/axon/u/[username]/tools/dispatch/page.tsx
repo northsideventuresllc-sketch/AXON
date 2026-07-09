@@ -1,4 +1,4 @@
-import { DispatchQueuePanel } from '@/components/axon/dispatch-queue-panel';
+import { DispatchQueuePanel } from '@/components/axon-ui/dispatch-queue-panel';
 import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
 
 export const dynamic = 'force-dynamic';
