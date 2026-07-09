@@ -127,6 +127,31 @@ export interface OutreachEmailAccount {
   label: string;
   isDefaultSend: boolean;
   isDefaultReceive: boolean;
+  /** Resend domain verification — synced automatically when email is connected. */
+  domain?: string;
+  domainStatus?: 'not_started' | 'pending' | 'verified' | 'failed' | 'temporary_failure' | 'partially_verified';
+  resendDomainId?: string;
+  domainSyncedAt?: string;
+  domainError?: string;
+}
+
+export interface OutreachDnsRecord {
+  record: string;
+  type: string;
+  name: string;
+  value: string;
+  priority?: number | null;
+  status?: string;
+  ttl?: string | null;
+}
+
+export interface OutreachEmailDomain {
+  domain: string;
+  resendDomainId?: string;
+  status: OutreachEmailAccount['domainStatus'];
+  records: OutreachDnsRecord[];
+  syncedAt?: string;
+  error?: string;
 }
 
 export interface OutreachEmailSignature {
@@ -138,25 +163,32 @@ export interface OutreachSettings {
   emails: OutreachEmailAccount[];
   socialAccounts: OutreachSocialAccount[];
   signature: OutreachEmailSignature;
+  /** DNS / Resend status keyed by domain name */
+  emailDomains: Record<string, OutreachEmailDomain>;
 }
 
-const DEFAULT_FROM = 'Jonny <northside@northsideintelligence.com>';
+const DEFAULT_FROM = 'JB <jb@northsideintelligence.com>';
+const DEFAULT_RECEIVE = 'jb@northsideintelligence.com';
 
 export const DEFAULT_OUTREACH_SETTINGS: OutreachSettings = {
   emails: [
     {
       id: 'default-send',
       email: DEFAULT_FROM,
-      label: 'Primary',
+      label: 'JB · Send',
       isDefaultSend: true,
       isDefaultReceive: false,
+      domain: 'northsideintelligence.com',
+      domainStatus: 'not_started',
     },
     {
       id: 'default-receive',
-      email: 'northside@northsideintelligence.com',
-      label: 'Inbox',
+      email: DEFAULT_RECEIVE,
+      label: 'JB · Inbox',
       isDefaultSend: false,
       isDefaultReceive: true,
+      domain: 'northsideintelligence.com',
+      domainStatus: 'not_started',
     },
   ],
   socialAccounts: [],
@@ -164,6 +196,7 @@ export const DEFAULT_OUTREACH_SETTINGS: OutreachSettings = {
     text: '— JB\nNORTHSiDE Intelligence',
     logoDataUrl: null,
   },
+  emailDomains: {},
 };
 
 function parseOutreachSettings(contextData: Record<string, unknown> | null | undefined): OutreachSettings {
@@ -180,6 +213,10 @@ function parseOutreachSettings(contextData: Record<string, unknown> | null | und
       ...DEFAULT_OUTREACH_SETTINGS.signature,
       ...(raw.signature || {}),
     },
+    emailDomains:
+      raw.emailDomains && typeof raw.emailDomains === 'object'
+        ? (raw.emailDomains as Record<string, OutreachEmailDomain>)
+        : DEFAULT_OUTREACH_SETTINGS.emailDomains,
   };
 }
 
@@ -203,6 +240,7 @@ export async function saveOutreachSettings(
       return normalizeSocialAccount({ ...account, ...parsed, label: account.label?.trim() || parsed.label });
     }),
     signature: { ...current.signature, ...(patch.signature || {}) },
+    emailDomains: patch.emailDomains ?? current.emailDomains,
   };
   await updateOperatorProfile(operatorId, {
     context_data: {

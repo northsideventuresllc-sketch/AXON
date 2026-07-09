@@ -90,6 +90,8 @@ const LIB_FILES = [
   'supabase.mjs',
   'resend.mjs',
   'resend.d.ts',
+  'resend-domains.mjs',
+  'email-domain-sync.mjs',
   'outreach-learn-core.d.ts',
   'telegram.mjs',
 ];
@@ -109,6 +111,7 @@ const API_FILES = [
   'outreach/[id]/route.ts',
   'outreach/run/route.ts',
   'outreach/settings/route.ts',
+  'outreach/email-domain/route.ts',
   'quick-links/route.ts',
 ];
 
@@ -129,6 +132,7 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/config\.mjs'/g, "from '@/lib/axon/config.mjs'")
     .replace(/from '@\/lib\/constants\.mjs'/g, "from '@/lib/axon/constants.mjs'")
     .replace(/from '@\/lib\/resend\.mjs'/g, "from '@/lib/axon/resend.mjs'")
+    .replace(/from '@\/lib\/email-domain-sync\.mjs'/g, "from '@/lib/axon/email-domain-sync.mjs'")
     .replace(/from '@\/lib\/axon-quick-links'/g, "from '@/lib/axon/axon-quick-links'")
     .replace(/from '@\/lib\/use-axon-quick-links'/g, "from '@/lib/axon/use-axon-quick-links'")
     .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")

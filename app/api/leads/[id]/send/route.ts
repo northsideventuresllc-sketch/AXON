@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { loadConfig } from '@/lib/config.mjs';
 import { formatNotes, parseNotes, shortId } from '@/lib/constants.mjs';
+import { ensureEmailCanSend } from '@/lib/email-domain-sync.mjs';
 import { resendSend } from '@/lib/resend.mjs';
 import { fetchLeadById, updateLeadStatus } from '@/lib/leads';
 import { recordOutreachSend } from '@/lib/outreach-learn';
@@ -89,6 +90,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (!cfg.resendKey) {
       return NextResponse.json({ error: 'Resend not configured' }, { status: 503 });
+    }
+
+    const domainCheck = await ensureEmailCanSend(cfg.resendKey, sendAccount.email);
+    if (!domainCheck.ok) {
+      return NextResponse.json(
+        {
+          error: domainCheck.message,
+          code: domainCheck.code || 'domain_not_verified',
+          canReplace: domainCheck.canReplace,
+          currentDomains: domainCheck.currentDomains,
+          domain: domainCheck.domain,
+        },
+        { status: 409 }
+      );
     }
 
     await resendSend(cfg, {
