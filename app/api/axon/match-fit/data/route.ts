@@ -3,7 +3,12 @@
  */
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { MF_SESSION_COOKIE, getMatchFitAccessCode, getMatchFitLegacyCredentials, isMatchFitSessionValid } from '@/lib/match-fit-session';
+import {
+  MF_SESSION_COOKIE,
+  getMatchFitLegacyCredentials,
+  isMatchFitSessionValid,
+  resolveMatchFitAccessCode,
+} from '@/lib/match-fit-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,9 +20,9 @@ const SUPABASE_URL =
 const SESSION_COOKIE = MF_SESSION_COOKIE;
 
 async function checkSession(): Promise<boolean> {
-  const envCode = getMatchFitAccessCode();
+  const accessCode = await resolveMatchFitAccessCode();
   const { email: envEmail } = getMatchFitLegacyCredentials();
-  if (!envCode && !envEmail) return false;
+  if (!accessCode && !envEmail) return false;
   const cookieStore = await cookies();
   const stored = cookieStore.get(SESSION_COOKIE)?.value ?? '';
   return isMatchFitSessionValid(stored);
