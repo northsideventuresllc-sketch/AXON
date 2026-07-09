@@ -40,7 +40,7 @@ export function NotificationOrganizeModal({
     if (selected.size === 0) return;
     setBusy(true);
     try {
-      await onArchive([...selected]);
+      await onArchive(Array.from(selected));
       onClose();
     } finally {
       setBusy(false);
