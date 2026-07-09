@@ -1,10 +1,11 @@
-import { ToolPlaceholder } from '@/components/axon/tool-placeholder';
+import { DealTrackerTool } from '@/components/axon/deal-tracker-tool';
+
+export const dynamic = 'force-dynamic';
 
 export default function DealsToolPage() {
   return (
-    <ToolPlaceholder
-      title="Deal Tracker"
-      description="Track proposals, negotiations, and closed-won revenue across the pipeline."
-    />
+    <div className="p-6">
+      <DealTrackerTool />
+    </div>
   );
 }
