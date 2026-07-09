@@ -77,6 +77,19 @@ export async function fetchDispatchQueue(limit = 100): Promise<DispatchRow[]> {
   return data ?? [];
 }
 
+/** Completed dispatches — status completed or fired with history. */
+export async function fetchCompletedDispatches(limit = 100): Promise<DispatchRow[]> {
+  const sb = serviceClient();
+  const { data, error } = await sb
+    .from('agent_dispatch')
+    .select(SELECT_FIELDS)
+    .in('status', ['completed', 'fired'])
+    .order('fired_at', { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function fetchDispatchTask(code: string): Promise<DispatchRow | null> {
   const sb = serviceClient();
   const { data, error } = await sb

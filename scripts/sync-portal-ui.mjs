@@ -53,6 +53,9 @@ const COMPONENT_FILES = [
   'panel-focus-view.tsx',
   'previous-chats-flip.tsx',
   'sidebar.tsx',
+  'axon-collapsible-section.tsx',
+  'test-mode-tool.tsx',
+  'it-builder-tool.tsx',
   'stats-cards.tsx',
   'status-badge.tsx',
   'todo-panel.tsx',
@@ -71,6 +74,7 @@ const LIB_FILES = [
   'axon-profile.ts',
   'axon-types.ts',
   'axon-user-tools.ts',
+  'it-axon-skeleton.ts',
   'axon-workspace.ts',
   'it-quick-links.ts',
   'outreach-edit.ts',
@@ -122,6 +126,7 @@ const API_FILES = [
   'outreach/run/route.ts',
   'outreach/settings/route.ts',
   'quick-links/route.ts',
+  'it-builder/route.ts',
 ];
 
 function rewriteImports(content) {
@@ -146,6 +151,7 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")
     .replace(/from '@\/lib\/use-axon-tool-display-names'/g, "from '@/lib/axon/use-axon-tool-display-names'")
     .replace(/from '@\/lib\/agent-dispatch'/g, "from '@/lib/axon/agent-dispatch'")
+    .replace(/from '@\/lib\/it-axon-skeleton'/g, "from '@/lib/axon/it-axon-skeleton'")
     .replace(/from '@\/lib\/match-fit-hub'/g, "from '@/lib/axon/match-fit-hub'")
     .replace(/from '@\/lib\/paths'/g, "from '@/lib/axon/app-path'");
 }

@@ -8,27 +8,55 @@ export interface AxonUserTool {
   sourceType: AxonUserToolSource;
 }
 
-/** Built-in AXON tools surfaced under sidebar "AXON's Tools". */
+/** Built-in AXON tools surfaced under sidebar "AXON Tools". Order = sidebar order. */
 export const AXON_USER_TOOLS: AxonUserTool[] = [
   {
     slug: 'manager-dispatch',
-    defaultDisplayName: 'Repo Manager Dispatch',
+    defaultDisplayName: 'Repo Manager Agent Dispatch',
     href: '/tools/dispatch',
     icon: '⚡',
+    sourceType: 'custom',
+  },
+  {
+    slug: 'match-fit-admin',
+    defaultDisplayName: 'AXON Management',
+    href: '/tools/match-fit-admin',
+    icon: '🏋',
     sourceType: 'custom',
   },
   {
     slug: 'ni-outreach',
     defaultDisplayName: 'NI Outreach HQ',
     href: '/tools/ni-outreach',
-    icon: '◎',
+    icon: '✉',
     sourceType: 'outreach_engine',
   },
   {
-    slug: 'match-fit-admin',
-    defaultDisplayName: 'Match Fit Admin',
-    href: '/tools/match-fit-admin',
-    icon: '🏋',
+    slug: 'follow-up-engine',
+    defaultDisplayName: 'Follow-Up Engine',
+    href: '/tools/follow-up',
+    icon: '↻',
+    sourceType: 'outreach_engine',
+  },
+  {
+    slug: 'hermes-sync',
+    defaultDisplayName: 'NI Marketing HQ',
+    href: '/tools/hermes',
+    icon: '📣',
+    sourceType: 'custom',
+  },
+  {
+    slug: 'deal-tracker',
+    defaultDisplayName: 'Financial Tracker',
+    href: '/tools/deals',
+    icon: '◆',
+    sourceType: 'custom',
+  },
+  {
+    slug: 'test-mode',
+    defaultDisplayName: 'Test Mode',
+    href: '/tools/test-mode',
+    icon: '🧪',
     sourceType: 'custom',
   },
 ];

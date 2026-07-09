@@ -45,10 +45,6 @@ export default async function AxonUserDashboardPage({
             AXON Home
           </a>
           <span className="text-axon-border">|</span>
-          <Link href={`${basePath}/dashboard`} className="text-axon-blue-glow hover:underline">
-            My AXON Dashboard
-          </Link>
-          <span className="text-axon-border">|</span>
           <Link href="/" className="text-axon-blue-glow hover:underline">
             Back to NI Portal
           </Link>

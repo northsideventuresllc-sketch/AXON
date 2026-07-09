@@ -1,13 +1,16 @@
 /**
  * Match Fit admin data — serves NI-Brain reads to the AXON admin portal tool.
- * Requires valid mf_admin_session cookie.
  */
 import { createHash } from 'crypto';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { createSupabaseClient } from '@/lib/supabase.mjs';
 
 export const dynamic = 'force-dynamic';
+
+const SUPABASE_URL =
+  process.env.NI_BRAIN_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  'https://kxijunwgbrlfzvgkhklo.supabase.co';
 
 const SESSION_COOKIE = 'mf_admin_session';
 
@@ -32,9 +35,19 @@ async function checkSession(): Promise<boolean> {
 function getClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
   if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY not configured');
-  return createSupabaseClient(key) as {
-    sbSelect: (table: string, filter?: string) => Promise<Record<string, unknown>[]>;
+  const headers = {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
   };
+  async function sbSelect(table: string, filter = '') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+      headers: { ...headers, Accept: 'application/json' },
+    });
+    if (!r.ok) throw new Error(`Supabase select ${table}: HTTP ${r.status}`);
+    return r.json();
+  }
+  return { sbSelect };
 }
 
 type PostRow = {

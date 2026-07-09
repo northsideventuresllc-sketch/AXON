@@ -45,6 +45,8 @@ const COMPLEXITY_ORDER = { high: 0, medium: 1, low: 2 };
 const QUEUE_API = apiUrl('/api/axon/dispatch/queue');
 const FIRE_API = apiUrl('/api/axon/dispatch/fire');
 
+type QueueView = 'active' | 'completed';
+
 function deriveVenture(item: DispatchItem): string {
   const blob = `${item.repo || ''} ${item.workflow_repo || ''} ${item.code || ''}`.toLowerCase();
   if (blob.includes('match-fit') || blob.includes('matchfit')) return 'Match Fit';
@@ -118,6 +120,7 @@ export function DispatchQueuePanel() {
   const [filterTab, setFilterTab] = useState<SortMode>('venture');
   const [selected, setSelected] = useState<DispatchItem | null>(null);
   const [livePoll, setLivePoll] = useState(false);
+  const [queueView, setQueueView] = useState<QueueView>('active');
 
   const allVentures = useMemo(() => [...new Set(items.map(deriveVenture))].sort(), [items]);
   const activeFilters = filters ?? defaultFilters(items);
@@ -130,7 +133,9 @@ export function DispatchQueuePanel() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const r = await fetch(QUEUE_API);
+      const url =
+        queueView === 'completed' ? `${QUEUE_API}?view=completed` : QUEUE_API;
+      const r = await fetch(url);
       const data = await r.json();
       if (!data.ok) throw new Error(data.error || 'load failed');
       setItems(data.items || []);
@@ -142,7 +147,7 @@ export function DispatchQueuePanel() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, queueView]);
 
   useEffect(() => {
     load();
@@ -200,13 +205,30 @@ export function DispatchQueuePanel() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Repo Manager Dispatch</h1>
+          <h1 className="text-2xl font-semibold text-white">Repo Manager Agent Dispatch</h1>
           <p className="mt-1 max-w-xl text-sm text-axon-muted">
             One click fires Hermes workflows and cues repo managers. Live progress below — Telegram
             summary when complete.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <div className="flex rounded-lg border border-axon-border p-0.5">
+            {(['active', 'completed'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  setLoading(true);
+                  setQueueView(v);
+                }}
+                className={`rounded-md px-3 py-1.5 text-xs capitalize ${
+                  queueView === v ? 'bg-axon-gold/20 text-axon-gold' : 'text-axon-muted'
+                }`}
+              >
+                {v === 'active' ? 'Active queue' : 'Completed'}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             onClick={() => setFilterOpen(true)}
@@ -217,7 +239,7 @@ export function DispatchQueuePanel() {
           <button
             type="button"
             onClick={fireAll}
-            disabled={firing || queued.length === 0}
+            disabled={firing || queued.length === 0 || queueView === 'completed'}
             className="rounded-lg bg-axon-gold px-5 py-2.5 text-sm font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {firing ? 'Dispatching…' : `Dispatch All (${queued.length})`}
