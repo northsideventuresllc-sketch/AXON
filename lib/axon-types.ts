@@ -224,8 +224,8 @@ export interface AxonNotification {
   read: boolean;
   read_at?: string;
   created_at: string;
-  /** Interactive notifications require chat resolution or decline before read. */
-  interactive: boolean;
+  /** Interactive notifications require chat resolution or decline before read. Defaults false. */
+  interactive?: boolean;
   /** Suggested action prompt for interactive notifications. */
   prompt?: string;
   archived?: boolean;
