@@ -3,9 +3,13 @@ import { fetchDispatchTask, updateDispatchTask } from '@/lib/agent-dispatch';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: NextRequest, { params }: { params: { code: string } }) {
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
   try {
-    const task = await fetchDispatchTask(params.code);
+    const { code } = await params;
+    const task = await fetchDispatchTask(code);
     if (!task) return NextResponse.json({ ok: false, error: 'Task not found' }, { status: 404 });
     return NextResponse.json({ ok: true, task });
   } catch (err) {
@@ -14,8 +18,12 @@ export async function GET(_req: NextRequest, { params }: { params: { code: strin
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { code: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
   try {
+    const { code } = await params;
     const body = await req.json().catch(() => ({}));
     const title = typeof body?.title === 'string' ? body.title.trim() : undefined;
     const dispatch_phrase =
@@ -25,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { code: stri
     if (title === undefined && dispatch_phrase === undefined) {
       return NextResponse.json({ ok: false, error: 'No fields to update' }, { status: 400 });
     }
-    const task = await updateDispatchTask(params.code, { title, dispatch_phrase });
+    const task = await updateDispatchTask(code, { title, dispatch_phrase });
     return NextResponse.json({ ok: true, task });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'update failed';
