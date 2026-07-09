@@ -657,9 +657,9 @@ export function AxonInterface({
           notification={selectedNotification}
           archivedView={notifArchivedView}
           onClose={() => setSelectedNotification(null)}
-          onMarkRead={notifActions.markRead}
-          onResolve={notifActions.resolve}
-          onDecline={notifActions.decline}
+          onMarkRead={async (id) => { await notifActions.markRead(id); }}
+          onResolve={async (id) => { await notifActions.resolve(id); }}
+          onDecline={async (id) => { await notifActions.decline(id); }}
           onDelete={async (id) => {
             await notifActions.remove(id);
             setSelectedNotification(null);
