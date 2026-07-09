@@ -68,7 +68,7 @@ function deriveComplexity(item: DispatchItem): 'high' | 'medium' | 'low' {
 }
 
 function defaultFilters(items: DispatchItem[]): FilterState {
-  const ventures = [...new Set(items.map(deriveVenture))].sort();
+  const ventures = Array.from(new Set(items.map(deriveVenture))).sort();
   return {
     sortBy: 'date',
     sortDir: 'desc',
@@ -122,7 +122,7 @@ export function DispatchQueuePanel() {
   const [livePoll, setLivePoll] = useState(false);
   const [queueView, setQueueView] = useState<QueueView>('active');
 
-  const allVentures = useMemo(() => [...new Set(items.map(deriveVenture))].sort(), [items]);
+  const allVentures = useMemo(() => Array.from(new Set(items.map(deriveVenture))).sort(), [items]);
   const activeFilters = filters ?? defaultFilters(items);
   const visible = useMemo(() => applyFilters(items, activeFilters), [items, activeFilters]);
   const queued = visible.filter((i) => i.status === 'queued');
