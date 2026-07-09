@@ -43,6 +43,9 @@ const COMPONENT_FILES = [
   'lead-card.tsx',
   'lead-detail.tsx',
   'notifications-panel.tsx',
+  'notification-holo-scroll.tsx',
+  'notification-detail-modal.tsx',
+  'notification-organize-modal.tsx',
   'icp-fit-badge.tsx',
   'outreach-generate-leads.tsx',
   'outreach-icp-checklist.tsx',
@@ -71,6 +74,9 @@ const LIB_FILES = [
   'axon-chat-sessions.ts',
   'axon-orb-theme.ts',
   'axon-preferences.ts',
+  'axon-notification-utils.ts',
+  'axon-web-chat.ts',
+  'use-notification-actions.ts',
   'axon-profile.ts',
   'axon-types.ts',
   'axon-user-tools.ts',
@@ -121,6 +127,7 @@ const API_FILES = [
   'match-fit/session/route.ts',
   'match-fit/data/route.ts',
   'preferences/route.ts',
+  'chat/route.ts',
   'reset/route.ts',
   'outreach/[id]/route.ts',
   'outreach/run/route.ts',
@@ -135,6 +142,8 @@ function rewriteImports(content) {
     .replace(/from '@\/components\/axon\/(?!AxonChangeCodeForm)/g, "from '@/components/axon-ui/")
     .replace(/from '@\/lib\/axon-([^']+)'/g, "from '@/lib/axon/axon-$1'")
     .replace(/from '@\/lib\/use-axon-voice'/g, "from '@/lib/axon/use-axon-voice'")
+    .replace(/from '@\/lib\/use-notification-actions'/g, "from '@/lib/axon/use-notification-actions'")
+    .replace(/from '@\/lib\/axon-notification-utils'/g, "from '@/lib/axon/axon-notification-utils'")
     .replace(/from '@\/lib\/leads'/g, "from '@/lib/axon/leads'")
     .replace(/from '@\/lib\/types'/g, "from '@/lib/axon/types'")
     .replace(/from '@\/lib\/it-quick-links'/g, "from '@/lib/axon/it-quick-links'")

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { AxonNotification, NotificationSettings } from '@/lib/axon-types';
+import { unreadCount } from '@/lib/axon-notification-utils';
+import { NotificationHoloScroll } from './notification-holo-scroll';
 
 type ScreenPhase = 'idle' | 'new' | 'from' | 'click' | 'urgent_flash';
 
@@ -9,6 +11,8 @@ interface NotificationsPanelProps {
   settings: NotificationSettings;
   notifications: AxonNotification[];
   onOpen?: (notification: AxonNotification) => void;
+  onSelectNotification?: (notification: AxonNotification) => void;
+  onOrganize?: () => void;
   trigger?: { notification: AxonNotification; key: number } | null;
   onUrgentStart?: () => void;
   onUrgentEnd?: () => void;
@@ -18,6 +22,8 @@ export function NotificationsPanel({
   settings,
   notifications,
   onOpen,
+  onSelectNotification,
+  onOrganize,
   trigger,
   onUrgentStart,
   onUrgentEnd,
@@ -26,9 +32,11 @@ export function NotificationsPanel({
   const [active, setActive] = useState<AxonNotification | null>(null);
   const [hoverIdle, setHoverIdle] = useState(false);
   const [urgentRed, setUrgentRed] = useState(false);
+  const [scrollExpanded, setScrollExpanded] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const running = useRef(false);
-  const unread = notifications.filter((n) => !n.read);
+  const unread = useMemo(() => unreadCount(notifications), [notifications]);
 
   const clearTimers = useCallback(() => {
     timers.current.forEach(clearTimeout);
@@ -115,16 +123,53 @@ export function NotificationsPanel({
   useEffect(() => () => clearTimers(), [clearTimers]);
 
   function handlePanelClick() {
+    if (scrollExpanded) return;
     if (phase === 'click' && active) {
       clearTimers();
-      onOpen?.(active);
+      if (active.interactive) {
+        onSelectNotification?.(active);
+      } else {
+        onOpen?.(active);
+        onSelectNotification?.(active);
+      }
       resetToIdle();
-    } else if (phase === 'idle' && unread[0]) {
-      runChain(unread[0], true);
+    } else if (phase === 'idle' && unread > 0) {
+      const firstUnread = notifications.find((n) => !n.archived && !n.read);
+      if (firstUnread) runChain(firstUnread, true);
     }
   }
 
+  function handleEyeClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setScrollExpanded((v) => !v);
+    if (scrollExpanded) setShowArchived(false);
+  }
+
+  function handleScrollSelect(n: AxonNotification) {
+    onSelectNotification?.(n);
+  }
+
   const urgentText = active?.urgent && settings.urgencyEnabled;
+
+  if (scrollExpanded) {
+    return (
+      <section
+        className={`axon-notif-panel-expanded relative axon-card-3d axon-glass flex min-h-[320px] flex-col overflow-hidden rounded-2xl border border-axon-border/50 transition-all duration-500`}
+      >
+        <NotificationHoloScroll
+          notifications={notifications}
+          showArchived={showArchived}
+          onToggleArchived={() => setShowArchived((v) => !v)}
+          onClose={() => {
+            setScrollExpanded(false);
+            setShowArchived(false);
+          }}
+          onOrganize={() => onOrganize?.()}
+          onSelect={handleScrollSelect}
+        />
+      </section>
+    );
+  }
 
   return (
     <section
@@ -132,12 +177,21 @@ export function NotificationsPanel({
         urgentRed ? 'axon-notif-urgent-flash border-red-500/60' : 'border border-axon-border/50'
       }`}
     >
-      {unread.length > 0 && phase === 'idle' && (
+      {unread > 0 && phase === 'idle' && (
         <span className="absolute right-2 top-2 z-10 h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
       )}
 
-      <header className="shrink-0 border-b border-axon-border/60 px-4 py-2">
+      <header className="flex shrink-0 items-center justify-between border-b border-axon-border/60 px-4 py-2">
         <h2 className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">Notifications</h2>
+        <button
+          type="button"
+          onClick={handleEyeClick}
+          className="axon-notif-eye-btn"
+          aria-label="Open notification scroll"
+          title="View all notifications"
+        >
+          <EyeIcon />
+        </button>
       </header>
 
       <button
@@ -195,6 +249,19 @@ export function NotificationsPanel({
         )}
       </button>
     </section>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
   );
 }
 
@@ -315,7 +382,6 @@ function playAlarmTone(
   harmonic.stop(t1 + 0.02);
 }
 
-/** Piercing two-tone alarm — alternating high beeps, clearly audible vs fog-horn hum. */
 function playUrgentAlarm(ctx: AudioContext, volume: number, cycles = 5) {
   const toneDuration = 0.28;
   const gap = 0.12;

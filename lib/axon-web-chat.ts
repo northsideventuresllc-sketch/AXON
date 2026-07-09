@@ -51,7 +51,13 @@ export async function generateAxonReply(
   userMessage: string,
   channel: 'chat' | 'voice',
   history: ChatMessage[],
-  sessionId?: string
+  sessionId?: string,
+  notificationContext?: {
+    title: string;
+    source: string;
+    body?: string;
+    prompt?: string;
+  }
 ) {
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   const { sbSelect } = createSupabaseClient(key);
@@ -71,6 +77,16 @@ export async function generateAxonReply(
     : '';
   const workspaceBlock = `\n${formatWorkspaceForPrompt(workspace)}`;
 
+  const notificationBlock = notificationContext
+    ? `\n\nACTIVE NOTIFICATION CONTEXT:
+Source: ${notificationContext.source}
+Title: ${notificationContext.title}
+${notificationContext.body ? `Details: ${notificationContext.body}` : ''}
+${notificationContext.prompt ? `Suggested action: ${notificationContext.prompt}` : ''}
+
+Help the operator understand and resolve this notification through conversation. When they confirm the action is complete or they've decided not to act, acknowledge clearly.`
+    : '';
+
   const system = `You are AXON — Northside Intelligence's State of the Art Personalized Agentic Assistant. Underground-premium voice.
 
 You help the operator run autonomous profit engines, review outreach, and make decisions. You grow WITH the operator — adapting tone from every interaction.
@@ -82,7 +98,7 @@ You operate a J-Space global workspace analogue: route high-order reasoning thro
 ${toneBlock}
 ${memoryBlock}
 ${workspaceBlock}
-${jspaceBlock}
+${jspaceBlock}${notificationBlock}
 
 ${channel === 'voice' ? 'This is a voice conversation. Keep responses concise (2-4 sentences unless detail is requested). Sound natural when spoken aloud.' : 'This is text chat. Be conversational and human — not bullet-heavy unless listing data.'}
 
