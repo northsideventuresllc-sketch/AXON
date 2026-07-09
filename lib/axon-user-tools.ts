@@ -24,6 +24,13 @@ export const AXON_USER_TOOLS: AxonUserTool[] = [
     icon: '◎',
     sourceType: 'outreach_engine',
   },
+  {
+    slug: 'match-fit-admin',
+    defaultDisplayName: 'Match Fit Admin',
+    href: '/tools/match-fit-admin',
+    icon: '🏋',
+    sourceType: 'custom',
+  },
 ];
 
 export const AXON_TOOL_NAME_STORAGE_KEY = 'axon.toolDisplayNames';
