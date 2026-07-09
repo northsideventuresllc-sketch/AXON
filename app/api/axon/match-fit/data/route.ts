@@ -10,10 +10,6 @@ import { createSupabaseClient } from '@/lib/supabase.mjs';
 export const dynamic = 'force-dynamic';
 
 const SESSION_COOKIE = 'mf_admin_session';
-const SUPABASE_URL =
-  process.env.NI_BRAIN_SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  'https://kxijunwgbrlfzvgkhklo.supabase.co';
 
 function deriveToken(email: string): string {
   const secret =
@@ -36,11 +32,6 @@ async function checkSession(): Promise<boolean> {
 function getClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
   if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY not configured');
-  // Override URL so custom client points at NI-Brain
-  const origUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (SUPABASE_URL !== origUrl) {
-    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
-  }
   return createSupabaseClient(key) as {
     sbSelect: (table: string, filter?: string) => Promise<Record<string, unknown>[]>;
   };
