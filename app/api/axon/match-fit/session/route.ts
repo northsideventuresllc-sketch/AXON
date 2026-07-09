@@ -1,6 +1,6 @@
 /**
  * Match Fit admin session — access-code gate for the AXON admin portal.
- * Set MF_ADMIN_ACCESS_CODE in deployment secrets (never commit the value).
+ * Set MF_ADMIN_ACCESS_CODE in deployment secrets or ni_platform_secrets (never commit the value).
  */
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
@@ -8,8 +8,8 @@ import {
   MF_COOKIE_MAX_AGE,
   MF_SESSION_COOKIE,
   deriveMatchFitSessionToken,
-  getMatchFitAccessCode,
   getMatchFitLegacyCredentials,
+  resolveMatchFitAccessCode,
   safeEq,
 } from '@/lib/match-fit-session';
 import { createHash } from 'crypto';
@@ -34,11 +34,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Bad request' }, { status: 400 });
   }
 
-  const envCode = getMatchFitAccessCode();
+  const accessCode = await resolveMatchFitAccessCode();
 
-  if (envCode) {
+  if (accessCode) {
     const input = (body.accessCode ?? '').trim();
-    if (!safeEq(input, envCode)) {
+    if (!safeEq(input, accessCode)) {
       return NextResponse.json({ ok: false, error: 'Invalid access code' }, { status: 401 });
     }
     const token = deriveMatchFitSessionToken();
@@ -81,15 +81,15 @@ export async function POST(req: NextRequest) {
 
 /** GET — check if session cookie is valid. */
 export async function GET() {
-  const envCode = getMatchFitAccessCode();
+  const accessCode = await resolveMatchFitAccessCode();
   const { email: envEmail } = getMatchFitLegacyCredentials();
-  if (!envCode && !envEmail) {
+  if (!accessCode && !envEmail) {
     return NextResponse.json({ ok: true, authed: false, reason: 'not_configured' });
   }
 
   const cookieStore = await cookies();
   const stored = cookieStore.get(MF_SESSION_COOKIE)?.value ?? '';
-  const expected = envCode ? deriveMatchFitSessionToken() : legacyToken(envEmail);
+  const expected = accessCode ? deriveMatchFitSessionToken() : legacyToken(envEmail);
   const authed = safeEq(stored, expected);
 
   return NextResponse.json({ ok: true, authed });
