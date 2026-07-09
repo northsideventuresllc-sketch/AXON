@@ -1,13 +1,22 @@
 name: AXON NI Outreach
 
 on:
-  schedule:
-    # 2:30 AM EST = 7:30 AM UTC (after Hermes 2 AM EST / 7:00 UTC)
-    - cron: '30 7 * * *'
+  # AUTO DISABLED 2026-07-09 — JB training mode until 3 validated manual leads.
+  # Re-enable schedule only after ICP locked + JB approval.
+  # schedule:
+  #   - cron: '30 7 * * *'
   workflow_dispatch:
     inputs:
+      manual_run:
+        description: 'Set true to run (training mode — auto cron off)'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
       max:
-        description: Max drafts this run (respects daily cap)
+        description: Max drafts this run (default 3 for training)
         required: false
         default: '3'
         type: string
@@ -43,7 +52,8 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
           AXON_GEMINI_DELAY_MS: '2500'
-          AXON_OUTREACH_MAX: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.max || '5' }}
+          AXON_OUTREACH_MANUAL_RUN: ${{ github.event.inputs.manual_run || 'true' }}
+          AXON_OUTREACH_MAX: ${{ github.event.inputs.max || '3' }}
         run: node scripts/axon-ni-outreach.mjs
 
       - name: Report failure
