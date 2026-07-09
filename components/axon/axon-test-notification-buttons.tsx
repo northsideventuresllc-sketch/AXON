@@ -83,7 +83,7 @@ export function AxonTestNotificationButtons({ className = '' }: AxonTestNotifica
         source,
         title,
         body: preset.body,
-        links: 'links' in preset ? preset.links : undefined,
+        links: 'links' in preset ? [...preset.links] : undefined,
         urgent:
           preset.urgent &&
           settings.urgencyEnabled &&
