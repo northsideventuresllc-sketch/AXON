@@ -93,6 +93,7 @@ export function TestModeSidebarPanel({ open, onClose }: { open: boolean; onClose
             outreachReply: false,
           },
           customNotUrgent: [],
+          readAutoArchiveHours: 24,
         };
 
       const notification: AxonNotification = {
@@ -102,13 +103,22 @@ export function TestModeSidebarPanel({ open, onClose }: { open: boolean; onClose
         body: test.hint,
         urgent: test.urgent && settings.urgencyEnabled && classifyUrgency(source, title, settings),
         read: false,
+        interactive: false,
         created_at: new Date().toISOString(),
       };
 
       const res = await fetch(apiUrl('/api/axon/preferences'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ addNotification: notification }),
+        body: JSON.stringify({
+          addNotification: {
+            source: notification.source,
+            title: notification.title,
+            body: notification.body,
+            urgent: notification.urgent,
+            interactive: notification.interactive,
+          },
+        }),
       });
 
       if (!res.ok) {
