@@ -1,10 +1,11 @@
-import { ToolPlaceholder } from '@/components/axon/tool-placeholder';
+import { HermesSyncTool } from '@/components/axon/hermes-sync-tool';
+
+export const dynamic = 'force-dynamic';
 
 export default function HermesToolPage() {
   return (
-    <ToolPlaceholder
-      title="Hermes Task Sync"
-      description="Mirror Hermes marketing tasks into AXON. Sync only — no LLM overlap per guardrails."
-    />
+    <div className="p-6">
+      <HermesSyncTool />
+    </div>
   );
 }

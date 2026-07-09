@@ -12,7 +12,7 @@ export interface AxonUserTool {
 export const AXON_USER_TOOLS: AxonUserTool[] = [
   {
     slug: 'manager-dispatch',
-    defaultDisplayName: 'Manager Dispatch',
+    defaultDisplayName: 'Repo Manager Dispatch',
     href: '/tools/dispatch',
     icon: '⚡',
     sourceType: 'custom',
@@ -23,6 +23,13 @@ export const AXON_USER_TOOLS: AxonUserTool[] = [
     href: '/tools/ni-outreach',
     icon: '◎',
     sourceType: 'outreach_engine',
+  },
+  {
+    slug: 'match-fit-admin',
+    defaultDisplayName: 'Match Fit Admin',
+    href: '/tools/match-fit-admin',
+    icon: '🏋',
+    sourceType: 'custom',
   },
 ];
 

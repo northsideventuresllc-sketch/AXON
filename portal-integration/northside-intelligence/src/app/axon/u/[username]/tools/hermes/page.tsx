@@ -1,4 +1,4 @@
-import { ToolPlaceholder } from '@/components/axon-ui/tool-placeholder';
+import { HermesSyncTool } from '@/components/axon-ui/hermes-sync-tool';
 import { axonPublicPath } from '@/lib/axon/paths';
 import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
 
@@ -7,10 +7,8 @@ export default async function AxonHermesPage({ params }: { params: { username: s
   const basePath = axonPublicPath(username);
 
   return (
-    <ToolPlaceholder
-      title="Hermes Task Sync"
-      description="Mirror Hermes marketing tasks into AXON. Sync only — no LLM overlap per guardrails."
-      basePath={basePath}
-    />
+    <div className="p-6">
+      <HermesSyncTool basePath={basePath} />
+    </div>
   );
 }

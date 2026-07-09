@@ -22,7 +22,11 @@ const INTEGRATION_ROOT = join(AXON_ROOT, 'portal-integration/northside-intellige
 
 const COMPONENT_FILES = [
   'match-fit-venture-hub.tsx',
+  'match-fit-admin-tool.tsx',
   'dispatch-queue-panel.tsx',
+  'follow-up-tool.tsx',
+  'hermes-sync-tool.tsx',
+  'deal-tracker-tool.tsx',
   'axon-ambient-bg.tsx',
   'axon-home-settings.tsx',
   'axon-interface.tsx',
@@ -54,6 +58,8 @@ const COMPONENT_FILES = [
   'todo-panel.tsx',
   'tool-panel.tsx',
   'tool-placeholder.tsx',
+  'hermes-sync-tool.tsx',
+  'deal-tracker-tool.tsx',
 ];
 
 const LIB_FILES = [
@@ -102,8 +108,14 @@ const STALE_LIB_FILES = [
 ];
 
 const API_FILES = [
+  'deals/route.ts',
   'dispatch/fire/route.ts',
   'dispatch/queue/route.ts',
+  'dispatch/chat/route.ts',
+  'dispatch/[code]/route.ts',
+  'follow-up/route.ts',
+  'match-fit/session/route.ts',
+  'match-fit/data/route.ts',
   'preferences/route.ts',
   'reset/route.ts',
   'outreach/[id]/route.ts',

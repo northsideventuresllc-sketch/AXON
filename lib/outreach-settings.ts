@@ -145,17 +145,10 @@ const DEFAULT_FROM = 'Jonny <northside@northsideintelligence.com>';
 export const DEFAULT_OUTREACH_SETTINGS: OutreachSettings = {
   emails: [
     {
-      id: 'default-send',
+      id: 'default-jb',
       email: DEFAULT_FROM,
-      label: 'Primary',
+      label: 'JB · Primary',
       isDefaultSend: true,
-      isDefaultReceive: false,
-    },
-    {
-      id: 'default-receive',
-      email: 'northside@northsideintelligence.com',
-      label: 'Inbox',
-      isDefaultSend: false,
       isDefaultReceive: true,
     },
   ],

@@ -104,6 +104,19 @@ export function OutreachChannelSettings() {
     });
   }
 
+  /** One email as both send-from and reply-to (clears both roles on other accounts). */
+  function setBothDefaults(id: string) {
+    if (!settings) return;
+    save({
+      ...settings,
+      emails: settings.emails.map((e) => ({
+        ...e,
+        isDefaultSend: e.id === id,
+        isDefaultReceive: e.id === id,
+      })),
+    });
+  }
+
   function setDefaultSocial(id: string) {
     if (!settings) return;
     save({
@@ -214,6 +227,7 @@ export function OutreachChannelSettings() {
             email={email}
             onDefaultSend={() => setDefaultSend(email.id)}
             onDefaultReceive={() => setDefaultReceive(email.id)}
+            onBoth={() => setBothDefaults(email.id)}
             onRemove={() => removeEmail(email.id)}
           />
         ))}
@@ -379,13 +393,16 @@ function EmailRow({
   email,
   onDefaultSend,
   onDefaultReceive,
+  onBoth,
   onRemove,
 }: {
   email: OutreachEmailAccount;
   onDefaultSend: () => void;
   onDefaultReceive: () => void;
+  onBoth: () => void;
   onRemove: () => void;
 }) {
+  const isBoth = email.isDefaultSend && email.isDefaultReceive;
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-axon-border/60 bg-axon-elevated/30 px-3 py-2">
       <div className="min-w-0">
@@ -393,8 +410,9 @@ function EmailRow({
         <p className="truncate text-xs text-axon-muted">{email.email}</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <SelectBtn active={email.isDefaultSend} label="Send" onClick={onDefaultSend} />
-        <SelectBtn active={email.isDefaultReceive} label="Receive" onClick={onDefaultReceive} />
+        <SelectBtn active={email.isDefaultSend} label="Send from" onClick={onDefaultSend} />
+        <SelectBtn active={email.isDefaultReceive} label="Reply to" onClick={onDefaultReceive} />
+        <SelectBtn active={isBoth} label="Both" onClick={onBoth} />
         <button type="button" onClick={onRemove} className="text-xs text-axon-danger hover:underline">
           Remove
         </button>

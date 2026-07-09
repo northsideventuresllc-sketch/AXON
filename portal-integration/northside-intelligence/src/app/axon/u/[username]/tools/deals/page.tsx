@@ -1,4 +1,4 @@
-import { ToolPlaceholder } from '@/components/axon-ui/tool-placeholder';
+import { DealTrackerTool } from '@/components/axon-ui/deal-tracker-tool';
 import { axonPublicPath } from '@/lib/axon/paths';
 import { requireAxonPortalUser } from '@/lib/axon/portal-guard';
 
@@ -7,10 +7,8 @@ export default async function AxonDealsPage({ params }: { params: { username: st
   const basePath = axonPublicPath(username);
 
   return (
-    <ToolPlaceholder
-      title="Deal Tracker"
-      description="Track proposals, negotiations, and closed-won revenue across the pipeline."
-      basePath={basePath}
-    />
+    <div className="p-6">
+      <DealTrackerTool basePath={basePath} />
+    </div>
   );
 }

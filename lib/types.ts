@@ -37,6 +37,9 @@ export interface LeadMeta {
   sent_from_handle?: string | null;
   sent_at?: string | null;
   icp_scan?: { icp_fit?: boolean; segment?: string; industry?: string } | null;
+  follow_up_draft?: string | null;
+  follow_up_drafted_at?: string | null;
+  follow_up_sent_at?: string | null;
   raw?: string;
 }
 
