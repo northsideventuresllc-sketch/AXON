@@ -1,8 +1,8 @@
 /**
  * AXON agent dispatch — NI-Brain queue read + fire via Hermes workflow.
- * Patch: _AI/axon-patches/dispatch-one-click/
  */
 import { createClient } from '@supabase/supabase-js';
+import { GITHUB_PAT_ENV_HINT, resolveGithubPat } from './github-pat.mjs';
 
 const SUPABASE_URL =
   process.env.NI_BRAIN_SUPABASE_URL ||
@@ -27,33 +27,116 @@ export type DispatchRow = {
   action_type: string;
   dispatch_phrase: string | null;
   workflow_file: string | null;
+  workflow_repo: string | null;
   result_summary: string | null;
+  risk_tier: string | null;
+  source: string | null;
+  created_at: string | null;
+  updated_at: string | null;
   fired_at: string | null;
+  completed_at: string | null;
 };
 
-export async function fetchDispatchQueue(limit = 50): Promise<DispatchRow[]> {
+export type DispatchComplexity = 'high' | 'medium' | 'low';
+
+const SELECT_FIELDS =
+  'id,code,title,owner,manager_chat,repo,status,priority,action_type,dispatch_phrase,workflow_file,workflow_repo,result_summary,risk_tier,source,created_at,updated_at,fired_at,completed_at';
+
+/** Map repo / owner to venture label for filters. */
+export function deriveVenture(row: Pick<DispatchRow, 'repo' | 'workflow_repo' | 'owner' | 'code'>): string {
+  const blob = `${row.repo || ''} ${row.workflow_repo || ''} ${row.code || ''}`.toLowerCase();
+  if (blob.includes('match-fit') || blob.includes('matchfit')) return 'Match Fit';
+  if (blob.includes('northside-intelligence') || blob.includes('ni-portal')) return 'NORTHSiDE Portal';
+  if (blob.includes('axon')) return 'AXON';
+  if (blob.includes('nv-vault') || blob.includes('vault')) return 'nv-vault';
+  if (blob.includes('replyflow')) return 'ReplyFlow';
+  if (blob.includes('grantbot')) return 'GrantBot';
+  return row.owner?.trim() || 'Other';
+}
+
+/** Complexity from risk_tier or priority band. */
+export function deriveComplexity(row: Pick<DispatchRow, 'risk_tier' | 'priority'>): DispatchComplexity {
+  const tier = (row.risk_tier || '').toLowerCase();
+  if (['high', 'critical', 'p0', 'p1'].includes(tier)) return 'high';
+  if (['medium', 'moderate', 'p2'].includes(tier)) return 'medium';
+  if (['low', 'p3', 'routine'].includes(tier)) return 'low';
+  if (row.priority <= 3) return 'high';
+  if (row.priority <= 6) return 'medium';
+  return 'low';
+}
+
+export async function fetchDispatchQueue(limit = 100): Promise<DispatchRow[]> {
   const sb = serviceClient();
   const { data, error } = await sb
     .from('agent_dispatch')
-    .select(
-      'id,code,title,owner,manager_chat,repo,status,priority,action_type,dispatch_phrase,workflow_file,result_summary,fired_at',
-    )
-    .in('status', ['queued', 'running', 'blocked'])
+    .select(SELECT_FIELDS)
+    .in('status', ['queued', 'running', 'fired', 'blocked'])
     .order('priority', { ascending: true })
     .limit(limit);
   if (error) throw new Error(error.message);
   return data ?? [];
 }
 
+/** Completed dispatches since a date (default floor: 2025-06-29). */
+export async function fetchCompletedDispatches(
+  limit = 500,
+  since = '2025-06-29',
+): Promise<DispatchRow[]> {
+  const sb = serviceClient();
+  const sinceIso = since.includes('T') ? since : `${since}T00:00:00.000Z`;
+
+  const { data, error } = await sb
+    .from('agent_dispatch')
+    .select(SELECT_FIELDS)
+    .in('status', ['completed', 'fired'])
+    .or(`fired_at.gte.${sinceIso},completed_at.gte.${sinceIso},created_at.gte.${sinceIso}`)
+    .order('fired_at', { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function fetchDispatchTask(code: string): Promise<DispatchRow | null> {
+  const sb = serviceClient();
+  const { data, error } = await sb
+    .from('agent_dispatch')
+    .select(SELECT_FIELDS)
+    .eq('code', code)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export type DispatchTaskPatch = {
+  title?: string;
+  dispatch_phrase?: string | null;
+};
+
+export async function updateDispatchTask(code: string, patch: DispatchTaskPatch): Promise<DispatchRow> {
+  const sb = serviceClient();
+  const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.title !== undefined) row.title = patch.title;
+  if (patch.dispatch_phrase !== undefined) row.dispatch_phrase = patch.dispatch_phrase;
+
+  const { data, error } = await sb
+    .from('agent_dispatch')
+    .update(row)
+    .eq('code', code)
+    .select(SELECT_FIELDS)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function triggerHermesDispatch(code?: string) {
-  const token = process.env.GH_PAT || process.env.GITHUB_TOKEN;
-  if (!token) throw new Error('GH_PAT not configured for dispatch fire');
+  const token = await resolveGithubPat();
+  if (!token) throw new Error(`GitHub PAT not configured for dispatch fire — ${GITHUB_PAT_ENV_HINT}`);
   const body: { ref: string; inputs?: Record<string, string> } = { ref: 'main' };
   if (code) {
     body.inputs = { fire_only: 'true', seed_only: 'false', code };
   } else {
-    // Portal Dispatch All — fire only; scheduled Hermes cron handles seed 3×/day
-    body.inputs = { fire_only: 'true', seed_only: 'false' };
+    body.inputs = { fire_only: 'false', seed_only: 'false' };
   }
   const r = await fetch(
     'https://api.github.com/repos/northsideventuresllc-sketch/nv-vault/actions/workflows/hermes-agent-dispatch.yml/dispatches',
