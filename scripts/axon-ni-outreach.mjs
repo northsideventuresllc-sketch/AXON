@@ -73,6 +73,18 @@ async function logIcpDrop(sbInsert, { reason, stage, label, dryRun }) {
 
 async function main() {
   console.log(`AXON NI outreach — ${new Date().toISOString()}`);
+
+  // Training mode — auto cron disabled; manual workflow_dispatch only (JB 2026-07-09).
+  const manualRun =
+    process.env.AXON_OUTREACH_MANUAL_RUN === '1' ||
+    process.env.AXON_OUTREACH_MANUAL_RUN === 'true';
+  if (!manualRun) {
+    console.log(
+      'Auto outreach OFF (training mode). Use workflow_dispatch with manual_run=true.'
+    );
+    return;
+  }
+
   const { sbSelect, sbInsert, sbPatch } = createSupabaseClient(
     process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
   );
