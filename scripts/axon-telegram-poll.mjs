@@ -4,7 +4,7 @@
  */
 import { loadConfig } from '../lib/config.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
-import { handleTelegramCallback, handleTelegramMessage } from '../lib/telegram-handler.mjs';
+import { handleTelegramMessage } from '../lib/telegram-handler.mjs';
 import {
   EXPECTED_BOT_USERNAME,
   telegramDeleteWebhook,
@@ -66,24 +66,6 @@ async function main() {
 
   for (const update of updates) {
     nextOffset = Math.max(nextOffset, update.update_id + 1);
-
-    if (update.callback_query) {
-      const cq = update.callback_query;
-      const chatId = String(cq.message?.chat?.id);
-      if (chatId !== String(cfg.telegramChatId)) {
-        console.log(`Skipping callback from chat ${chatId}`);
-        continue;
-      }
-      try {
-        const reply = await handleTelegramCallback(cfg, sb, cq);
-        if (reply) replied++;
-      } catch (err) {
-        console.error('Callback handler error:', err.message);
-      }
-      if (!cfg.dryRun) await saveOffset(sb.sbUpsertSecret, nextOffset);
-      continue;
-    }
-
     const msg = update.message;
     if (!msg?.text) continue;
 

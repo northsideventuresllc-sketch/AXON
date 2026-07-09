@@ -10,54 +10,24 @@
 
 | Surface | What |
 |---------|------|
-| **Web UI (portal)** | Sign in at `northsideintelligence.com` → **AXON** in nav → `/axon-{username}/dashboard` (master account). Public waitlist at `/axon`. |
-| **Web UI (standalone)** | `workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/axon` — password login via `AXON_DASHBOARD_SECRET` |
-| **Telegram** | Chat with AXON like a normal AI assistant. Slash commands for pipeline actions. Drafts land nightly. |
+| **Telegram** | Drafts land in your chat nightly. Commands below. |
 | **NI-Brain** | `ni_brain_outreach` where `source = axon_ni_services` |
-| **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Self-Research / AXON Telegram Poll / AXON Telegram Setup |
+| **GitHub Actions** | Manual run: Actions → AXON NI Outreach / AXON Telegram Poll |
 
-Set `NEXT_PUBLIC_BASE_PATH=/axon` on the standalone Vercel **workspace** project.
-
-**Portal sync:** After UI changes in this repo, run `node scripts/sync-portal-ui.mjs ../northside-intelligence` and merge in the NI portal repo so `/axon-{username}/dashboard` stays current.
+There is no web UI yet (Phase 3–4).
 
 ---
 
-## Telegram — chat + slash commands
-
-**Talk normally:** Just message AXON in Telegram. It replies in plain human language — no jargon unless you ask for technical detail.
-
-**Built-in slash commands** (visible when you type `/` in Telegram):
+## Telegram commands
 
 ```
-/start, /help       — intro and how to use AXON
-/status             — pipeline summary in plain English
-/approve <id>       — send approved email (Resend) or mark LinkedIn approved
-/reject <id>        — pass on a lead
-/sent_li <id>       — you sent the LinkedIn DM manually
-/new                — fresh conversation note
+/status              — pipeline summary
+/approve <id>        — send approved email (Resend) or mark LinkedIn approved
+/reject <id>         — kill lead
+/sent_li <id>        — mark LinkedIn DM sent manually
 ```
 
 `<id>` = first 8 chars of lead UUID (shown in each draft message).
-
-**First-time setup** — register slash commands with BotFather API:
-
-```bash
-npm run telegram:setup
-# Or: GitHub Actions → AXON Telegram Setup → mode: commands
-```
-
-**Real-time chat (recommended)** — Vercel webhook (instant `/status` replies):
-
-```bash
-npm run telegram:setup -- --auto
-# Or: GitHub Actions → AXON Telegram Setup → mode: webhook (or auto)
-```
-
-Webhook URL (production): `https://workspace-git-main-northsideventuresllc-sketchs-projects.vercel.app/api/telegram-webhook`
-
-Do **not** use `northsideintelligence.com/axon/api/...` until NI proxy + middleware are aligned — the root Vercel `/api/telegram-webhook` route is the working endpoint today.
-
-Without webhook, GitHub Actions polls as fallback (best-effort ~hourly on free tier — not every 2 min).
 
 ---
 
@@ -68,16 +38,13 @@ Add in **Settings → Secrets → Actions** on this repo:
 | Secret | Required | Notes |
 |--------|----------|-------|
 | `SUPABASE_SERVICE_KEY` | **Yes** | NI-Brain service role |
-| `ANTHROPIC_API_KEY` | **Yes** | Haiku drafts + chat |
+| `ANTHROPIC_API_KEY` | **Yes** | Haiku drafts |
 | `GEMINI_API_KEY` | Yes | Prospect scan |
 | `SERPAPI_API_KEY` | Yes | Lead discovery |
 | `TELEGRAM_BOT_TOKEN` | **Yes** | From [@BotFather](https://t.me/BotFather) |
 | `TELEGRAM_CHAT_ID` | **Yes** | Your personal chat ID |
 | `RESEND_API_KEY` | For email send | After approve |
 | `RESEND_FROM_EMAIL` | Optional | Default: `Jonny <northside@northsideintelligence.com>` |
-| `TELEGRAM_WEBHOOK_SECRET` | Optional | Webhook auth header |
-| `AXON_WEBHOOK_URL` | Optional | Override default Vercel webhook URL |
-| `AXON_DASHBOARD_SECRET` | **Yes** | Web UI login |
 | `GEMINI_API_KEY_BACKUP` | Optional | Fallback |
 
 Keys can also live in NI-Brain `ni_platform_secrets` — env vars take precedence.
@@ -88,14 +55,9 @@ Keys can also live in NI-Brain `ni_platform_secrets` — env vars take precedenc
 
 ```bash
 cp .env.example .env   # fill from NI-Brain / GitHub secrets
-npm install
-npm run dev            # web UI at http://localhost:3000
 npm run outreach:dry   # no writes
 npm run outreach       # live run
-npm run research:dry   # autonomous research (no writes)
-npm run research       # live research → briefings
 npm run telegram:poll  # process Telegram commands once
-npm run telegram:setup # register slash commands
 ```
 
 ---
@@ -105,10 +67,7 @@ npm run telegram:setup # register slash commands
 | Workflow | Cron (UTC) | EST |
 |----------|------------|-----|
 | AXON NI Outreach | `30 7 * * *` | 2:30 AM (after Hermes 2 AM) |
-| AXON Self-Research | `0 11 * * 1,3,5,6` | 6:00 AM Mon/Wed/Fri/Sat |
-| AXON Telegram Poll | `*/15 * * * *` | Every 15 min fallback (skips when webhook active) |
-
-**J-Space & self-learning:** See `docs/axon-j-space.md` — autonomous research surfaces in daily briefs.
+| AXON Telegram Poll | `*/15 * * * *` | Every 15 min |
 
 ---
 
@@ -124,10 +83,7 @@ npm run telegram:setup # register slash commands
 ## Repo map
 
 ```
-app/           Next.js web UI (Jarvis + tools + outreach)
-components/    AXON UI components
-lib/           shared clients (supabase, ai, telegram, chat, resend)
-api/           Vercel serverless (Telegram webhook + legacy API)
-scripts/       outreach engine + telegram poll/setup
+lib/           shared clients (supabase, ai, telegram, resend, serpapi)
+scripts/       outreach engine + telegram poll
 .github/       scheduled workflows
 ```
