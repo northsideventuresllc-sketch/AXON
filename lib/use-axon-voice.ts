@@ -41,6 +41,8 @@ export function useAxonVoice(inputMode: 'chat' | 'voice', voiceId: string, readA
   const [transcript, setTranscript] = useState('');
   const [voiceSupported, setVoiceSupported] = useState(false);
   const [ttsSupported, setTtsSupported] = useState(false);
+  /** False until client has probed browser speech APIs (avoids stale disabled controls on first paint). */
+  const [capabilitiesReady, setCapabilitiesReady] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -50,6 +52,7 @@ export function useAxonVoice(inputMode: 'chat' | 'voice', voiceId: string, readA
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     setVoiceSupported(!!SR);
     setTtsSupported(!!window.speechSynthesis);
+    setCapabilitiesReady(true);
 
     if (!SR) return;
 
@@ -131,6 +134,7 @@ export function useAxonVoice(inputMode: 'chat' | 'voice', voiceId: string, readA
     stopSpeaking,
     voiceSupported,
     ttsSupported,
+    capabilitiesReady,
   };
 }
 
