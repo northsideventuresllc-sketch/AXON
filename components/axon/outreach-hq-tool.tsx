@@ -11,19 +11,22 @@ import { OutreachTrainingPanel } from './outreach-training-panel';
 import { OutreachIcpChecklist } from './outreach-icp-checklist';
 import { OutreachGenerateLeads } from './outreach-generate-leads';
 import { OutreachChannelSettings } from './outreach-channel-settings';
+import { FollowUpTool } from './follow-up-tool';
 import { STATUS_ORDER, BULK_STATUS_OPTIONS } from '@/lib/types';
 import { apiUrl } from '@/lib/api-base';
 import { appPath } from '@/lib/paths';
 import { consumeToolLaunch } from '@/lib/axon-user-tools';
 import { useAxonToolDisplayNames } from '@/lib/use-axon-tool-display-names';
 import { AxonToolLaunchOverlay } from './axon-tool-launch-overlay';
+import { AxonToolFooter } from './axon-tool-footer';
 
-export type OutreachHqTab = 'overview' | 'queue' | 'pipeline';
+export type OutreachHqTab = 'overview' | 'queue' | 'pipeline' | 'follow-up';
 
 const TABS: { id: OutreachHqTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'queue', label: 'Queue' },
   { id: 'pipeline', label: 'Pipeline' },
+  { id: 'follow-up', label: 'Follow-Up' },
 ];
 
 interface OutreachHqToolProps {
@@ -35,6 +38,8 @@ interface OutreachHqToolProps {
   basePath?: string;
   initialTab?: OutreachHqTab;
   pipelineFilter?: string;
+  followUpPending?: LeadWithMeta[];
+  followUpDone?: LeadWithMeta[];
 }
 
 export function OutreachHqTool({
@@ -46,6 +51,8 @@ export function OutreachHqTool({
   basePath,
   initialTab = 'overview',
   pipelineFilter,
+  followUpPending = [],
+  followUpDone = [],
 }: OutreachHqToolProps) {
   const { tools, getDisplayName } = useAxonToolDisplayNames();
   const outreach = tools.find((t) => t.slug === 'ni-outreach');
@@ -356,8 +363,13 @@ export function OutreachHqTool({
               </div>
             </section>
           )}
+
+          {tab === 'follow-up' && (
+            <FollowUpTool pending={followUpPending} done={followUpDone} basePath={basePath} embedded />
+          )}
         </div>
       </div>
+      <AxonToolFooter toolSlug="ni-outreach" basePath={basePath} />
     </>
   );
 }

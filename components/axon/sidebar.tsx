@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AxonCollapsibleSection } from './axon-collapsible-section';
+import { TestModeSidebarPanel } from './test-mode-sidebar-panel';
 
 const EXPLORE_ITS_URL = 'https://www.northsideintelligence.com/toolkit';
 
@@ -64,6 +65,7 @@ export function Sidebar({ basePath }: { basePath?: string }) {
   const pathname = usePathname();
   const quickLinks = useAxonQuickLinks();
   const [toolNames, setToolNames] = useState<Record<string, string>>({});
+  const [testModeOpen, setTestModeOpen] = useState(false);
 
   useEffect(() => {
     setToolNames(readToolDisplayNames());
@@ -117,11 +119,30 @@ export function Sidebar({ basePath }: { basePath?: string }) {
           })}
         </div>
 
-        <AxonCollapsibleSection title="AXON Tools" defaultOpen maxHeightClass="max-h-56">
+        <AxonCollapsibleSection title="AXON Tools" defaultOpen maxHeightClass="max-h-64">
           {AXON_USER_TOOLS.map((tool) => {
             const href = resolveHref(tool.href, basePath);
             const active = isActive(pathname, tool.href, basePath);
             const label = resolveToolDisplayName(tool, toolNames);
+
+            if (tool.action === 'test-mode-panel') {
+              return (
+                <button
+                  key={tool.slug}
+                  type="button"
+                  onClick={() => setTestModeOpen(true)}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    testModeOpen
+                      ? 'bg-axon-blue/15 text-axon-cyan'
+                      : 'text-axon-muted hover:bg-axon-elevated/50 hover:text-axon-text'
+                  }`}
+                >
+                  <span className="text-base opacity-70">{tool.icon}</span>
+                  <span className="truncate">{label}</span>
+                </button>
+              );
+            }
+
             return (
               <Link
                 key={tool.slug}
@@ -195,6 +216,7 @@ export function Sidebar({ basePath }: { basePath?: string }) {
         )}
         <SignOutButton basePath={basePath} />
       </div>
+      <TestModeSidebarPanel open={testModeOpen} onClose={() => setTestModeOpen(false)} />
     </aside>
   );
 }

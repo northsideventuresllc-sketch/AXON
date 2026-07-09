@@ -8,7 +8,7 @@ function newId(): string {
   return `id-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export type SocialPlatform = 'linkedin' | 'twitter' | 'instagram';
+export type SocialPlatform = 'linkedin' | 'reddit' | 'instagram' | 'custom';
 
 export interface OutreachSocialAccount {
   id: string;
@@ -18,6 +18,8 @@ export interface OutreachSocialAccount {
   /** Slug parsed from profileUrl — not entered manually. */
   handle: string;
   label: string;
+  /** For platform === 'custom' — operator-defined network name. */
+  customPlatformName?: string;
   isDefault: boolean;
   connectedAt?: string;
 }
@@ -29,18 +31,21 @@ export interface ParsedSocialProfile {
   label: string;
 }
 
-const PLATFORM_HOSTS: Record<SocialPlatform, RegExp[]> = {
+const PLATFORM_HOSTS: Record<Exclude<SocialPlatform, 'custom'>, RegExp[]> = {
   linkedin: [/^(www\.)?linkedin\.com$/i],
-  twitter: [/^(www\.)?(twitter|x)\.com$/i],
+  reddit: [/^(www\.)?reddit\.com$/i, /^(www\.)?old\.reddit\.com$/i],
   instagram: [/^(www\.)?instagram\.com$/i],
 };
 
-const RESERVED_TWITTER = new Set(['home', 'i', 'intent', 'share', 'search', 'settings', 'messages']);
+const RESERVED_REDDIT = new Set(['r', 'user', 'u', 'submit', 'message', 'prefs']);
 const RESERVED_INSTAGRAM = new Set(['p', 'reel', 'reels', 'explore', 'stories', 'accounts']);
 
 export function detectSocialPlatform(hostname: string): SocialPlatform | null {
   const host = hostname.replace(/^www\./, '').toLowerCase();
-  for (const [platform, patterns] of Object.entries(PLATFORM_HOSTS) as [SocialPlatform, RegExp[]][]) {
+  for (const [platform, patterns] of Object.entries(PLATFORM_HOSTS) as [
+    Exclude<SocialPlatform, 'custom'>,
+    RegExp[],
+  ][]) {
     if (patterns.some((re) => re.test(host) || re.test(`www.${host}`))) return platform;
   }
   return null;
@@ -48,7 +53,8 @@ export function detectSocialPlatform(hostname: string): SocialPlatform | null {
 
 export function parseSocialProfileUrl(
   input: string,
-  expectedPlatform?: SocialPlatform
+  expectedPlatform?: SocialPlatform,
+  customPlatformName?: string,
 ): ParsedSocialProfile | { error: string } {
   const raw = input.trim();
   if (!raw) return { error: 'Profile URL is required' };
@@ -64,11 +70,22 @@ export function parseSocialProfileUrl(
     return { error: 'Profile URL must use http or https' };
   }
 
-  const platform = detectSocialPlatform(url.hostname);
+  const platform = expectedPlatform === 'custom' ? 'custom' : detectSocialPlatform(url.hostname);
   if (!platform) {
-    return { error: 'Unsupported site — use LinkedIn, X/Twitter, or Instagram profile links' };
+    if (expectedPlatform === 'custom' && customPlatformName?.trim()) {
+      const profileUrl = `${url.protocol}//${url.hostname}${url.pathname}`.replace(/\/$/, '');
+      const handle = url.pathname.split('/').filter(Boolean).pop() || url.hostname;
+      const name = customPlatformName.trim();
+      return {
+        platform: 'custom',
+        profileUrl,
+        handle,
+        label: `${name} · ${handle}`,
+      };
+    }
+    return { error: 'Unsupported site — pick Other and enter a profile URL, or use LinkedIn, Reddit, or Instagram.' };
   }
-  if (expectedPlatform && platform !== expectedPlatform) {
+  if (expectedPlatform && expectedPlatform !== 'custom' && platform !== expectedPlatform) {
     return { error: `URL does not match selected platform (${expectedPlatform})` };
   }
 
@@ -82,10 +99,17 @@ export function parseSocialProfileUrl(
     }
     handle = segments[1] || '';
     if (!handle) return { error: 'LinkedIn URL is missing a profile or company slug' };
-  } else if (platform === 'twitter') {
-    handle = segments[0] || '';
-    if (!handle || RESERVED_TWITTER.has(handle.toLowerCase())) {
-      return { error: 'X/Twitter URL must be a profile link (e.g. https://x.com/username)' };
+  } else if (platform === 'reddit') {
+    const kind = segments[0]?.toLowerCase();
+    if (kind === 'user' || kind === 'u') {
+      handle = segments[1] || '';
+    } else if (kind === 'r') {
+      handle = `r/${segments[1] || ''}`;
+    } else {
+      handle = segments[0] || '';
+    }
+    if (!handle || RESERVED_REDDIT.has(handle.toLowerCase())) {
+      return { error: 'Reddit URL must be a user or subreddit link (e.g. https://reddit.com/user/name)' };
     }
   } else if (platform === 'instagram') {
     handle = segments[0] || '';
@@ -98,7 +122,7 @@ export function parseSocialProfileUrl(
   const label =
     platform === 'linkedin' && segments[0]?.toLowerCase() === 'company'
       ? `LinkedIn · ${handle}`
-      : `${platform === 'twitter' ? 'X' : platform.charAt(0).toUpperCase() + platform.slice(1)} · @${handle}`;
+      : `${platform.charAt(0).toUpperCase() + platform.slice(1)} · ${handle.startsWith('r/') ? handle : `@${handle}`}`;
 
   return { platform, profileUrl, handle, label };
 }
