@@ -193,6 +193,7 @@
   .axon-holo-cell-orb {
     grid-column: 2;
     grid-row: 3;
+    z-index: 6;
     transform: translateZ(72px);
   }
 

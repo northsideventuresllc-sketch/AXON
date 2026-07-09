@@ -306,6 +306,8 @@ export function AxonInterface({
             listening={voice.listening}
             onToggleListening={toggleVoiceListening}
             onSend={() => sendMessage(input)}
+            voiceSupported={voice.voiceSupported}
+            capabilitiesReady={voice.capabilitiesReady}
           />
         ) : (
           <div className="flex gap-2">
@@ -369,6 +371,8 @@ export function AxonInterface({
             listening={voice.listening}
             onToggleListening={toggleVoiceListening}
             onSend={() => sendMessage(input)}
+            voiceSupported={voice.voiceSupported}
+            capabilitiesReady={voice.capabilitiesReady}
           />
         ) : (
           <div className="flex gap-2">
@@ -481,7 +485,6 @@ export function AxonInterface({
                     savePrefs({ input_mode: 'voice' });
                   }}
                   label="Voice"
-                  disabled={!voice.voiceSupported}
                 />
               </div>
               <AxonOrbStatus
@@ -500,7 +503,6 @@ export function AxonInterface({
                   savePrefs({ read_aloud: v });
                   if (!v) voice.stopSpeaking();
                 }}
-                disabled={!voice.ttsSupported}
               />
               <label className="flex items-center gap-2 text-xs text-axon-muted">
                 Voice
@@ -527,6 +529,8 @@ export function AxonInterface({
                 listening={voice.listening}
                 onToggleListening={toggleVoiceListening}
                 onSend={() => sendMessage(input)}
+                voiceSupported={voice.voiceSupported}
+                capabilitiesReady={voice.capabilitiesReady}
                 compact
               />
             )}
@@ -649,6 +653,8 @@ function VoiceInputControls({
   listening,
   onToggleListening,
   onSend,
+  voiceSupported = true,
+  capabilitiesReady = false,
   compact = false,
 }: {
   input: string;
@@ -656,14 +662,20 @@ function VoiceInputControls({
   listening: boolean;
   onToggleListening: () => void;
   onSend: () => void;
+  voiceSupported?: boolean;
+  capabilitiesReady?: boolean;
   compact?: boolean;
 }) {
+  const micUnavailable = capabilitiesReady && !voiceSupported;
+
   return (
     <div className={`flex w-full flex-col gap-3 ${compact ? 'max-w-md' : ''}`}>
       <button
         type="button"
         onClick={onToggleListening}
-        className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+        disabled={micUnavailable}
+        title={micUnavailable ? 'Speech recognition is not supported in this browser' : undefined}
+        className={`rounded-xl border px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
           listening
             ? 'border-axon-cyan bg-axon-cyan/10 text-axon-cyan'
             : 'border-axon-border hover:border-axon-blue-glow/40'
@@ -671,6 +683,11 @@ function VoiceInputControls({
       >
         {listening ? 'Stop listening' : 'Tap to speak'}
       </button>
+      {micUnavailable && (
+        <p className="text-center text-xs text-axon-muted">
+          Voice capture needs Chrome, Edge, or Safari on a secure connection.
+        </p>
+      )}
       {input && <p className="text-center text-sm text-axon-muted">&ldquo;{input}&rdquo;</p>}
       <button
         type="button"

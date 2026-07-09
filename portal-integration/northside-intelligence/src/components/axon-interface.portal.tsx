@@ -504,7 +504,6 @@ export function AxonInterface({
                     savePrefs({ input_mode: 'voice' });
                   }}
                   label="Voice"
-                  disabled={!voice.voiceSupported}
                 />
               </div>
               <AxonOrbStatus
@@ -523,7 +522,6 @@ export function AxonInterface({
                   savePrefs({ read_aloud: v });
                   if (!v) voice.stopSpeaking();
                 }}
-                disabled={!voice.ttsSupported}
               />
               <label className="flex items-center gap-2 text-xs text-axon-muted">
                 Voice
