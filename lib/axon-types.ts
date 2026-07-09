@@ -291,10 +291,11 @@ export const AXON_TOOLS: AxonTool[] = [
     slug: 'follow-up-engine',
     name: 'Follow-Up Engine',
     description: 'Automated follow-up sequences for sent outreach. Re-engage warm leads.',
-    status: 'building',
+    status: 'active',
     icon: '↻',
     href: '/tools/follow-up',
     phase: 1,
+    metric: 'sent',
   },
   {
     slug: 'hermes-sync',
