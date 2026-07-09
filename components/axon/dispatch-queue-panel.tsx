@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiUrl } from '@/lib/api-base';
+import { AxonToolFooter } from './axon-tool-footer';
 
 type DispatchItem = {
   id: string;
@@ -37,7 +38,10 @@ const STATUS_LABEL: Record<string, string> = {
   running: 'Running',
   fired: 'Sent to manager',
   blocked: 'Blocked',
+  completed: 'Completed',
 };
+
+const COMPLETED_SINCE = '2025-06-29';
 
 const COMPLEXITY_LABEL = { high: 'High', medium: 'Medium', low: 'Low' } as const;
 const COMPLEXITY_ORDER = { high: 0, medium: 1, low: 2 };
@@ -134,7 +138,9 @@ export function DispatchQueuePanel() {
     setError(null);
     try {
       const url =
-        queueView === 'completed' ? `${QUEUE_API}?view=completed` : QUEUE_API;
+        queueView === 'completed'
+          ? `${QUEUE_API}?view=completed&since=${COMPLETED_SINCE}&limit=500`
+          : QUEUE_API;
       const r = await fetch(url);
       const data = await r.json();
       if (!data.ok) throw new Error(data.error || 'load failed');
@@ -209,6 +215,11 @@ export function DispatchQueuePanel() {
           <p className="mt-1 max-w-xl text-sm text-axon-muted">
             One click fires Hermes workflows and cues repo managers. Live progress below — Telegram
             summary when complete.
+            {queueView === 'completed' && (
+              <span className="mt-1 block text-axon-gold">
+                Showing merged activity since June 29, 2025 (this week and last week).
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -358,6 +369,7 @@ export function DispatchQueuePanel() {
           }}
         />
       )}
+      <AxonToolFooter toolSlug="manager-dispatch" />
     </div>
   );
 }

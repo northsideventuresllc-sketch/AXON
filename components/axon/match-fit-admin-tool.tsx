@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiUrl } from '@/lib/api-base';
 import { consumeToolLaunch } from '@/lib/axon-user-tools';
 import { AxonToolLaunchOverlay } from './axon-tool-launch-overlay';
+import { AxonToolFooter } from './axon-tool-footer';
 import { MF_ADMIN_LINKS } from '@/lib/match-fit-hub';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -318,14 +319,13 @@ function AdTrackingTab({ summary }: { summary: AdSummary }) {
 // ─── Login Form ─────────────────────────────────────────────────────────────
 
 function LoginForm({ onSuccess }: { onSuccess: () => void }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [accessCode, setAccessCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    emailRef.current?.focus();
+    inputRef.current?.focus();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -336,11 +336,11 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       const res = await fetch(SESSION_API, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ accessCode: accessCode.trim() }),
       });
       const data = await res.json();
       if (!data.ok) {
-        setError(data.error || 'Login failed');
+        setError(data.error || 'Access denied');
       } else {
         onSuccess();
       }
@@ -358,39 +358,24 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           <p className="text-xs uppercase tracking-[0.2em] text-axon-muted">AXON · Sector 1A</p>
           <h1 className="mt-2 text-2xl font-semibold text-white">Match Fit Admin</h1>
           <p className="mt-2 text-sm text-axon-muted">
-            Sign in with your Match Fit admin credentials to continue.
+            Enter your Match Fit admin access code to continue.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <label className="text-xs font-medium uppercase tracking-wider text-axon-muted">
-              Email
+              Access Code
             </label>
             <input
-              ref={emailRef}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              ref={inputRef}
+              type="password"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value)}
+              autoComplete="one-time-code"
               required
               className="w-full rounded-lg border border-axon-border bg-axon-surface px-4 py-2.5 text-sm text-white placeholder-axon-muted/50 outline-none transition focus:border-[#FF7E00]/60 focus:ring-1 focus:ring-[#FF7E00]/30"
-              placeholder="admin@match-fit.net"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium uppercase tracking-wider text-axon-muted">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              className="w-full rounded-lg border border-axon-border bg-axon-surface px-4 py-2.5 text-sm text-white outline-none transition focus:border-[#FF7E00]/60 focus:ring-1 focus:ring-[#FF7E00]/30"
-              placeholder="••••••••"
+              placeholder="Your access code"
             />
           </div>
 
@@ -402,16 +387,16 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
           <button
             type="submit"
-            disabled={loading || !email || !password}
+            disabled={loading || !accessCode.trim()}
             className="w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50"
             style={{ background: loading ? 'rgba(255,126,0,0.4)' : MF_ACCENT }}
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? 'Verifying…' : 'Continue'}
           </button>
         </form>
 
         <p className="text-center text-xs text-axon-muted">
-          Credentials are session-only and never stored in this browser or git.
+          Access code is session-only and never stored in this browser or git.
         </p>
       </div>
     </div>
@@ -595,6 +580,7 @@ export function MatchFitAdminTool() {
           </button>
         </div>
       )}
+      <AxonToolFooter toolSlug="match-fit-admin" />
     </div>
   );
 }

@@ -12,27 +12,39 @@ interface FollowUpToolProps {
   pending: LeadWithMeta[];
   done: LeadWithMeta[];
   basePath?: string;
+  /** When true, hide outer header (used inside Outreach HQ). */
+  embedded?: boolean;
 }
 
-export function FollowUpTool({ pending, done, basePath }: FollowUpToolProps) {
+export function FollowUpTool({ pending, done, basePath, embedded }: FollowUpToolProps) {
   const [tab, setTab] = useState<FollowUpTab>('pending');
   const homeHref = basePath ? appPath('/', basePath) : '/';
 
   const leads = tab === 'pending' ? pending : done;
 
   return (
-    <div className="axon-tool-enter space-y-8">
-      <header>
-        <Link href={homeHref} className="text-sm text-axon-muted hover:text-axon-gold">
-          ← Back to AXON
-        </Link>
-        <p className="mt-3 text-xs uppercase tracking-[0.25em] text-axon-gold">AXON Tool</p>
-        <h1 className="mt-1 text-3xl font-semibold">Follow-Up Engine</h1>
-        <p className="mt-2 max-w-2xl text-sm text-axon-muted">
-          Re-engage sent leads with AI-drafted follow-ups. Draft, copy, and mark sent — all in one
-          place.
-        </p>
-      </header>
+    <div className={embedded ? 'space-y-6' : 'axon-tool-enter space-y-8'}>
+      {!embedded && (
+        <header>
+          <Link href={homeHref} className="text-sm text-axon-muted hover:text-axon-gold">
+            ← Back to AXON
+          </Link>
+          <p className="mt-3 text-xs uppercase tracking-[0.25em] text-axon-gold">AXON Tool</p>
+          <h1 className="mt-1 text-3xl font-semibold">Follow-Up Engine</h1>
+          <p className="mt-2 max-w-2xl text-sm text-axon-muted">
+            Re-engage sent leads with AI-drafted follow-ups. Draft, copy, and mark sent — all in one
+            place.
+          </p>
+        </header>
+      )}
+      {embedded && (
+        <div>
+          <h2 className="text-xl font-medium">Follow-Up Engine</h2>
+          <p className="mt-1 text-sm text-axon-muted">
+            Re-engage sent leads with AI-drafted follow-ups — part of NI Outreach HQ.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4 sm:grid-cols-3">
         <StatCard label="Awaiting Follow-Up" value={pending.length} accent="gold" />

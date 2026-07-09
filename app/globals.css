@@ -271,7 +271,7 @@
 
   .axon-holo-orb-deck-controls {
     position: relative;
-    z-index: 30;
+    z-index: 50;
     pointer-events: auto;
   }
 

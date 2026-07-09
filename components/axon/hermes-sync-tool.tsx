@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { apiUrl } from '@/lib/api-base';
 import { appPath } from '@/lib/paths';
+import { AxonToolFooter } from './axon-tool-footer';
 
 type DispatchTask = {
   id: string;
@@ -61,9 +62,9 @@ export function HermesSyncTool({ basePath }: { basePath?: string }) {
           ← Back to AXON
         </Link>
         <p className="mt-3 text-xs uppercase tracking-[0.25em] text-axon-gold">AXON Tool</p>
-        <h1 className="mt-1 text-3xl font-semibold">Hermes Task Sync</h1>
+        <h1 className="mt-1 text-3xl font-semibold">NI Marketing HQ</h1>
         <p className="mt-2 max-w-2xl text-sm text-axon-muted">
-          Agent dispatch tasks from NI-Brain — status view only. Fire and manage workflows in{' '}
+          Marketing dispatch tasks from NI-Brain — status view. Fire and manage workflows in{' '}
           <Link href={dispatchHref} className="text-axon-gold hover:underline">
             Repo Manager Dispatch
           </Link>
@@ -143,6 +144,7 @@ export function HermesSyncTool({ basePath }: { basePath?: string }) {
           Open Repo Manager Dispatch →
         </Link>
       </div>
+      <AxonToolFooter toolSlug="hermes-sync" basePath={basePath} />
     </div>
   );
 }

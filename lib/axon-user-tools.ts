@@ -6,6 +6,8 @@ export interface AxonUserTool {
   href: string;
   icon: string;
   sourceType: AxonUserToolSource;
+  /** Sidebar-only action (no route navigation). */
+  action?: 'test-mode-panel';
 }
 
 /** Built-in AXON tools surfaced under sidebar "AXON Tools". Order = sidebar order. */
@@ -19,7 +21,7 @@ export const AXON_USER_TOOLS: AxonUserTool[] = [
   },
   {
     slug: 'match-fit-admin',
-    defaultDisplayName: 'AXON Management',
+    defaultDisplayName: 'AXON Management-Match Fit',
     href: '/tools/match-fit-admin',
     icon: '🏋',
     sourceType: 'custom',
@@ -29,13 +31,6 @@ export const AXON_USER_TOOLS: AxonUserTool[] = [
     defaultDisplayName: 'NI Outreach HQ',
     href: '/tools/ni-outreach',
     icon: '✉',
-    sourceType: 'outreach_engine',
-  },
-  {
-    slug: 'follow-up-engine',
-    defaultDisplayName: 'Follow-Up Engine',
-    href: '/tools/follow-up',
-    icon: '↻',
     sourceType: 'outreach_engine',
   },
   {
@@ -58,6 +53,7 @@ export const AXON_USER_TOOLS: AxonUserTool[] = [
     href: '/tools/test-mode',
     icon: '🧪',
     sourceType: 'custom',
+    action: 'test-mode-panel',
   },
 ];
 

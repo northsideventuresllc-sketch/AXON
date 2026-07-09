@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiUrl } from '@/lib/api-base';
 import { getItSkeletonBySlug } from '@/lib/it-axon-skeleton';
+import { AXON_USER_TOOLS } from '@/lib/axon-user-tools';
+import { getAxonToolMeta } from '@/lib/axon-tool-meta';
 import { appPath } from '@/lib/paths';
 
 type BuilderMessage = { role: 'user' | 'assistant' | 'system'; content: string };
@@ -12,7 +14,10 @@ type BuilderMessage = { role: 'user' | 'assistant' | 'system'; content: string }
 export function ItBuilderTool({ basePath }: { basePath?: string }) {
   const searchParams = useSearchParams();
   const slug = searchParams.get('slug') ?? '';
+  const axonTool = searchParams.get('axonTool') ?? '';
   const skeleton = slug ? getItSkeletonBySlug(slug) : undefined;
+  const axonToolDef = axonTool ? AXON_USER_TOOLS.find((t) => t.slug === axonTool) : undefined;
+  const axonMeta = axonToolDef ? getAxonToolMeta(axonToolDef) : null;
   const [messages, setMessages] = useState<BuilderMessage[]>([]);
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -20,17 +25,22 @@ export function ItBuilderTool({ basePath }: { basePath?: string }) {
   const [loading, setLoading] = useState(false);
 
   const dash = basePath ? appPath('/dashboard', basePath) : '/';
+  const mode = axonTool && axonMeta ? 'axon-tool' : slug && skeleton ? 'it' : null;
 
   useEffect(() => {
-    if (!slug || !skeleton) return;
+    if (!mode) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
       try {
+        const body =
+          mode === 'axon-tool'
+            ? { action: 'start', axonTool }
+            : { action: 'start', slug };
         const r = await fetch(apiUrl('/api/axon/it-builder'), {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ action: 'start', slug }),
+          body: JSON.stringify(body),
         });
         const data = await r.json();
         if (cancelled || !data.ok) return;
@@ -44,7 +54,7 @@ export function ItBuilderTool({ basePath }: { basePath?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [slug, skeleton]);
+  }, [mode, slug, skeleton, axonTool, axonMeta]);
 
   async function send() {
     if (!input.trim() || !sessionId || loading) return;
@@ -68,12 +78,13 @@ export function ItBuilderTool({ basePath }: { basePath?: string }) {
     }
   }
 
-  if (!slug || !skeleton) {
+  if (!mode) {
     return (
       <div className="p-6">
         <h1 className="text-xl font-semibold text-white">AXON Tool Builder</h1>
         <p className="mt-2 text-sm text-axon-muted">
-          Open this page from an IT&apos;s <strong className="text-axon-gold">MODIFY</strong> button in the sidebar.
+          Open from an IT&apos;s <strong className="text-axon-gold">MODIFY</strong> button or an AXON
+          tool&apos;s <strong className="text-axon-gold">Adjust Functionality</strong> link.
         </p>
         <Link href={dash} className="mt-4 inline-block text-sm text-axon-gold hover:underline">
           ← Back to AXON Dash
@@ -82,19 +93,29 @@ export function ItBuilderTool({ basePath }: { basePath?: string }) {
     );
   }
 
+  const title =
+    mode === 'axon-tool'
+      ? `${axonToolDef?.defaultDisplayName ?? axonTool} → Adjust`
+      : `${skeleton?.name} → AXON Toolbox`;
+
   const builtToolPath = toolHref ? (basePath ? appPath(toolHref, basePath) : toolHref) : null;
 
   return (
     <div className="flex h-[min(80vh,720px)] flex-col p-6">
       <header className="shrink-0 border-b border-axon-border pb-4">
         <p className="text-xs uppercase tracking-wider text-axon-muted">Coding AXON tool</p>
-        <h1 className="text-xl font-semibold text-white">{skeleton.name} → AXON Toolbox</h1>
-        <p className="mt-1 text-sm text-axon-muted">
-          Skeleton status: <span className="text-axon-gold">{skeleton.skeletonStatus}</span> — full codegen UI ships next.
-        </p>
+        <h1 className="text-xl font-semibold text-white">{title}</h1>
+        {axonMeta && (
+          <p className="mt-1 text-sm text-axon-muted">{axonMeta.setupDescription}</p>
+        )}
+        {mode === 'it' && skeleton && (
+          <p className="mt-1 text-sm text-axon-muted">
+            Skeleton status: <span className="text-axon-gold">{skeleton.skeletonStatus}</span>
+          </p>
+        )}
         {builtToolPath && (
           <Link href={builtToolPath} className="mt-2 inline-block text-sm text-axon-gold hover:underline">
-            Open AXON tool MVP →
+            Open tool →
           </Link>
         )}
       </header>

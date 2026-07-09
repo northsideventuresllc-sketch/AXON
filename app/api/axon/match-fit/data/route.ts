@@ -1,9 +1,9 @@
 /**
  * Match Fit admin data — serves NI-Brain reads to the AXON admin portal tool.
  */
-import { createHash } from 'crypto';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { MF_SESSION_COOKIE, getMatchFitAccessCode, getMatchFitLegacyCredentials, isMatchFitSessionValid } from '@/lib/match-fit-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,24 +12,15 @@ const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
   'https://kxijunwgbrlfzvgkhklo.supabase.co';
 
-const SESSION_COOKIE = 'mf_admin_session';
-
-function deriveToken(email: string): string {
-  const secret =
-    process.env.MF_ADMIN_SECRET ||
-    process.env.AXON_DASHBOARD_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 32) ||
-    'dev-fallback';
-  return createHash('sha256').update(`mf:${email}:${secret}`).digest('hex');
-}
+const SESSION_COOKIE = MF_SESSION_COOKIE;
 
 async function checkSession(): Promise<boolean> {
-  const envEmail = process.env.MF_ADMIN_EMAIL ?? '';
-  if (!envEmail) return false;
+  const envCode = getMatchFitAccessCode();
+  const { email: envEmail } = getMatchFitLegacyCredentials();
+  if (!envCode && !envEmail) return false;
   const cookieStore = await cookies();
   const stored = cookieStore.get(SESSION_COOKIE)?.value ?? '';
-  const expected = deriveToken(envEmail);
-  return stored === expected;
+  return isMatchFitSessionValid(stored);
 }
 
 function getClient() {

@@ -22,14 +22,19 @@ const PLATFORM_OPTIONS: { id: SocialPlatform; label: string; placeholder: string
     placeholder: 'https://www.linkedin.com/in/your-profile',
   },
   {
-    id: 'twitter',
-    label: 'X / Twitter',
-    placeholder: 'https://x.com/your-profile',
+    id: 'reddit',
+    label: 'Reddit',
+    placeholder: 'https://www.reddit.com/user/your-profile',
   },
   {
     id: 'instagram',
     label: 'Instagram',
     placeholder: 'https://www.instagram.com/your-profile',
+  },
+  {
+    id: 'custom',
+    label: 'Other',
+    placeholder: 'https://your-network.com/your-profile',
   },
 ];
 
@@ -44,6 +49,7 @@ export function OutreachChannelSettings() {
   const [newSocialPlatform, setNewSocialPlatform] = useState<SocialPlatform>('linkedin');
   const [newSocialUrl, setNewSocialUrl] = useState('');
   const [newSocialLabel, setNewSocialLabel] = useState('');
+  const [newSocialCustomName, setNewSocialCustomName] = useState('');
   const [connectError, setConnectError] = useState<string | null>(null);
   const [blockedDeleteNotice, setBlockedDeleteNotice] = useState<string | null>(null);
 
@@ -136,7 +142,11 @@ export function OutreachChannelSettings() {
   function connectSocial() {
     if (!settings) return;
     setConnectError(null);
-    const parsed = parseSocialProfileUrl(newSocialUrl, newSocialPlatform);
+    const parsed = parseSocialProfileUrl(
+      newSocialUrl,
+      newSocialPlatform,
+      newSocialPlatform === 'custom' ? newSocialCustomName : undefined,
+    );
     if ('error' in parsed) {
       setConnectError(parsed.error);
       return;
@@ -291,6 +301,15 @@ export function OutreachChannelSettings() {
               </button>
             ))}
           </div>
+          {newSocialPlatform === 'custom' && (
+            <input
+              type="text"
+              placeholder="Network name (e.g. TikTok, YouTube)"
+              value={newSocialCustomName}
+              onChange={(e) => setNewSocialCustomName(e.target.value)}
+              className="w-full rounded-lg border border-axon-border bg-axon-elevated px-3 py-2 text-sm"
+            />
+          )}
           <input
             type="url"
             placeholder={platformPlaceholder}

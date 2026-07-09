@@ -77,15 +77,22 @@ export async function fetchDispatchQueue(limit = 100): Promise<DispatchRow[]> {
   return data ?? [];
 }
 
-/** Completed dispatches — status completed or fired with history. */
-export async function fetchCompletedDispatches(limit = 100): Promise<DispatchRow[]> {
+/** Completed dispatches since a date (default floor: 2025-06-29). */
+export async function fetchCompletedDispatches(
+  limit = 500,
+  since = '2025-06-29',
+): Promise<DispatchRow[]> {
   const sb = serviceClient();
+  const sinceIso = since.includes('T') ? since : `${since}T00:00:00.000Z`;
+
   const { data, error } = await sb
     .from('agent_dispatch')
     .select(SELECT_FIELDS)
     .in('status', ['completed', 'fired'])
+    .or(`fired_at.gte.${sinceIso},completed_at.gte.${sinceIso},created_at.gte.${sinceIso}`)
     .order('fired_at', { ascending: false, nullsFirst: false })
     .limit(limit);
+
   if (error) throw new Error(error.message);
   return data ?? [];
 }

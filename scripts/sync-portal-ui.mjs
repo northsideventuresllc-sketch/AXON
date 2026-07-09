@@ -55,6 +55,8 @@ const COMPONENT_FILES = [
   'sidebar.tsx',
   'axon-collapsible-section.tsx',
   'test-mode-tool.tsx',
+  'test-mode-sidebar-panel.tsx',
+  'axon-tool-footer.tsx',
   'it-builder-tool.tsx',
   'stats-cards.tsx',
   'status-badge.tsx',
@@ -75,6 +77,9 @@ const LIB_FILES = [
   'axon-types.ts',
   'axon-user-tools.ts',
   'it-axon-skeleton.ts',
+  'match-fit-session.ts',
+  'axon-copy.ts',
+  'axon-tool-meta.ts',
   'axon-workspace.ts',
   'it-quick-links.ts',
   'outreach-edit.ts',
@@ -152,6 +157,9 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/use-axon-tool-display-names'/g, "from '@/lib/axon/use-axon-tool-display-names'")
     .replace(/from '@\/lib\/agent-dispatch'/g, "from '@/lib/axon/agent-dispatch'")
     .replace(/from '@\/lib\/it-axon-skeleton'/g, "from '@/lib/axon/it-axon-skeleton'")
+    .replace(/from '@\/lib\/match-fit-session'/g, "from '@/lib/axon/match-fit-session'")
+    .replace(/from '@\/lib\/axon-tool-meta'/g, "from '@/lib/axon/axon-tool-meta'")
+    .replace(/from '@\/lib\/axon-copy'/g, "from '@/lib/axon/axon-copy'")
     .replace(/from '@\/lib\/match-fit-hub'/g, "from '@/lib/axon/match-fit-hub'")
     .replace(/from '@\/lib\/paths'/g, "from '@/lib/axon/app-path'");
 }
