@@ -39,6 +39,29 @@
 }
 
 @layer utilities {
+  .axon-sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(96, 165, 250, 0.45) rgba(10, 20, 36, 0.6);
+  }
+
+  .axon-sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .axon-sidebar-scroll::-webkit-scrollbar-track {
+    background: rgba(10, 20, 36, 0.6);
+    border-radius: 9999px;
+  }
+
+  .axon-sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(96, 165, 250, 0.45);
+    border-radius: 9999px;
+  }
+
+  .axon-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(96, 165, 250, 0.65);
+  }
+
   .axon-grid-bg {
     background-image:
       linear-gradient(rgba(37, 99, 235, 0.035) 1px, transparent 1px),

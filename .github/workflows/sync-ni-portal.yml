@@ -39,6 +39,7 @@ on:
       - 'app/api/axon/follow-up/**'
       - 'app/api/axon/deals/**'
       - 'app/api/axon/match-fit/**'
+      - 'app/api/axon/it-builder/**'
       - 'lib/axon-quick-links.ts'
       - 'lib/use-axon-quick-links.ts'
       - 'lib/leads.ts'
