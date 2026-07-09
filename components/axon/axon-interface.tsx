@@ -7,6 +7,8 @@ import { BriefingPanel } from './briefing-panel';
 import { TodoPanel } from './todo-panel';
 import { AxonLabFloor } from './axon-lab-floor';
 import { NotificationsPanel } from './notifications-panel';
+import { NotificationDetailModal } from './notification-detail-modal';
+import { NotificationOrganizeModal } from './notification-organize-modal';
 import { PanelFocusView, type FocusPanelId } from './panel-focus-view';
 import { PreviousChatsFlip } from './previous-chats-flip';
 import {
@@ -27,6 +29,7 @@ import {
   tagMessageWithSession,
 } from '@/lib/axon-chat-sessions';
 import { useAxonVoice } from '@/lib/use-axon-voice';
+import { useNotificationActions } from '@/lib/use-notification-actions';
 import { apiUrl } from '@/lib/api-base';
 
 interface AxonInterfaceProps {
@@ -70,8 +73,12 @@ export function AxonInterface({
   const [focusPanel, setFocusPanel] = useState<FocusPanelId | null>(null);
   const [urgentChatOverlay, setUrgentChatOverlay] = useState(false);
   const [notifTrigger, setNotifTrigger] = useState<{ notification: AxonNotification; key: number } | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<AxonNotification | null>(null);
+  const [notifArchivedView, setNotifArchivedView] = useState(false);
+  const [showOrganizeModal, setShowOrganizeModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const voice = useAxonVoice(inputMode, voiceId, readAloud);
+  const notifActions = useNotificationActions(setPreferences);
 
   const toggleVoiceListening = useCallback(() => {
     if (inputMode !== 'voice') return;
@@ -438,16 +445,17 @@ export function AxonInterface({
             onUrgentStart={() => setUrgentChatOverlay(true)}
             onUrgentEnd={() => setUrgentChatOverlay(false)}
             onOpen={(n) => {
-              fetch(apiUrl('/api/axon/preferences'), {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ markReadId: n.id }),
-              })
-                .then((r) => r.json())
-                .then((d) => d.preferences && setPreferences(d.preferences));
+              if (!n.interactive) {
+                void notifActions.markRead(n.id);
+              }
             }}
+            onSelectNotification={(n) => {
+              setNotifArchivedView(Boolean(n.archived));
+              setSelectedNotification(n);
+            }}
+            onOrganize={() => setShowOrganizeModal(true)}
           />,
-          zone === 'holo-right-lower' ? 'axon-holo-panel w-full' : 'w-full'
+          zone === 'holo-right-lower' ? 'axon-holo-panel axon-notif-widget-slot w-full' : 'w-full'
         );
       case 'orb':
         return wrap(
@@ -643,6 +651,36 @@ export function AxonInterface({
         }
         chatGhost={chatGhost}
       />
+
+      {selectedNotification && (
+        <NotificationDetailModal
+          notification={selectedNotification}
+          archivedView={notifArchivedView}
+          onClose={() => setSelectedNotification(null)}
+          onMarkRead={notifActions.markRead}
+          onResolve={notifActions.resolve}
+          onDecline={notifActions.decline}
+          onDelete={async (id) => {
+            await notifActions.remove(id);
+            setSelectedNotification(null);
+          }}
+          onRevive={async (id) => {
+            await notifActions.revive(id);
+            setSelectedNotification(null);
+          }}
+        />
+      )}
+
+      {showOrganizeModal && (
+        <NotificationOrganizeModal
+          notifications={preferences.notificationsInbox}
+          onClose={() => setShowOrganizeModal(false)}
+          onArchive={async (ids) => {
+            await notifActions.archive(ids);
+            setShowOrganizeModal(false);
+          }}
+        />
+      )}
     </>
   );
 }

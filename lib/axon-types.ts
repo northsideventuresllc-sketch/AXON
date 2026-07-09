@@ -185,12 +185,19 @@ export interface HomeLayoutPrefs {
   hidden: HomeWidgetId[];
 }
 
+export interface NotificationLink {
+  label: string;
+  url: string;
+}
+
 export interface NotificationSettings {
   enabled: boolean;
   urgencyEnabled: boolean;
   urgencyFlashSeconds: number;
   urgencySound: boolean;
   urgencyVolume: number;
+  /** Hours after read before auto-archive (default 24). */
+  readAutoArchiveHours: number;
   integrations: {
     outreach: boolean;
     telegram: boolean;
@@ -213,8 +220,18 @@ export interface AxonNotification {
   body?: string;
   urgent: boolean;
   href?: string;
+  links?: NotificationLink[];
   read: boolean;
+  read_at?: string;
   created_at: string;
+  /** Interactive notifications require chat resolution or decline before read. */
+  interactive: boolean;
+  /** Suggested action prompt for interactive notifications. */
+  prompt?: string;
+  archived?: boolean;
+  archived_at?: string;
+  resolved?: boolean;
+  declined?: boolean;
 }
 
 export interface AxonPreferences {
@@ -257,7 +274,11 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
     outreachReply: false,
   },
   customNotUrgent: [],
+  readAutoArchiveHours: 24,
 };
+
+/** Archived notifications are permanently deleted after this many days. */
+export const NOTIFICATION_ARCHIVE_RETENTION_DAYS = 7;
 
 export const DEFAULT_PREFERENCES: AxonPreferences = {
   homeLayout: DEFAULT_HOME_LAYOUT_VISIBLE,

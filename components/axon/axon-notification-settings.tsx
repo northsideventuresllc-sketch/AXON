@@ -95,6 +95,22 @@ export function AxonNotificationSettings({ initial }: AxonNotificationSettingsPr
             disabled={!settings.urgencySound}
           />
         </label>
+
+        <label className="block text-xs text-axon-muted">
+          Auto-archive read notifications after ({settings.readAutoArchiveHours}h)
+          <input
+            type="range"
+            min={1}
+            max={168}
+            step={1}
+            value={settings.readAutoArchiveHours}
+            onChange={(e) => patch({ readAutoArchiveHours: Number(e.target.value) })}
+            className="mt-2 w-full"
+          />
+        </label>
+        <p className="text-[10px] text-axon-muted/80">
+          Read notifications move to archive automatically. Archived items are permanently deleted after 7 days unless revived.
+        </p>
       </div>
 
       <div className="mt-6">

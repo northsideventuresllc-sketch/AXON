@@ -991,3 +991,110 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* Holographic notification scroll & modals */
+.axon-notif-widget-slot { transition: min-height 0.45s ease; }
+.axon-notif-panel-expanded { min-height: min(420px, 55vh); animation: axon-notif-expand 0.45s ease-out; }
+@keyframes axon-notif-expand {
+  from { opacity: 0.6; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.axon-notif-eye-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px; color: #22d3ee;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.axon-notif-eye-btn:hover { background: rgba(34, 211, 238, 0.12); box-shadow: 0 0 12px rgba(34, 211, 238, 0.25); }
+.axon-notif-holo-scroll {
+  display: flex; flex-direction: column; height: 100%; min-height: 300px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.92));
+}
+.axon-notif-holo-scroll-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 12px; border-bottom: 1px solid rgba(96, 165, 250, 0.15); background: rgba(37, 99, 235, 0.06);
+}
+.axon-notif-holo-tab {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9); padding: 4px 8px; border-radius: 6px;
+}
+.axon-notif-holo-tab--active, .axon-notif-holo-tab:hover { color: #22d3ee; background: rgba(34, 211, 238, 0.08); }
+.axon-notif-holo-organize-btn {
+  font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(96, 165, 250, 0.35); color: #93c5fd;
+}
+.axon-notif-holo-organize-btn:hover { border-color: rgba(34, 211, 238, 0.5); background: rgba(37, 99, 235, 0.12); }
+.axon-notif-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px; font-size: 14px; color: rgba(148, 163, 184, 0.9);
+}
+.axon-notif-icon-btn:hover { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+.axon-notif-holo-scroll-list { flex: 1; overflow-y: auto; padding: 8px; scrollbar-width: thin; }
+.axon-notif-holo-scroll-item {
+  position: relative; display: block; width: 100%; text-align: left;
+  padding: 12px 14px; margin-bottom: 6px; border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.12); background: rgba(15, 23, 42, 0.55);
+  transition: border-color 0.25s, transform 0.2s;
+}
+.axon-notif-holo-scroll-item:hover { border-color: rgba(34, 211, 238, 0.35); transform: translateX(2px); }
+.axon-notif-holo-scroll-item--unread { border-color: rgba(34, 211, 238, 0.28); }
+.axon-notif-holo-scroll-item--urgent { border-color: rgba(248, 113, 113, 0.35); }
+.axon-notif-holo-scroll-item-glow {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.06), transparent 60%); pointer-events: none;
+}
+.axon-notif-modal-backdrop {
+  position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(2, 6, 23, 0.72); backdrop-filter: blur(6px);
+}
+.axon-notif-modal {
+  width: min(520px, 100%); max-height: min(85vh, 640px); display: flex; flex-direction: column;
+  border-radius: 16px; border: 1px solid rgba(96, 165, 250, 0.25);
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.95));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+.axon-notif-modal--interactive { width: min(640px, 100%); max-height: min(90vh, 720px); }
+.axon-notif-modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid rgba(96, 165, 250, 0.12);
+}
+.axon-notif-modal-footer {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end;
+  padding: 14px 20px; border-top: 1px solid rgba(96, 165, 250, 0.12);
+}
+.axon-notif-static-body { padding: 20px; overflow-y: auto; }
+.axon-notif-prompt-banner {
+  margin: 12px 20px 0; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid rgba(34, 211, 238, 0.25); background: rgba(34, 211, 238, 0.06);
+}
+.axon-notif-chat-scroll {
+  flex: 1; min-height: 200px; max-height: 360px; overflow-y: auto;
+  padding: 12px 20px; display: flex; flex-direction: column; gap: 8px;
+}
+.axon-notif-chat-bubble {
+  max-width: 88%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.45;
+  background: rgba(37, 99, 235, 0.12); border: 1px solid rgba(96, 165, 250, 0.15);
+  color: rgba(226, 232, 240, 0.95); align-self: flex-start;
+}
+.axon-notif-chat-bubble--user {
+  align-self: flex-end; background: rgba(34, 211, 238, 0.1); border-color: rgba(34, 211, 238, 0.2);
+}
+.axon-notif-chat-input-row { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid rgba(96, 165, 250, 0.1); }
+.axon-notif-chat-input {
+  flex: 1; border-radius: 10px; border: 1px solid rgba(96, 165, 250, 0.2);
+  background: rgba(15, 23, 42, 0.8); padding: 10px 12px; font-size: 13px; color: rgba(226, 232, 240, 0.95);
+}
+.axon-notif-primary-btn, .axon-notif-secondary-btn, .axon-notif-danger-btn {
+  padding: 8px 14px; border-radius: 8px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.axon-notif-primary-btn { background: linear-gradient(135deg, #2563eb, #0891b2); color: white; }
+.axon-notif-primary-btn:disabled { opacity: 0.45; }
+.axon-notif-secondary-btn { border: 1px solid rgba(148, 163, 184, 0.35); color: rgba(203, 213, 225, 0.9); }
+.axon-notif-danger-btn { border: 1px solid rgba(248, 113, 113, 0.35); color: #fca5a5; }
+.axon-notif-organize-modal { width: min(560px, 100%); }
+.axon-notif-organize-actions { display: flex; gap: 12px; padding: 8px 20px 4px; }
+.axon-notif-text-btn { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: #93c5fd; }
+.axon-notif-organize-list { max-height: 360px; overflow-y: auto; padding: 8px 0; }
+.axon-notif-organize-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 20px; cursor: pointer;
+}
+.axon-notif-organize-row:hover { background: rgba(37, 99, 235, 0.08); }
