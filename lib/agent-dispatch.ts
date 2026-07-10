@@ -77,6 +77,8 @@ export async function fetchDispatchQueue(limit = 100): Promise<DispatchRow[]> {
   return data ?? [];
 }
 
+const TERMINAL_STATUSES = ['done', 'completed', 'fired'] as const;
+
 /** Completed dispatches since a date (default floor: 2025-06-29). */
 export async function fetchCompletedDispatches(
   limit = 500,
@@ -88,13 +90,31 @@ export async function fetchCompletedDispatches(
   const { data, error } = await sb
     .from('agent_dispatch')
     .select(SELECT_FIELDS)
-    .in('status', ['completed', 'fired'])
-    .or(`fired_at.gte.${sinceIso},completed_at.gte.${sinceIso},created_at.gte.${sinceIso}`)
-    .order('fired_at', { ascending: false, nullsFirst: false })
-    .limit(limit);
+    .in('status', [...TERMINAL_STATUSES])
+    .or(`fired_at.gte.${sinceIso},completed_at.gte.${sinceIso},updated_at.gte.${sinceIso},created_at.gte.${sinceIso}`)
+    .order('updated_at', { ascending: false, nullsFirst: false })
+    .limit(limit * 3);
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  const rows = data ?? [];
+  const byCode = new Map<string, DispatchRow>();
+  for (const row of rows) {
+    const prev = byCode.get(row.code);
+    const rowTs = row.updated_at ?? row.completed_at ?? row.fired_at ?? row.created_at ?? '';
+    const prevTs = prev
+      ? prev.updated_at ?? prev.completed_at ?? prev.fired_at ?? prev.created_at ?? ''
+      : '';
+    if (!prev || rowTs > prevTs) byCode.set(row.code, row);
+  }
+
+  return Array.from(byCode.values())
+    .sort((a, b) => {
+      const aTs = a.updated_at ?? a.completed_at ?? a.fired_at ?? a.created_at ?? '';
+      const bTs = b.updated_at ?? b.completed_at ?? b.fired_at ?? b.created_at ?? '';
+      return bTs.localeCompare(aTs);
+    })
+    .slice(0, limit);
 }
 
 export async function fetchDispatchTask(code: string): Promise<DispatchRow | null> {
