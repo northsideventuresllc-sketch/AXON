@@ -39,6 +39,7 @@ const STATUS_LABEL: Record<string, string> = {
   fired: 'Sent to manager',
   blocked: 'Blocked',
   completed: 'Completed',
+  done: 'Completed',
 };
 
 const COMPLETED_SINCE = '2025-06-29';
