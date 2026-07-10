@@ -78,6 +78,7 @@ const COMPONENT_FILES = [
 const LIB_FILES = [
   'match-fit-hub.ts',
   'agent-dispatch.ts',
+  'dispatch-session-store.ts',
   'axon-cron-jobs.ts',
   'axon-cron-service.ts',
   'axon-chat-sessions.ts',
@@ -174,6 +175,7 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")
     .replace(/from '@\/lib\/use-axon-tool-display-names'/g, "from '@/lib/axon/use-axon-tool-display-names'")
     .replace(/from '@\/lib\/agent-dispatch'/g, "from '@/lib/axon/agent-dispatch'")
+    .replace(/from '@\/lib\/dispatch-session-store'/g, "from '@/lib/axon/dispatch-session-store'")
     .replace(/from '@\/lib\/axon-cron-jobs'/g, "from '@/lib/axon/axon-cron-jobs'")
     .replace(/from '@\/lib\/axon-cron-service'/g, "from '@/lib/axon/axon-cron-service'")
     .replace(/from '@\/lib\/it-axon-skeleton'/g, "from '@/lib/axon/it-axon-skeleton'")
