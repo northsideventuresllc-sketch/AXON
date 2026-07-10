@@ -1098,3 +1098,67 @@
   display: flex; align-items: center; gap: 12px; padding: 10px 20px; cursor: pointer;
 }
 .axon-notif-organize-row:hover { background: rgba(37, 99, 235, 0.08); }
+
+/* Droid Space — OpenClaw-inspired worker bay */
+.axon-droid-scene {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 18, 38, 0.98) 100%);
+}
+.axon-droid-scene--work {
+  box-shadow: inset 0 0 40px rgba(59, 130, 246, 0.12);
+}
+.axon-droid-scene--sleep {
+  filter: brightness(0.55) saturate(0.7);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.45);
+}
+.axon-droid-scene-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(96, 165, 250, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96, 165, 250, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+.axon-droid-patrol {
+  animation: axon-droid-patrol 4s ease-in-out infinite alternate;
+}
+.axon-droid-work {
+  animation: axon-droid-bob 0.9s ease-in-out infinite;
+}
+.axon-droid-idle {
+  animation: axon-droid-bob 2.2s ease-in-out infinite;
+}
+.axon-droid-sleep {
+  transform: rotate(-12deg);
+  opacity: 0.75;
+}
+.axon-droid-eye {
+  animation: axon-droid-blink 3s step-end infinite;
+}
+.axon-droid-modal-backdrop {
+  animation: axon-fade-in 0.2s ease-out;
+}
+.axon-droid-modal-panel {
+  animation: axon-scale-in 0.25s ease-out;
+}
+@keyframes axon-droid-patrol {
+  0% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(18px) translateY(-4px); }
+  100% { transform: translateX(-8px) translateY(2px); }
+}
+@keyframes axon-droid-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes axon-droid-blink {
+  0%, 92%, 100% { opacity: 1; }
+  95% { opacity: 0; }
+}
+@keyframes axon-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes axon-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}

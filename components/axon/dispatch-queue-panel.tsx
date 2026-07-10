@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiUrl } from '@/lib/api-base';
 import { AxonToolFooter } from './axon-tool-footer';
+import { CronJobsPanel } from './cron-jobs-panel';
 
 type DispatchItem = {
   id: string;
@@ -50,7 +51,7 @@ const COMPLEXITY_ORDER = { high: 0, medium: 1, low: 2 };
 const QUEUE_API = apiUrl('/api/axon/dispatch/queue');
 const FIRE_API = apiUrl('/api/axon/dispatch/fire');
 
-type QueueView = 'active' | 'completed';
+type QueueView = 'active' | 'completed' | 'cron';
 
 function deriveVenture(item: DispatchItem): string {
   const blob = `${item.repo || ''} ${item.workflow_repo || ''} ${item.code || ''}`.toLowerCase();
@@ -141,7 +142,13 @@ export function DispatchQueuePanel() {
       const url =
         queueView === 'completed'
           ? `${QUEUE_API}?view=completed&since=${COMPLETED_SINCE}&limit=500`
-          : QUEUE_API;
+          : queueView === 'cron'
+            ? null
+            : QUEUE_API;
+      if (!url) {
+        setLoading(false);
+        return;
+      }
       const r = await fetch(url);
       const data = await r.json();
       if (!data.ok) throw new Error(data.error || 'load failed');
@@ -221,30 +228,36 @@ export function DispatchQueuePanel() {
                 Showing merged activity since June 29, 2025 (this week and last week).
               </span>
             )}
+            {queueView === 'cron' && (
+              <span className="mt-1 block text-axon-gold">
+                Repeating workflows — start/stop, run history, and next scheduled fire.
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="flex rounded-lg border border-axon-border p-0.5">
-            {(['active', 'completed'] as const).map((v) => (
+            {(['active', 'completed', 'cron'] as const).map((v) => (
               <button
                 key={v}
                 type="button"
                 onClick={() => {
-                  setLoading(true);
+                  setLoading(v !== 'cron');
                   setQueueView(v);
                 }}
                 className={`rounded-md px-3 py-1.5 text-xs capitalize ${
                   queueView === v ? 'bg-axon-gold/20 text-axon-gold' : 'text-axon-muted'
                 }`}
               >
-                {v === 'active' ? 'Active queue' : 'Completed'}
+                {v === 'active' ? 'Active queue' : v === 'completed' ? 'Completed' : 'Cron jobs'}
               </button>
             ))}
           </div>
           <button
             type="button"
             onClick={() => setFilterOpen(true)}
-            className="rounded-lg border border-axon-border px-4 py-2.5 text-sm text-axon-muted hover:border-axon-gold/40 hover:text-white"
+            disabled={queueView === 'cron'}
+            className="rounded-lg border border-axon-border px-4 py-2.5 text-sm text-axon-muted hover:border-axon-gold/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             Filter &amp; sort
           </button>
@@ -259,6 +272,7 @@ export function DispatchQueuePanel() {
         </div>
       </header>
 
+      {queueView !== 'cron' && (
       <div className="rounded-xl border border-white/10 bg-axon-surface p-4">
         <div className="mb-2 flex items-center justify-between text-xs text-axon-muted">
           <span>Queue progress</span>
@@ -276,6 +290,7 @@ export function DispatchQueuePanel() {
           <p className="mt-2 text-xs text-axon-gold">Firing Hermes workflows…</p>
         )}
       </div>
+      )}
 
       {message && (
         <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
@@ -288,7 +303,9 @@ export function DispatchQueuePanel() {
         </p>
       )}
 
-      {loading && !items.length ? (
+      {queueView === 'cron' ? (
+        <CronJobsPanel />
+      ) : loading && !items.length ? (
         <p className="text-sm text-axon-muted">Loading queue…</p>
       ) : (
         <div className="overflow-hidden rounded-xl border border-white/10">

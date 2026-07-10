@@ -24,6 +24,11 @@ const COMPONENT_FILES = [
   'match-fit-venture-hub.tsx',
   'match-fit-admin-tool.tsx',
   'dispatch-queue-panel.tsx',
+  'cron-jobs-panel.tsx',
+  'droid-space.tsx',
+  'droid-scene.tsx',
+  'droid-detail-modal.tsx',
+  'axon-droid-avatar.tsx',
   'follow-up-tool.tsx',
   'hermes-sync-tool.tsx',
   'deal-tracker-tool.tsx',
@@ -73,6 +78,8 @@ const COMPONENT_FILES = [
 const LIB_FILES = [
   'match-fit-hub.ts',
   'agent-dispatch.ts',
+  'axon-cron-jobs.ts',
+  'axon-cron-service.ts',
   'axon-chat-sessions.ts',
   'axon-orb-theme.ts',
   'axon-preferences.ts',
@@ -128,6 +135,8 @@ const API_FILES = [
   'dispatch/queue/route.ts',
   'dispatch/chat/route.ts',
   'dispatch/[code]/route.ts',
+  'cron/jobs/route.ts',
+  'cron/jobs/[id]/toggle/route.ts',
   'follow-up/route.ts',
   'match-fit/session/route.ts',
   'match-fit/data/route.ts',
@@ -165,6 +174,8 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/axon-user-tools'/g, "from '@/lib/axon/axon-user-tools'")
     .replace(/from '@\/lib\/use-axon-tool-display-names'/g, "from '@/lib/axon/use-axon-tool-display-names'")
     .replace(/from '@\/lib\/agent-dispatch'/g, "from '@/lib/axon/agent-dispatch'")
+    .replace(/from '@\/lib\/axon-cron-jobs'/g, "from '@/lib/axon/axon-cron-jobs'")
+    .replace(/from '@\/lib\/axon-cron-service'/g, "from '@/lib/axon/axon-cron-service'")
     .replace(/from '@\/lib\/it-axon-skeleton'/g, "from '@/lib/axon/it-axon-skeleton'")
     .replace(/from '@\/lib\/match-fit-session'/g, "from '@/lib/axon/match-fit-session'")
     .replace(/from '@\/lib\/axon-tool-meta'/g, "from '@/lib/axon/axon-tool-meta'")

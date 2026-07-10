@@ -1,26 +1,18 @@
 import { AxonInterface } from '@/components/axon/axon-interface';
-import { ToolPanel } from '@/components/axon/tool-panel';
+import { DroidSpace } from '@/components/axon/droid-space';
 import { fetchChatHistory, getOperatorProfile } from '@/lib/axon-profile';
 import { getWorkspace } from '@/lib/axon-workspace';
 import { getPreferences } from '@/lib/axon-preferences';
-import { AXON_TOOLS } from '@/lib/axon-types';
-import { fetchPipelineStats } from '@/lib/leads';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AxonHomePage() {
-  const [profile, messages, stats, workspace, preferences] = await Promise.all([
+  const [profile, messages, workspace, preferences] = await Promise.all([
     getOperatorProfile(),
     fetchChatHistory(undefined, 30),
-    fetchPipelineStats().catch(() => null),
     getWorkspace(),
     getPreferences(),
   ]);
-
-  const metrics: Record<string, string | number> = {};
-  if (stats) {
-    metrics['ni-services-outreach'] = stats.pending;
-  }
 
   return (
     <div className="relative space-y-8">
@@ -48,7 +40,7 @@ export default async function AxonHomePage() {
         }}
       />
 
-      <ToolPanel tools={AXON_TOOLS} metrics={metrics} />
+      <DroidSpace />
     </div>
   );
 }
