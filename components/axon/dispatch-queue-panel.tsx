@@ -1,36 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { apiUrl } from '@/lib/api-base';
+import {
+  dispatchSessionStore,
+  type DispatchItem,
+  type FilterState,
+  type SortMode,
+} from '@/lib/dispatch-session-store';
 import { AxonToolFooter } from './axon-tool-footer';
 import { CronJobsPanel } from './cron-jobs-panel';
-
-type DispatchItem = {
-  id: string;
-  code: string;
-  title: string;
-  owner: string;
-  manager_chat: string | null;
-  repo: string | null;
-  status: string;
-  priority: number;
-  action_type: string;
-  dispatch_phrase: string | null;
-  workflow_repo: string | null;
-  risk_tier: string | null;
-  created_at: string | null;
-  result_summary: string | null;
-};
-
-type SortMode = 'venture' | 'complexity' | 'date';
-type SortDir = 'asc' | 'desc';
-
-type FilterState = {
-  sortBy: SortMode;
-  sortDir: SortDir;
-  ventures: string[];
-  complexities: Array<'high' | 'medium' | 'low'>;
-};
 
 type ChatMsg = { role: 'user' | 'assistant'; content: string };
 
@@ -43,15 +22,18 @@ const STATUS_LABEL: Record<string, string> = {
   done: 'Completed',
 };
 
-const COMPLETED_SINCE = '2025-06-29';
-
 const COMPLEXITY_LABEL = { high: 'High', medium: 'Medium', low: 'Low' } as const;
 const COMPLEXITY_ORDER = { high: 0, medium: 1, low: 2 };
 
-const QUEUE_API = apiUrl('/api/axon/dispatch/queue');
 const FIRE_API = apiUrl('/api/axon/dispatch/fire');
 
-type QueueView = 'active' | 'completed' | 'cron';
+function useDispatchSession() {
+  return useSyncExternalStore(
+    dispatchSessionStore.subscribe,
+    dispatchSessionStore.getState,
+    () => dispatchSessionStore.getState(),
+  );
+}
 
 function deriveVenture(item: DispatchItem): string {
   const blob = `${item.repo || ''} ${item.workflow_repo || ''} ${item.code || ''}`.toLowerCase();
@@ -116,17 +98,31 @@ function progressPercent(items: DispatchItem[]): number {
 }
 
 export function DispatchQueuePanel() {
-  const [items, setItems] = useState<DispatchItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [firing, setFiring] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<FilterState | null>(null);
+  const session = useDispatchSession();
+  const {
+    items,
+    loading,
+    error,
+    message,
+    filters,
+    queueView,
+  } = session;
+
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterTab, setFilterTab] = useState<SortMode>('venture');
   const [selected, setSelected] = useState<DispatchItem | null>(null);
-  const [livePoll, setLivePoll] = useState(false);
-  const [queueView, setQueueView] = useState<QueueView>('active');
+
+  const firing = dispatchSessionStore.isFiring();
+
+  useEffect(() => {
+    dispatchSessionStore.init();
+  }, []);
+
+  useEffect(() => {
+    if (!filters && items.length > 0) {
+      dispatchSessionStore.setFilters(defaultFilters(items));
+    }
+  }, [filters, items]);
 
   const allVentures = useMemo(() => Array.from(new Set(items.map(deriveVenture))).sort(), [items]);
   const activeFilters = filters ?? defaultFilters(items);
@@ -134,69 +130,28 @@ export function DispatchQueuePanel() {
   const queued = visible.filter((i) => i.status === 'queued');
   const running = items.filter((i) => i.status === 'running');
   const progress = progressPercent(items);
-  const showLiveBar = firing || running.length > 0 || livePoll;
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const url =
-        queueView === 'completed'
-          ? `${QUEUE_API}?view=completed&since=${COMPLETED_SINCE}&limit=500`
-          : queueView === 'cron'
-            ? null
-            : QUEUE_API;
-      if (!url) {
-        setLoading(false);
-        return;
-      }
-      const r = await fetch(url);
-      const data = await r.json();
-      if (!data.ok) throw new Error(data.error || 'load failed');
-      setItems(data.items || []);
-      if (!filters && data.items?.length) {
-        setFilters(defaultFilters(data.items));
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'load failed');
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, queueView]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    if (!showLiveBar) return;
-    const id = setInterval(load, 3000);
-    return () => clearInterval(id);
-  }, [showLiveBar, load]);
+  const showLiveBar = dispatchSessionStore.showLiveBar();
 
   async function fireAll() {
-    setFiring(true);
-    setLivePoll(true);
-    setMessage(null);
-    setError(null);
+    dispatchSessionStore.beginFire();
+    dispatchSessionStore.setMessage(null);
+    dispatchSessionStore.setError(null);
     try {
       const r = await fetch(FIRE_API, { method: 'POST', body: '{}' });
       const data = await r.json();
       if (!data.ok) throw new Error(data.error || 'fire failed');
-      setMessage(data.message || 'Dispatch started — check Telegram for summary');
-      setTimeout(load, 2000);
+      dispatchSessionStore.setMessage(data.message || 'Dispatch started — check Telegram for summary');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'fire failed');
+      dispatchSessionStore.setError(e instanceof Error ? e.message : 'fire failed');
     } finally {
-      setFiring(false);
-      setTimeout(() => setLivePoll(false), 15000);
+      dispatchSessionStore.endFire();
     }
   }
 
   async function fireOne(code: string) {
-    setFiring(true);
-    setLivePoll(true);
-    setMessage(null);
-    setError(null);
+    dispatchSessionStore.beginFire();
+    dispatchSessionStore.setMessage(null);
+    dispatchSessionStore.setError(null);
     try {
       const r = await fetch(FIRE_API, {
         method: 'POST',
@@ -205,13 +160,11 @@ export function DispatchQueuePanel() {
       });
       const data = await r.json();
       if (!data.ok) throw new Error(data.error || 'fire failed');
-      setMessage(data.message || `Fired ${code}`);
-      setTimeout(load, 2000);
+      dispatchSessionStore.setMessage(data.message || `Fired ${code}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'fire failed');
+      dispatchSessionStore.setError(e instanceof Error ? e.message : 'fire failed');
     } finally {
-      setFiring(false);
-      setTimeout(() => setLivePoll(false), 10000);
+      dispatchSessionStore.endFire();
     }
   }
 
@@ -241,10 +194,7 @@ export function DispatchQueuePanel() {
               <button
                 key={v}
                 type="button"
-                onClick={() => {
-                  setLoading(v !== 'cron');
-                  setQueueView(v);
-                }}
+                onClick={() => dispatchSessionStore.setQueueView(v)}
                 className={`rounded-md px-3 py-1.5 text-xs capitalize ${
                   queueView === v ? 'bg-axon-gold/20 text-axon-gold' : 'text-axon-muted'
                 }`}
@@ -283,11 +233,15 @@ export function DispatchQueuePanel() {
             className={`h-full rounded-full bg-axon-gold transition-all duration-500 ${
               showLiveBar && progress < 100 ? 'animate-pulse' : ''
             }`}
-            style={{ width: `${Math.max(showLiveBar && progress === 0 ? 8 : progress, firing ? 12 : 0)}%` }}
+            style={{
+              width: `${Math.max(showLiveBar && progress === 0 ? 8 : progress, firing ? 12 : 0)}%`,
+            }}
           />
         </div>
-        {firing && (
-          <p className="mt-2 text-xs text-axon-gold">Firing Hermes workflows…</p>
+        {(firing || running.length > 0) && (
+          <p className="mt-2 text-xs text-axon-gold">
+            {firing ? 'Firing Hermes workflows…' : `${running.length} task${running.length === 1 ? '' : 's'} in progress`}
+          </p>
         )}
       </div>
       )}
@@ -336,9 +290,20 @@ export function DispatchQueuePanel() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        item.status === 'running'
+                          ? 'bg-axon-gold/20 text-axon-gold animate-pulse'
+                          : 'bg-white/10'
+                      }`}
+                    >
                       {STATUS_LABEL[item.status] || item.status}
                     </span>
+                    {item.status === 'running' && (
+                      <div className="mt-1.5 h-1 w-20 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-full w-1/2 animate-pulse rounded-full bg-axon-gold" />
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     {item.status === 'queued' && (
@@ -372,7 +337,10 @@ export function DispatchQueuePanel() {
           onTab={setFilterTab}
           filters={activeFilters}
           ventures={allVentures}
-          onApply={setFilters}
+          onApply={(f) => {
+            dispatchSessionStore.setFilters(f);
+            setFilterOpen(false);
+          }}
           onClose={() => setFilterOpen(false)}
         />
       )}
@@ -382,7 +350,7 @@ export function DispatchQueuePanel() {
           task={selected}
           onClose={() => setSelected(null)}
           onSaved={(updated) => {
-            setItems((prev) => prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i)));
+            dispatchSessionStore.updateItem(updated);
             setSelected(updated);
           }}
         />
