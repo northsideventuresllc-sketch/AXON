@@ -213,6 +213,56 @@ export interface NotificationSettings {
   customNotUrgent: string[];
 }
 
+/** Sector 3 IT executive summary for launch review notifications. */
+export interface ItExecutiveSummary {
+  title: string;
+  description: string;
+  targetAudience: string;
+  subscriptionPriceUsd: number;
+  lifetimeOfferPriceUsd: number;
+  lifetimeOfferNote?: string;
+  useCases: string[];
+  estimatedRevenueEoyUsd: number;
+  revenueAssumptions?: string;
+  marketingStrategy: string;
+  rolloutPlan: string;
+  competitors: string[];
+  differentiation: string;
+  previewUrl: string;
+}
+
+export type ItReportType = 'ninety_day' | 'trial_extension' | 'archive_revival';
+
+export interface ItReportMetrics {
+  reportType: ItReportType;
+  toolSlug: string;
+  toolName: string;
+  periodDays: number;
+  signups: number;
+  activeUsers: number;
+  payingUsers: number;
+  mrrUsd: number;
+  churnPct: number;
+  usageEvents: number;
+  topFeatures: string[];
+  aiRecommendation: 'keep' | 'remove' | 'trial';
+  rationale: string;
+}
+
+export type ItNotificationType = 'it_launch' | 'it_report';
+
+export interface ItLaunchPayload {
+  launchId: string;
+  opportunityId: number;
+  toolSlug: string;
+  summary: ItExecutiveSummary;
+}
+
+export interface ItReportPayload {
+  reportId: string;
+  metrics: ItReportMetrics;
+}
+
 export interface AxonNotification {
   id: string;
   source: string;
@@ -232,6 +282,11 @@ export interface AxonNotification {
   archived_at?: string;
   resolved?: boolean;
   declined?: boolean;
+  /** IT lifecycle notification type — renders specialized action cards. */
+  itType?: ItNotificationType;
+  itPayload?: ItLaunchPayload | ItReportPayload;
+  /** Test notifications are excluded from metrics and marked in UI. */
+  isTest?: boolean;
 }
 
 export interface AxonPreferences {
