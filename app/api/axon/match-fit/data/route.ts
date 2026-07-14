@@ -74,6 +74,21 @@ type RecentRow = {
   created_at: string;
 };
 
+type AdSnapshotRow = {
+  platform: string;
+  day_key: string;
+  impressions: number;
+  clicks: number;
+  spend_cents: number;
+  conversions: number;
+  source: string;
+  updated_at: string;
+};
+
+function emptyAdTotals() {
+  return { impressions: 0, clicks: 0, spendCents: 0, conversions: 0 };
+}
+
 export async function GET() {
   const authed = await checkSession();
   if (!authed) {
@@ -87,7 +102,18 @@ export async function GET() {
       .toISOString()
       .split('T')[0];
 
-    const [todayPosts, outreachLeads, recentPosts] = await Promise.all([
+    const loadAdSnapshots = async (): Promise<AdSnapshotRow[]> => {
+      try {
+        return (await sbSelect(
+          'mf_ad_platform_daily_snapshots',
+          `day_key=gte.${thirtyDaysAgo}&select=platform,day_key,impressions,clicks,spend_cents,conversions,source,updated_at&order=day_key.desc&limit=200`
+        )) as AdSnapshotRow[];
+      } catch {
+        return [];
+      }
+    };
+
+    const [todayPosts, outreachLeads, recentPosts, adSnapshotsRaw] = await Promise.all([
       sbSelect(
         'content_machine_posts',
         `brand_slug=eq.match-fit&created_at=gte.${today}T00:00:00&select=id,post_type,theme_name,status,caption,platforms,created_at,scheduled_for&order=post_type.asc`
@@ -100,16 +126,36 @@ export async function GET() {
         'content_machine_posts',
         `brand_slug=eq.match-fit&created_at=gte.${thirtyDaysAgo}T00:00:00&select=id,post_type,status,platforms,created_at&order=created_at.desc&limit=200`
       ) as Promise<RecentRow[]>,
+      loadAdSnapshots(),
     ]);
 
     const posts = (todayPosts ?? []) as PostRow[];
     const leads = (outreachLeads ?? []) as OutreachRow[];
     const recent = (recentPosts ?? []) as RecentRow[];
+    const adSnapshots = (adSnapshotsRaw ?? []) as AdSnapshotRow[];
 
     const pending = posts.filter((p) => p.status === 'pending_approval');
     const approved = posts.filter((p) => p.status === 'approved');
 
+    const apiRows = adSnapshots.filter((r) => r.source === 'api');
+    const attrRows = adSnapshots.filter((r) => r.source === 'site_attribution');
+    const metricRows = apiRows.length ? apiRows : attrRows;
+
+    const sumPlatform = (platform: string) =>
+      metricRows
+        .filter((r) => r.platform === platform)
+        .reduce(
+          (acc, r) => ({
+            impressions: acc.impressions + (r.impressions || 0),
+            clicks: acc.clicks + (r.clicks || 0),
+            spendCents: acc.spendCents + (r.spend_cents || 0),
+            conversions: acc.conversions + (r.conversions || 0),
+          }),
+          emptyAdTotals()
+        );
+
     const adSummary = {
+      // Legacy content-calendar counts (still useful for posts tab context)
       totalLast30Days: recent.length,
       published: recent.filter((p) => p.status === 'approved' || p.status === 'published').length,
       pending: recent.filter((p) => p.status === 'pending_approval').length,
@@ -122,6 +168,26 @@ export async function GET() {
         },
         {} as Record<string, number>
       ),
+      // Live ad tracker (NI-Brain mf_ad_platform_daily_snapshots from AX-AD sync)
+      tracker: {
+        mode: apiRows.length ? ('api' as const) : attrRows.length ? ('site_attribution' as const) : ('empty' as const),
+        daysCovered: new Set(metricRows.map((r) => r.day_key)).size,
+        totals: {
+          meta: sumPlatform('meta'),
+          tiktok: sumPlatform('tiktok'),
+          google: sumPlatform('google'),
+        },
+        daily: metricRows.slice(0, 21).map((r) => ({
+          platform: r.platform,
+          dayKey: r.day_key,
+          impressions: r.impressions,
+          clicks: r.clicks,
+          spendCents: r.spend_cents,
+          conversions: r.conversions,
+          source: r.source,
+          syncedAt: r.updated_at,
+        })),
+      },
     };
 
     return NextResponse.json({

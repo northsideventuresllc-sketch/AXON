@@ -15,7 +15,10 @@
     "research": "node scripts/axon-self-research.mjs",
     "research:dry": "AXON_DRY_RUN=1 node scripts/axon-self-research.mjs",
     "dashboard": "node scripts/axon-dashboard.mjs",
-    "outreach:dry": "AXON_DRY_RUN=1 node scripts/axon-ni-outreach.mjs"
+    "outreach:dry": "AXON_DRY_RUN=1 node scripts/axon-ni-outreach.mjs",
+    "ad-tracker": "node scripts/axon-mf-ad-tracker-sync.mjs",
+    "ad-tracker:dry": "AXON_DRY_RUN=1 node scripts/axon-mf-ad-tracker-sync.mjs",
+    "test:ad-tracker": "node tests/mf-ad-tracker.test.mjs"
   },
   "engines": {
     "node": ">=20"

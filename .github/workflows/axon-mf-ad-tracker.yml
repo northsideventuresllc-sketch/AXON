@@ -1,0 +1,63 @@
+name: AXON MF Ad Tracker Sync
+
+on:
+  schedule:
+    # Every 6 hours — Match Fit ↔ AXON sync spec cadence for ad tracking
+    - cron: '15 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Lookback days (1–30)'
+        required: false
+        default: '7'
+      day:
+        description: 'Optional single Eastern day YYYY-MM-DD (overrides days)'
+        required: false
+        default: ''
+
+concurrency:
+  group: axon-mf-ad-tracker
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: AXON — Meta+TikTok ad snapshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Unit tests
+        run: node tests/mf-ad-tracker.test.mjs
+
+      - name: Pull live snapshots
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          META_ADS_ACCESS_TOKEN: ${{ secrets.META_ADS_ACCESS_TOKEN }}
+          META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
+          TIKTOK_ADS_ACCESS_TOKEN: ${{ secrets.TIKTOK_ADS_ACCESS_TOKEN }}
+          TIKTOK_ADS_ADVERTISER_ID: ${{ secrets.TIKTOK_ADS_ADVERTISER_ID }}
+          MATCHFIT_SUPABASE_URL: ${{ secrets.MATCHFIT_SUPABASE_URL }}
+          MATCHFIT_SUPABASE_SERVICE_KEY: ${{ secrets.MATCHFIT_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          ARGS=( )
+          if [[ -n "${{ inputs.day }}" ]]; then
+            ARGS+=( "--day=${{ inputs.day }}" )
+          else
+            ARGS+=( "--days=${{ inputs.days || '7' }}" )
+          fi
+          node scripts/axon-mf-ad-tracker-sync.mjs "${ARGS[@]}"
+
+      - name: Report failure
+        if: failure()
+        run: echo "❌ AXON MF Ad Tracker sync failed — check Actions logs"

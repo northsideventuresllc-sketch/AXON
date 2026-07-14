@@ -112,6 +112,25 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
     whyImportant: 'Feeds the Repo Manager queue — without this droid the dispatch board stays empty.',
     defaultEnabled: true,
   },
+  {
+    id: 'axon-mf-ad-tracker',
+    title: 'Match Fit Ad Tracker Sync',
+    scheduleLabel: 'Every 6 hours',
+    cronUtc: '15 */6 * * *',
+    workflowFile: 'axon-mf-ad-tracker.yml',
+    workflowRepo: 'northsideventuresllc-sketch/AXON',
+    venture: 'Match Fit',
+    droidRole: 'Ads',
+    faceShape: 'square',
+    axonTools: ['Match Fit Admin', 'AXON Management-Match Fit'],
+    description:
+      'Pulls live Meta + TikTok daily snapshots (AX-AD) into NI-Brain for Match Fit Ad Tracking.',
+    howItWorks:
+      'GitHub Actions loads Ads API keys from secrets/ni_platform_secrets, writes mf_ad_platform_daily_snapshots, Telegram cues only if keys missing.',
+    whyImportant:
+      'July $50 MF tests need spend/click truth so August winners are locked from real ROAS — not gut feel.',
+    defaultEnabled: true,
+  },
 ];
 
 export function getCronJobDef(id: string): AxonCronJobDef | undefined {
