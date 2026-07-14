@@ -26,6 +26,8 @@ const ids = [
   'axon-content-batch-notify',
   'axon-ni-outreach',
   'hermes-agent-dispatch',
+  'axon-mf-ad-tracker',
+  'axon-local-model-daily',
 ];
 for (const id of ids) {
   assert(src.includes(`id: '${id}'`), `catalog includes ${id}`);

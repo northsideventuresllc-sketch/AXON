@@ -94,6 +94,8 @@ npm run outreach:dry   # no writes
 npm run outreach       # live run
 npm run research:dry   # autonomous research (no writes)
 npm run research       # live research → briefings
+npm run model:daily:dry # local model build (no Ollama required)
+npm run model:daily    # live local score → axon_local_model_runs
 npm run telegram:poll  # process Telegram commands once
 npm run telegram:setup # register slash commands
 ```
@@ -109,6 +111,8 @@ npm run telegram:setup # register slash commands
 | AXON Telegram Poll | `*/15 * * * *` | Every 15 min fallback (skips when webhook active) |
 
 **J-Space & self-learning:** See `docs/axon-j-space.md` — autonomous research surfaces in daily briefs.
+
+**Local daily model (AX-MODEL-DAILY):** See `docs/axon-local-model-daily.md` — Mac Ollama/heuristic scoring + Phase 1 workflow strip in NI Outreach HQ.
 
 ---
 

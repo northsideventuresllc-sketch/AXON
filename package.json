@@ -18,7 +18,10 @@
     "outreach:dry": "AXON_DRY_RUN=1 node scripts/axon-ni-outreach.mjs",
     "ad-tracker": "node scripts/axon-mf-ad-tracker-sync.mjs",
     "ad-tracker:dry": "AXON_DRY_RUN=1 node scripts/axon-mf-ad-tracker-sync.mjs",
-    "test:ad-tracker": "node tests/mf-ad-tracker.test.mjs"
+    "test:ad-tracker": "node tests/mf-ad-tracker.test.mjs",
+    "model:daily": "node scripts/axon-local-model-daily.mjs",
+    "model:daily:dry": "AXON_DRY_RUN=1 node scripts/axon-local-model-daily.mjs",
+    "test:local-model": "node tests/local-model-daily.test.mjs"
   },
   "engines": {
     "node": ">=20"
