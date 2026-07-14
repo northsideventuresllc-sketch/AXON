@@ -131,6 +131,25 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
       'July $50 MF tests need spend/click truth so August winners are locked from real ROAS — not gut feel.',
     defaultEnabled: true,
   },
+  {
+    id: 'axon-local-model-daily',
+    title: 'Local Daily Model Build',
+    scheduleLabel: 'Mac cron · daily 7:00 AM local',
+    cronUtc: null,
+    workflowFile: 'axon-local-model-daily.mjs',
+    workflowRepo: 'northsideventuresllc-sketch/AXON',
+    venture: 'AXON',
+    droidRole: 'Model',
+    faceShape: 'circle',
+    axonTools: ['NI Outreach HQ', 'Follow-Up Engine'],
+    description:
+      'AX-MODEL-DAILY — Ollama (or heuristic) scoring loop that calibrates Phase 1 outreach without burning paid API quota.',
+    howItWorks:
+      'Mac cron runs npm run model:daily, probes Ollama, scores recent leads, writes axon_local_model_runs. HQ Phase 1 strip can trigger the same path.',
+    whyImportant:
+      'Moves daily score/follow-up interactivity into AXON so JB spends less on cloud LLM subscriptions for routine calibration.',
+    defaultEnabled: true,
+  },
 ];
 
 export function getCronJobDef(id: string): AxonCronJobDef | undefined {

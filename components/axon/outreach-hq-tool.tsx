@@ -12,6 +12,7 @@ import { OutreachIcpChecklist } from './outreach-icp-checklist';
 import { OutreachGenerateLeads } from './outreach-generate-leads';
 import { OutreachChannelSettings } from './outreach-channel-settings';
 import { FollowUpTool } from './follow-up-tool';
+import { Phase1WorkflowPanel } from './phase1-workflow-panel';
 import { STATUS_ORDER, BULK_STATUS_OPTIONS } from '@/lib/types';
 import { apiUrl } from '@/lib/api-base';
 import { appPath } from '@/lib/paths';
@@ -178,6 +179,11 @@ export function OutreachHqTool({
 
           {tab === 'overview' && (
             <>
+              <Phase1WorkflowPanel
+                stats={stats}
+                pendingFollowUp={followUpPending.length}
+                basePath={basePath}
+              />
               <OutreachGenerateLeads stats={stats} />
               <OutreachChannelSettings />
               <OutreachIcpChecklist

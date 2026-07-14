@@ -56,6 +56,7 @@ const COMPONENT_FILES = [
   'outreach-generate-leads.tsx',
   'outreach-icp-checklist.tsx',
   'outreach-hq-tool.tsx',
+  'phase1-workflow-panel.tsx',
   'outreach-training-panel.tsx',
   'outreach-send-modal.tsx',
   'outreach-channel-settings.tsx',
@@ -109,6 +110,7 @@ const LIB_FILES = [
   'outreach-run-core.mjs',
   'icp-config.mjs',
   'constants.mjs',
+  'local-model-daily.mjs',
   'github-pat.mjs',
   'axon-quick-links.ts',
   'use-axon-quick-links.ts',
@@ -148,6 +150,7 @@ const API_FILES = [
   'outreach/[id]/route.ts',
   'outreach/run/route.ts',
   'outreach/settings/route.ts',
+  'local-model/route.ts',
   'quick-links/route.ts',
   'it-builder/route.ts',
 ];
@@ -166,6 +169,8 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/outreach-edit'/g, "from '@/lib/axon/outreach-edit'")
     .replace(/from '@\/lib\/outreach-reject'/g, "from '@/lib/axon/outreach-reject'")
     .replace(/from '@\/lib\/outreach-learn'/g, "from '@/lib/axon/outreach-learn'")
+    .replace(/from '@\/lib\/local-model-daily\.mjs'/g, "from '@/lib/axon/local-model-daily.mjs'")
+    .replace(/from '@\/lib\/outreach-learn-core\.mjs'/g, "from '@/lib/axon/outreach-learn-core.mjs'")
     .replace(/from '@\/lib\/outreach-settings'/g, "from '@/lib/axon/outreach-settings'")
     .replace(/from '@\/lib\/outreach-lifecycle'/g, "from '@/lib/axon/outreach-lifecycle'")
     .replace(/from '@\/lib\/config\.mjs'/g, "from '@/lib/axon/config.mjs'")
@@ -327,9 +332,12 @@ function main() {
   console.log('lib: api-base.ts (portal variant)');
 
   const appPathSrc = join(INTEGRATION_ROOT, 'src/lib/axon/app-path.ts');
-  if (existsSync(appPathSrc)) {
-    cpSync(appPathSrc, join(niRoot, 'src/lib/axon/app-path.ts'));
+  const appPathDest = join(niRoot, 'src/lib/axon/app-path.ts');
+  if (existsSync(appPathSrc) && appPathSrc !== appPathDest) {
+    cpSync(appPathSrc, appPathDest);
     console.log('lib: app-path.ts (portal vanity routes)');
+  } else if (existsSync(appPathSrc)) {
+    console.log('lib: app-path.ts (already in target)');
   }
 
   for (const file of API_FILES) {
