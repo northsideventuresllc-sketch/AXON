@@ -1,6 +1,7 @@
 import { AxonChangeCodeForm } from '@/components/axon/AxonChangeCodeForm';
 import { AxonHomeSettings } from '@/components/axon-ui/axon-home-settings';
 import { AxonNotificationSettings } from '@/components/axon-ui/axon-notification-settings';
+import { AxonQuickLinksSettings } from '@/components/axon-ui/axon-quick-links-settings';
 import { AxonResetSettings } from '@/components/axon-ui/axon-reset-settings';
 import { fetchMemories, fetchTopSignals, getOperatorProfile } from '@/lib/axon/axon-profile';
 import { getOutreachTrainingSummary } from '@/lib/axon/outreach-learn';
@@ -36,6 +37,7 @@ export default async function AxonSettingsPage({ params }: { params: { username:
 
       <AxonHomeSettings initial={preferences.homeLayout} />
       <AxonNotificationSettings initial={preferences.notifications} />
+      <AxonQuickLinksSettings />
 
       <AxonChangeCodeForm />
 

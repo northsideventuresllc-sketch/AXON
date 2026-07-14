@@ -14,6 +14,19 @@ export function useAxonQuickLinks(): AxonQuickLink[] {
   });
 
   useEffect(() => {
+    const syncFromStorage = () => {
+      setLinks(readQuickLinksFromStorage() ?? DEFAULT_QUICK_LINKS);
+    };
+
+    window.addEventListener('axon:quick-links-updated', syncFromStorage);
+    window.addEventListener('storage', syncFromStorage);
+    return () => {
+      window.removeEventListener('axon:quick-links-updated', syncFromStorage);
+      window.removeEventListener('storage', syncFromStorage);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function load() {

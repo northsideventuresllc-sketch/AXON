@@ -2,6 +2,7 @@ import { MAX_DRAFTS_PER_DAY } from '@/lib/constants.mjs';
 import { AxonResetSettings } from '@/components/axon/axon-reset-settings';
 import { AxonHomeSettings } from '@/components/axon/axon-home-settings';
 import { AxonNotificationSettings } from '@/components/axon/axon-notification-settings';
+import { AxonQuickLinksSettings } from '@/components/axon/axon-quick-links-settings';
 import { AxonToolNameSettings } from '@/components/axon/axon-tool-name-settings';
 import { fetchTopSignals, fetchMemories, getOperatorProfile } from '@/lib/axon-profile';
 import { getOutreachTrainingSummary } from '@/lib/outreach-learn';
@@ -34,6 +35,7 @@ export default async function SettingsPage() {
 
       <AxonHomeSettings initial={preferences.homeLayout} />
       <AxonNotificationSettings initial={preferences.notifications} />
+      <AxonQuickLinksSettings />
       <AxonToolNameSettings />
 
       <section className="rounded-xl border border-axon-border bg-axon-surface p-6 axon-glass">

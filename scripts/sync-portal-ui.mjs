@@ -38,6 +38,7 @@ const COMPONENT_FILES = [
   'axon-lab-floor.tsx',
   'axon-notification-settings.tsx',
   'axon-orb-status.tsx',
+  'axon-quick-links-settings.tsx',
   'axon-reset-settings.tsx',
   'axon-test-notification-buttons.tsx',
   'axon-tool-launch-overlay.tsx',
