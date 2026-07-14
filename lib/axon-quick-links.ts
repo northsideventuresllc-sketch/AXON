@@ -46,6 +46,7 @@ export function writeQuickLinksToStorage(links: AxonQuickLink[]): AxonQuickLink[
   const next = normalizeLinks(links);
   if (typeof window !== 'undefined') {
     localStorage.setItem(QUICK_LINKS_STORAGE_KEY, JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent('axon:quick-links-updated'));
   }
   return next;
 }
