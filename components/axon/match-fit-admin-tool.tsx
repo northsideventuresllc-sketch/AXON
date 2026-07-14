@@ -30,11 +30,39 @@ type OutreachLead = {
   source: string;
 };
 
+type AdPlatformTotals = {
+  impressions: number;
+  clicks: number;
+  spendCents: number;
+  conversions: number;
+};
+
+type AdDailyRow = {
+  platform: string;
+  dayKey: string;
+  impressions: number;
+  clicks: number;
+  spendCents: number;
+  conversions: number;
+  source: string;
+  syncedAt: string;
+};
+
 type AdSummary = {
   totalLast30Days: number;
   published: number;
   pending: number;
   byPlatform: Record<string, number>;
+  tracker?: {
+    mode: 'api' | 'site_attribution' | 'empty';
+    daysCovered: number;
+    totals: {
+      meta: AdPlatformTotals;
+      tiktok: AdPlatformTotals;
+      google: AdPlatformTotals;
+    };
+    daily: AdDailyRow[];
+  };
 };
 
 type AdminData = {
@@ -260,25 +288,94 @@ function OutreachTab({ leads }: { leads: OutreachLead[] }) {
 
 // ─── Ad Tracking Tab ────────────────────────────────────────────────────────
 
+function formatUsd(cents: number) {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
 function AdTrackingTab({ summary }: { summary: AdSummary }) {
   const platforms = Object.entries(summary.byPlatform).sort((a, b) => b[1] - a[1]);
+  const tracker = summary.tracker;
+  const modeLabel =
+    tracker?.mode === 'api'
+      ? 'Live Ads API'
+      : tracker?.mode === 'site_attribution'
+        ? 'Site UTM attribution (spend pending API keys)'
+        : 'No snapshots yet';
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Posts (30 days)" value={summary.totalLast30Days} />
         <StatCard
-          label="Published / Approved"
-          value={summary.published}
-          sub={`${summary.totalLast30Days ? Math.round((summary.published / summary.totalLast30Days) * 100) : 0}% publish rate`}
+          label="Meta (30d)"
+          value={
+            tracker?.mode === 'api'
+              ? formatUsd(tracker.totals.meta.spendCents)
+              : tracker?.totals.meta.clicks ?? 0
+          }
+          sub={
+            tracker?.mode === 'api'
+              ? `${tracker.totals.meta.clicks} clicks · ${tracker.totals.meta.impressions} imps`
+              : `${tracker?.totals.meta.clicks ?? 0} attributed page views`
+          }
         />
-        <StatCard label="Pending review" value={summary.pending} />
+        <StatCard
+          label="TikTok (30d)"
+          value={
+            tracker?.mode === 'api'
+              ? formatUsd(tracker.totals.tiktok.spendCents)
+              : tracker?.totals.tiktok.clicks ?? 0
+          }
+          sub={
+            tracker?.mode === 'api'
+              ? `${tracker.totals.tiktok.clicks} clicks · ${tracker.totals.tiktok.impressions} imps`
+              : `${tracker?.totals.tiktok.clicks ?? 0} attributed page views`
+          }
+        />
+        <StatCard
+          label="Tracker mode"
+          value={tracker?.daysCovered ?? 0}
+          sub={modeLabel}
+        />
       </div>
+
+      {tracker && tracker.daily.length > 0 && (
+        <section className="space-y-3">
+          <p className="text-xs font-medium uppercase tracking-wider text-axon-muted">
+            Daily snapshots
+          </p>
+          <div className="overflow-x-auto rounded-lg border border-white/10">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-white/5 text-xs uppercase tracking-wider text-axon-muted">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Day</th>
+                  <th className="px-3 py-2 font-medium">Platform</th>
+                  <th className="px-3 py-2 font-medium">Imps</th>
+                  <th className="px-3 py-2 font-medium">Clicks / views</th>
+                  <th className="px-3 py-2 font-medium">Spend</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tracker.daily.map((row) => (
+                  <tr key={`${row.platform}-${row.dayKey}-${row.source}`} className="border-t border-white/5">
+                    <td className="px-3 py-2 text-axon-muted">{row.dayKey}</td>
+                    <td className="px-3 py-2 capitalize text-white">{row.platform}</td>
+                    <td className="px-3 py-2 text-axon-muted">{row.impressions}</td>
+                    <td className="px-3 py-2 text-axon-muted">{row.clicks}</td>
+                    <td className="px-3 py-2 text-axon-muted">
+                      {row.source === 'api' ? formatUsd(row.spendCents) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {platforms.length > 0 && (
         <section className="space-y-3">
           <p className="text-xs font-medium uppercase tracking-wider text-axon-muted">
-            Platform breakdown (30 days)
+            Content posts by platform (30 days)
           </p>
           <div className="space-y-2">
             {platforms.map(([pl, count]) => {
@@ -309,7 +406,7 @@ function AdTrackingTab({ summary }: { summary: AdSummary }) {
         <DeepLinkRow
           href={MF_ADMIN_LINKS.adTracking}
           label="Ad Tracking — Match Fit Admin"
-          note="Log metrics →"
+          note="Sync / register campaigns →"
         />
       </section>
     </div>
