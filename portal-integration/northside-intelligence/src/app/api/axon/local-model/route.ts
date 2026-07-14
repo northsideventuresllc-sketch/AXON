@@ -9,6 +9,7 @@ import {
   summarizeOutreachTraining,
 } from '@/lib/axon/outreach-learn-core.mjs';
 import { SOURCE } from '@/lib/axon/constants.mjs';
+import { requireAxonOperatorId } from '@/lib/axon/operator';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -59,9 +60,9 @@ async function sbInsert(table: string, row: Record<string, unknown>) {
   return Array.isArray(data) ? data[0] : data;
 }
 
-/** Latest local model run + Ollama probe (probe skipped on GET for speed). */
 export async function GET() {
   try {
+    await requireAxonOperatorId();
     const sb = serviceClient();
     let last: Record<string, unknown> | null = null;
     if (sb) {
@@ -87,16 +88,15 @@ export async function GET() {
       dryRun: last?.dry_run ?? null,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to load local model status' },
-      { status: 500 },
-    );
+    const message = err instanceof Error ? err.message : 'Failed to load local model status';
+    const status = message === 'AXON access denied' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
-/** Run daily local model build (heuristic if Ollama unavailable). */
 export async function POST(req: Request) {
   try {
+    await requireAxonOperatorId();
     const body = await req.json().catch(() => ({}));
     const dryRun = body?.dryRun === true || process.env.AXON_DRY_RUN === '1';
     const forceHeuristic = body?.forceHeuristic === true;
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
         `source=eq.${SOURCE}&select=id,handle,niche,target_group,why_match_fit,comment_draft,dm_draft,notes,status,created_at&order=created_at.desc&limit=40`,
       );
     } catch {
-      /* corpus optional for probe/heuristic path */
+      /* corpus optional */
     }
 
     const training = summarizeOutreachTraining(signals);
@@ -135,9 +135,8 @@ export async function POST(req: Request) {
       summary: result.summary,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Local model run failed' },
-      { status: 500 },
-    );
+    const message = err instanceof Error ? err.message : 'Local model run failed';
+    const status = message === 'AXON access denied' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
