@@ -38,7 +38,7 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
     description:
       'Scans AI models, open-source repos, and neuroscience gaps — feeds your daily AXON brief.',
     howItWorks:
-      'GitHub Actions fires on schedule, runs research lanes (Haiku + SERP), writes findings to NI-Brain, and surfaces highlights in briefing.',
+      'GitHub Actions fires on schedule, runs research lanes (Haiku + SERP), writes findings + axon_research_runs lab log to NI-Brain, and surfaces highlights in briefing.',
     whyImportant:
       'Keeps JB ahead of model releases and OSS tooling without manual RSS hunting — autonomous intelligence loop.',
     defaultEnabled: true,
