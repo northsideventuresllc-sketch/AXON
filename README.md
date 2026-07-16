@@ -93,9 +93,12 @@ npm run dev            # web UI at http://localhost:3000
 npm run outreach:dry   # no writes
 npm run outreach       # live run
 npm run research:dry   # autonomous research (no writes)
-npm run research       # live research → briefings
+npm run research       # live research → findings + axon_research_runs lab log
+npm run test:research-runs  # AX-RESEARCH-RUNS lab-log unit tests
 npm run model:daily:dry # local model build (no Ollama required)
 npm run model:daily    # live local score → axon_local_model_runs
+npm run wisdom:dry     # wisdom absorb loop (no writes)
+npm run wisdom         # live Watch→digest→enhance → axon_wisdom_*
 npm run telegram:poll  # process Telegram commands once
 npm run telegram:setup # register slash commands
 ```
@@ -115,6 +118,8 @@ npm run telegram:setup # register slash commands
 **Local daily model (AX-MODEL-DAILY):** See `docs/axon-local-model-daily.md` — Mac Ollama/heuristic scoring + Phase 1 workflow strip in NI Outreach HQ.
 
 **Communication skill (AX-COMM-SKILL / AX-COMM-TELEMETRY):** See `docs/axon-comm-skill.md` — technique practice writes `axon_comm_skill_runs` (`npm run comm:skill`).
+
+**Wisdom absorb (AX-WISDOM-LOOP):** See `docs/axon-wisdom-loop.md` — Watch→digest→enhance loop over ND corpus / research / Learnings → `axon_wisdom_items`.
 
 ---
 

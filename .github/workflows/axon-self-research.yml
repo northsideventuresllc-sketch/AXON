@@ -58,4 +58,6 @@ jobs:
 
       - name: Report failure
         if: failure()
-        run: echo "❌ AXON self-research failed — check Actions logs"
+        run: |
+          echo "❌ AXON self-research failed — check Actions logs"
+          echo "Lab log: axon_research_runs should have status=failed for this run (AX-RESEARCH-RUNS)"

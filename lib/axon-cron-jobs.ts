@@ -38,7 +38,7 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
     description:
       'Scans AI models, open-source repos, and neuroscience gaps — feeds your daily AXON brief.',
     howItWorks:
-      'GitHub Actions fires on schedule, runs research lanes (Haiku + SERP), writes findings to NI-Brain, and surfaces highlights in briefing.',
+      'GitHub Actions fires on schedule, runs research lanes (Haiku + SERP), writes findings + axon_research_runs lab log to NI-Brain, and surfaces highlights in briefing.',
     whyImportant:
       'Keeps JB ahead of model releases and OSS tooling without manual RSS hunting — autonomous intelligence loop.',
     defaultEnabled: true,
@@ -167,6 +167,25 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
       'npm run comm:skill (or POST /api/axon/comm-skill / learning refresh) scans axon_communication_profile + signals, bumps weights, inserts an audit row into axon_comm_skill_runs.',
     whyImportant:
       'Without run telemetry JB cannot see whether the communication adaptation skill is practicing — this closes the Post-Comm gap.',
+    defaultEnabled: true,
+  },
+  {
+    id: 'axon-wisdom-loop',
+    title: 'Wisdom Absorb Loop',
+    scheduleLabel: 'Mac cron · daily 6:30 AM local',
+    cronUtc: null,
+    workflowFile: 'axon-wisdom-loop.mjs',
+    workflowRepo: 'northsideventuresllc-sketch/AXON',
+    venture: 'AXON',
+    droidRole: 'Learning',
+    faceShape: 'hex',
+    axonTools: ['Briefing Panel', 'NI Outreach HQ'],
+    description:
+      'AX-WISDOM-LOOP — Watch→digest→enhance absorb of ND corpus, research, Learnings, and signals into durable wisdom.',
+    howItWorks:
+      'Mac cron runs npm run wisdom, ranks multi-source wisdom, enhances J-space, upserts axon_wisdom_items + axon_wisdom_runs. Chat loads the prompt block.',
+    whyImportant:
+      'Slow Takeover / Mac ON path — AXON keeps JB corrections and verified ND principles without re-deriving them every session.',
     defaultEnabled: true,
   },
 ];

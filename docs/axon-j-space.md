@@ -59,7 +59,7 @@ AXON cannot access Claude's internal activations. We implement a **global worksp
 |-------|---------|
 | `axon_jspace_state` | Active concepts, broadcast queue, gap backlog, implementation queue |
 | `axon_research_findings` | Autonomous research outputs |
-| `axon_research_runs` | Audit log + weekly rate limit |
+| `axon_research_runs` | Lab log (completed/failed/skipped) + weekly rate limit — AX-RESEARCH-RUNS |
 
 ### Maximization strategy
 
@@ -84,10 +84,23 @@ AXON cannot access Claude's internal activations. We implement a **global worksp
 **Outputs:**
 
 - 2–4 findings stored in `axon_research_findings`
+- One `axon_research_runs` lab-log row per job (`completed` / `failed` / `skipped`)
 - J-space concepts posted from synthesis
 - **Daily brief items** added automatically:
   - `🔬 Research: <headline>`
   - `⚡ Implement: <high-priority finding>` (when applicable)
+
+### Lab log (`axon_research_runs`)
+
+Every live research job writes a lab-log row (AX-RESEARCH-RUNS):
+
+| Status | When |
+|--------|------|
+| `completed` | Findings + briefing persisted |
+| `skipped` | Weekly cap already reached (still audited) |
+| `failed` | Exception during gather/synthesize/persist |
+
+`GET /api/axon/jspace` returns `researchRuns` alongside `jspace` and `findings`. Rate limit counts only `status=completed` rows in the last 7 days.
 
 ### Manual run
 
