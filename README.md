@@ -117,6 +117,8 @@ npm run telegram:setup # register slash commands
 
 **Local daily model (AX-MODEL-DAILY):** See `docs/axon-local-model-daily.md` — Mac Ollama/heuristic scoring + Phase 1 workflow strip in NI Outreach HQ.
 
+**Communication skill (AX-COMM-SKILL / AX-COMM-TELEMETRY):** See `docs/axon-comm-skill.md` — technique practice writes `axon_comm_skill_runs` (`npm run comm:skill`).
+
 **Wisdom absorb (AX-WISDOM-LOOP):** See `docs/axon-wisdom-loop.md` — Watch→digest→enhance loop over ND corpus / research / Learnings → `axon_wisdom_items`.
 
 ---
