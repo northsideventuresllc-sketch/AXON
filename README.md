@@ -93,7 +93,8 @@ npm run dev            # web UI at http://localhost:3000
 npm run outreach:dry   # no writes
 npm run outreach       # live run
 npm run research:dry   # autonomous research (no writes)
-npm run research       # live research → briefings
+npm run research       # live research → findings + axon_research_runs lab log
+npm run test:research-runs  # AX-RESEARCH-RUNS lab-log unit tests
 npm run model:daily:dry # local model build (no Ollama required)
 npm run model:daily    # live local score → axon_local_model_runs
 npm run telegram:poll  # process Telegram commands once

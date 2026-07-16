@@ -50,7 +50,7 @@ COMMENT ON TABLE public.axon_research_findings IS
 
 ALTER TABLE public.axon_research_findings ENABLE ROW LEVEL SECURITY;
 
--- Research run log (audit + rate limiting)
+-- Research run lab log (audit + weekly rate limiting) — AX-RESEARCH-RUNS
 CREATE TABLE IF NOT EXISTS public.axon_research_runs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   operator_id text NOT NULL DEFAULT 'default',
@@ -59,14 +59,22 @@ CREATE TABLE IF NOT EXISTS public.axon_research_runs (
   briefing_items_added int NOT NULL DEFAULT 0,
   status text NOT NULL DEFAULT 'completed',
   error_message text,
+  summary text,
   meta jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Idempotent upgrade for DBs created before summary column
+ALTER TABLE public.axon_research_runs
+  ADD COLUMN IF NOT EXISTS summary text;
+
 CREATE INDEX IF NOT EXISTS idx_axon_research_runs_created
   ON public.axon_research_runs (created_at DESC);
 
+CREATE INDEX IF NOT EXISTS idx_axon_research_runs_status_created
+  ON public.axon_research_runs (status, created_at DESC);
+
 COMMENT ON TABLE public.axon_research_runs IS
-  'AXON self-research run audit log. Service role only.';
+  'AXON self-research lab log (completed|failed|skipped). Service role only. Job: AX-RESEARCH-RUNS.';
 
 ALTER TABLE public.axon_research_runs ENABLE ROW LEVEL SECURITY;

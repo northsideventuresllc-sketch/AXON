@@ -14,6 +14,7 @@
     "content:notify": "node scripts/axon-content-batch-notify.mjs",
     "research": "node scripts/axon-self-research.mjs",
     "research:dry": "AXON_DRY_RUN=1 node scripts/axon-self-research.mjs",
+    "test:research-runs": "node tests/axon-research-runs.test.mjs",
     "dashboard": "node scripts/axon-dashboard.mjs",
     "outreach:dry": "AXON_DRY_RUN=1 node scripts/axon-ni-outreach.mjs",
     "ad-tracker": "node scripts/axon-mf-ad-tracker-sync.mjs",
