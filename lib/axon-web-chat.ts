@@ -18,6 +18,7 @@ import {
   setWorkspaceFlags,
 } from './axon-workspace';
 import { loadJspacePromptBlock } from './axon-j-space';
+import { loadWisdomPromptBlock } from './axon-wisdom';
 import type { ChatMessage, TonePreset } from './axon-types';
 import { createSupabaseClient } from './supabase.mjs';
 
@@ -63,12 +64,13 @@ export async function generateAxonReply(
   const { sbSelect } = createSupabaseClient(key);
   const cfg = await loadConfig(sbSelect);
 
-  const [profile, signals, memories, workspace, jspaceBlock] = await Promise.all([
+  const [profile, signals, memories, workspace, jspaceBlock, wisdomBlock] = await Promise.all([
     getOperatorProfile(),
     fetchTopSignals(),
     fetchMemories(undefined, 15),
     getWorkspace(),
     loadJspacePromptBlock(),
+    loadWisdomPromptBlock(),
   ]);
 
   const toneBlock = buildToneInstructions(profile.tone_preset, signals);
@@ -98,7 +100,7 @@ You operate a J-Space global workspace analogue: route high-order reasoning thro
 ${toneBlock}
 ${memoryBlock}
 ${workspaceBlock}
-${jspaceBlock}${notificationBlock}
+${jspaceBlock}${wisdomBlock}${notificationBlock}
 
 ${channel === 'voice' ? 'This is a voice conversation. Keep responses concise (2-4 sentences unless detail is requested). Sound natural when spoken aloud.' : 'This is text chat. Be conversational and human — not bullet-heavy unless listing data.'}
 
