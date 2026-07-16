@@ -150,6 +150,25 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
       'Moves daily score/follow-up interactivity into AXON so JB spends less on cloud LLM subscriptions for routine calibration.',
     defaultEnabled: true,
   },
+  {
+    id: 'axon-comm-skill',
+    title: 'Communication Skill Practice',
+    scheduleLabel: 'On learning refresh / manual',
+    cronUtc: null,
+    workflowFile: 'axon-comm-skill.mjs',
+    workflowRepo: 'northsideventuresllc-sketch/AXON',
+    venture: 'AXON',
+    droidRole: 'Comms',
+    faceShape: 'diamond',
+    axonTools: ['Test Mode', 'Repo Manager Agent Dispatch'],
+    description:
+      'AX-COMM-SKILL — heuristic technique weight practice from communication signals; writes axon_comm_skill_runs (AX-COMM-TELEMETRY).',
+    howItWorks:
+      'npm run comm:skill (or POST /api/axon/comm-skill / learning refresh) scans axon_communication_profile + signals, bumps weights, inserts an audit row into axon_comm_skill_runs.',
+    whyImportant:
+      'Without run telemetry JB cannot see whether the communication adaptation skill is practicing — this closes the Post-Comm gap.',
+    defaultEnabled: true,
+  },
 ];
 
 export function getCronJobDef(id: string): AxonCronJobDef | undefined {

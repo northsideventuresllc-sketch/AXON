@@ -2,6 +2,7 @@ import { HAIKU_MODEL } from './constants.mjs';
 import { loadConfig } from './config.mjs';
 import {
   buildToneInstructions,
+  fetchCommunicationTechniques,
   fetchMemories,
   fetchTopSignals,
   getOperatorProfile,
@@ -63,15 +64,16 @@ export async function generateAxonReply(
   const { sbSelect } = createSupabaseClient(key);
   const cfg = await loadConfig(sbSelect);
 
-  const [profile, signals, memories, workspace, jspaceBlock] = await Promise.all([
+  const [profile, signals, memories, workspace, jspaceBlock, techniques] = await Promise.all([
     getOperatorProfile(),
     fetchTopSignals(),
     fetchMemories(undefined, 15),
     getWorkspace(),
     loadJspacePromptBlock(),
+    fetchCommunicationTechniques(),
   ]);
 
-  const toneBlock = buildToneInstructions(profile.tone_preset, signals);
+  const toneBlock = buildToneInstructions(profile.tone_preset, signals, techniques, channel);
   const memoryBlock = memories.length
     ? `\nOperator context you remember:\n${memories.map((m) => `- (${m.memory_type}) ${m.content}`).join('\n')}`
     : '';
@@ -99,8 +101,6 @@ ${toneBlock}
 ${memoryBlock}
 ${workspaceBlock}
 ${jspaceBlock}${notificationBlock}
-
-${channel === 'voice' ? 'This is a voice conversation. Keep responses concise (2-4 sentences unless detail is requested). Sound natural when spoken aloud.' : 'This is text chat. Be conversational and human — not bullet-heavy unless listing data.'}
 
 Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand name). Never auto-send outreach. Phase 1 goal: close 4 paid NI Services clients.`;
 

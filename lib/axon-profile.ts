@@ -1,5 +1,9 @@
 import { createSupabaseClient } from './supabase.mjs';
 import {
+  buildCommSkillInstructions,
+  mergeTechniquesWithDefaults,
+} from './axon-comm-skill.mjs';
+import {
   DEFAULT_TONE_PRESET,
   OPERATOR_ID,
   type ChatMessage,
@@ -84,6 +88,31 @@ export async function fetchTopSignals(
   )) as CommunicationSignal[];
   return rows || [];
 }
+
+/** AX-COMM-SKILL technique catalog from NI-Brain (dual-brain runtime memory). */
+export async function fetchCommunicationTechniques(): Promise<
+  ReturnType<typeof mergeTechniquesWithDefaults>
+> {
+  try {
+    const { sbSelect } = client();
+    const rows = (await sbSelect(
+      'axon_communication_profile',
+      'select=*&order=weight.desc',
+    )) as Array<{
+      id?: number;
+      technique_id: string;
+      description: string;
+      weight?: number;
+      evidence?: string | null;
+      source?: string | null;
+    }>;
+    return mergeTechniquesWithDefaults(rows || []);
+  } catch {
+    return mergeTechniquesWithDefaults([]);
+  }
+}
+
+export { buildCommSkillInstructions };
 
 export async function upsertSignal(input: {
   operator_id?: string;
@@ -191,7 +220,9 @@ export async function resetOperatorData(
 
 export function buildToneInstructions(
   preset: TonePreset,
-  signals: CommunicationSignal[]
+  signals: CommunicationSignal[],
+  techniques?: Parameters<typeof buildCommSkillInstructions>[0],
+  channel: 'chat' | 'voice' | 'telegram' = 'chat',
 ): string {
   const top = signals
     .filter((s) => s.weight >= 1.5)
@@ -210,7 +241,14 @@ export function buildToneInstructions(
     ? `\nAvoid: ${preset.avoid_phrases.join(', ')}`
     : '';
 
-  return `Tone preset: ${preset.summary || DEFAULT_TONE_PRESET.summary}
+  const skillBlock = buildCommSkillInstructions(
+    techniques?.length ? techniques : mergeTechniquesWithDefaults([]),
+    { channel },
+  );
+
+  return `${skillBlock}
+
+Tone preset: ${preset.summary || DEFAULT_TONE_PRESET.summary}
 Warmth ${preset.warmth}, directness ${preset.directness}, formality ${preset.formality}, humor ${preset.humor}.
 ${top.length ? `\nEvidence-weighted communication signals:\n${top.join('\n')}` : ''}${learned}${preferred}${avoid}
 
