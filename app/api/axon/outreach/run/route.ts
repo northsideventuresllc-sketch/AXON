@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getOutreachRunStatus, triggerOutreachRun } from '@/lib/outreach-run';
+import { assertFireAllowed, FireHoldError } from '@/lib/axon-fire-gate';
 
 export async function GET() {
   try {
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
       /* default max */
     }
 
+    await assertFireAllowed('outreach.run');
     const result = await triggerOutreachRun({ max });
     return NextResponse.json({
       ok: true,
@@ -31,6 +33,12 @@ export async function POST(req: Request) {
       message: `Outreach run started (max ${result.max} draft${result.max === 1 ? '' : 's'}). New leads land in the queue in ~5–10 minutes.`,
     });
   } catch (err) {
+    if (err instanceof FireHoldError) {
+      return NextResponse.json(
+        { error: err.message, hold: true, action: err.action },
+        { status: 423 }
+      );
+    }
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Run failed' },
       { status: 500 }
