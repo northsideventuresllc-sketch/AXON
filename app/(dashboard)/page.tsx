@@ -1,5 +1,6 @@
 import { AxonInterface } from '@/components/axon/axon-interface';
 import { DroidSpace } from '@/components/axon/droid-space';
+import { FireGateBanner } from '@/components/axon/fire-gate-banner';
 import { fetchChatHistory, getOperatorProfile } from '@/lib/axon-profile';
 import { getWorkspace } from '@/lib/axon-workspace';
 import { getPreferences } from '@/lib/axon-preferences';
@@ -16,6 +17,7 @@ export default async function AxonHomePage() {
 
   return (
     <div className="relative space-y-8">
+      <FireGateBanner />
       <header className="mx-auto max-w-3xl overflow-visible pb-2 pt-1 text-center">
         <p className="text-xs uppercase tracking-[0.2em] text-axon-blue-glow">
           Northside Intelligence
