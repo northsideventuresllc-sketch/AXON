@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getFireMode, setFireMode, type FireMode } from '@/lib/axon-fire-gate';
+import { learnStep } from '@/lib/axon-step-learn';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,17 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+    const previous = await getFireMode().catch(() => null);
     const state = await setFireMode(requested as FireMode);
+    // Learn every gate flip (HOLD ↔ FIRE) — the single most important operator
+    // signal about when JB is willing to go live. Fire-and-forget.
+    learnStep({
+      tool: 'fire-gate',
+      step: 'mode-change',
+      before: previous?.mode,
+      after: state.mode,
+      meta: { source: state.source },
+    });
     return NextResponse.json({ ok: true, ...state });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'fire-gate write failed';

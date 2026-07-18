@@ -12,6 +12,7 @@ import {
   type LucielleNode,
 } from '@/lib/axon-tools-data';
 import { AxonToolFooter } from './axon-tool-footer';
+import { learnStepClient } from '@/lib/axon-step-learn-client';
 
 function formatMetric(m: LucielleMetric): string {
   if (m.format === 'percent') return `${m.value}%`;
@@ -48,6 +49,15 @@ export function LucielleTool({ basePath }: { basePath?: string }) {
             key={m}
             type="button"
             onClick={() => {
+              if (m !== mode) {
+                learnStepClient({
+                  tool: 'lucielle',
+                  step: 'mode-switch',
+                  before: mode,
+                  after: m,
+                  venture: m === 'nvg' ? 'NVG' : 'Personal',
+                });
+              }
               setMode(m);
               setSelectedNode(m === 'nvg' ? 'nvg' : 'personal');
             }}
