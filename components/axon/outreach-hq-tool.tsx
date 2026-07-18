@@ -156,6 +156,14 @@ export function OutreachHqTool({
             <p className="mt-2 max-w-2xl text-sm text-axon-muted">
               Find → score → draft → approve → send. Queue and pipeline live inside this workspace.
             </p>
+            <p className="mt-3 inline-flex flex-wrap items-center gap-2 rounded-lg border border-axon-border bg-axon-surface px-3 py-1.5 text-xs text-axon-muted">
+              <span className="font-medium text-axon-text">Daily caps</span>
+              <span>10 email</span>
+              <span className="text-axon-muted/50">·</span>
+              <span>10 LinkedIn</span>
+              <span className="text-axon-muted/50">·</span>
+              <span>max 20 unreached leads</span>
+            </p>
           </header>
 
           <nav className="flex flex-wrap gap-2 border-b border-axon-border/60 pb-3">
