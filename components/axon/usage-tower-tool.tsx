@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { appPath } from '@/lib/paths';
 import { USAGE_CONNECTORS, USAGE_VENTURES, type UsageConnector } from '@/lib/axon-tools-data';
 import { AxonToolFooter } from './axon-tool-footer';
@@ -71,9 +71,15 @@ export function UsageTowerTool({ basePath }: { basePath?: string }) {
     });
   }
 
+  /** Last value we already learned for each connector (avoids stale seed + no-op re-learns). */
+  const lastLearnedCaps = useRef<Record<string, number | null>>(
+    Object.fromEntries(USAGE_CONNECTORS.map((c) => [c.id, c.capMonthly])),
+  );
+
   function recordCapChange(connector: UsageConnector, next: number | null) {
-    const previous = connector.capMonthly;
+    const previous = lastLearnedCaps.current[connector.id] ?? null;
     if (next === previous) return;
+    lastLearnedCaps.current[connector.id] = next;
     learnStepClient({
       tool: 'usage-tower',
       step: 'cap-change',
