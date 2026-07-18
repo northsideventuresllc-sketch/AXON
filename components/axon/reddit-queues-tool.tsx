@@ -12,6 +12,7 @@ import {
 } from '@/lib/axon-tools-data';
 import { AxonToolFooter } from './axon-tool-footer';
 import { FireGateNotice, FireModePill, useFireGate } from './fire-gate-banner';
+import { learnStepClient } from '@/lib/axon-step-learn-client';
 
 const TELEGRAM_STATUS: Record<
   TelegramApprovalStatus,
@@ -97,12 +98,34 @@ function RedditQueue({
                   type="button"
                   disabled={!canPost}
                   title={!canPost ? 'Needs Telegram approval + FIRE' : undefined}
+                  onClick={() =>
+                    learnStepClient({
+                      tool: 'reddit-queues',
+                      step: 'post-attempt',
+                      venture: 'NORTHSiDE Intelligence',
+                      meta: {
+                        queue: title,
+                        title: item.title,
+                        subreddit: item.subreddit,
+                        telegramStatus: item.telegramStatus,
+                        mode,
+                      },
+                    })
+                  }
                   className="rounded-lg border border-axon-success/40 px-3 py-1.5 text-xs text-axon-success transition hover:bg-axon-success/10 disabled:opacity-40"
                 >
                   Post now{!canPost ? ' 🔒' : ''}
                 </button>
                 <button
                   type="button"
+                  onClick={() =>
+                    learnStepClient({
+                      tool: 'reddit-queues',
+                      step: 'preview',
+                      venture: 'NORTHSiDE Intelligence',
+                      meta: { queue: title, title: item.title, subreddit: item.subreddit },
+                    })
+                  }
                   className="rounded-lg border border-axon-border px-3 py-1.5 text-xs text-axon-muted transition hover:border-axon-gold/40 hover:text-axon-text"
                 >
                   Preview

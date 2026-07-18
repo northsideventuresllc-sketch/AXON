@@ -4,6 +4,7 @@ import { parseNotes, shortId } from '@/lib/constants.mjs';
 import { resendSend } from '@/lib/resend.mjs';
 import { fetchLeadById, getClient, updateLeadStatus } from '@/lib/leads';
 import { recordOutreachApproval } from '@/lib/outreach-learn';
+import { learnStep } from '@/lib/axon-step-learn';
 
 async function logApproval(id: string) {
   try {
@@ -11,6 +12,14 @@ async function logApproval(id: string) {
   } catch {
     /* training signal is best-effort */
   }
+  // Cross-tool one-line learning (feeds AX-WISDOM-LOOP) — fire-and-forget.
+  learnStep({
+    tool: 'ni-outreach',
+    step: 'approve',
+    after: 'approved',
+    venture: 'NI Outreach',
+    resourceId: id,
+  });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

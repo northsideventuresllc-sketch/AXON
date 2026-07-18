@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { appPath } from '@/lib/paths';
 import { USAGE_CONNECTORS, USAGE_VENTURES, type UsageConnector } from '@/lib/axon-tools-data';
 import { AxonToolFooter } from './axon-tool-footer';
+import { learnStepClient } from '@/lib/axon-step-learn-client';
 
 type Window = 'spendDay' | 'spendWeek' | 'spendMonth' | 'spendYear';
 
@@ -60,6 +61,27 @@ export function UsageTowerTool({ basePath }: { basePath?: string }) {
     const reply = `Biggest line item is ${top.label} at ${money(top.spendMonth)}/mo (${top.venture}). Consider a monthly cap and routing cheaper calls to Gemini/local. Once the FIRE gate is live I can enforce caps automatically.`;
     setChat((prev) => [...prev, { role: 'user', text: q }, { role: 'axon', text: reply }]);
     setInput('');
+    // Learn which cost questions JB asks + which tip was surfaced.
+    learnStepClient({
+      tool: 'usage-tower',
+      step: 'cost-tip',
+      after: `tip: trim ${top.label}`,
+      venture: top.venture,
+      meta: { question: q },
+    });
+  }
+
+  function recordCapChange(connector: UsageConnector, next: number | null) {
+    const previous = connector.capMonthly;
+    if (next === previous) return;
+    learnStepClient({
+      tool: 'usage-tower',
+      step: 'cap-change',
+      before: previous == null ? 'none' : previous,
+      after: next == null ? 'none' : next,
+      venture: connector.venture,
+      meta: { connector: connector.label, connectorId: connector.id },
+    });
   }
 
   return (
@@ -161,6 +183,9 @@ export function UsageTowerTool({ basePath }: { basePath?: string }) {
                             ...prev,
                             [c.id]: e.target.value === '' ? null : Number(e.target.value),
                           }))
+                        }
+                        onBlur={(e) =>
+                          recordCapChange(c, e.target.value === '' ? null : Number(e.target.value))
                         }
                         className="w-24 rounded-md border border-axon-border bg-axon-elevated px-2 py-1 text-right text-xs text-axon-text"
                       />

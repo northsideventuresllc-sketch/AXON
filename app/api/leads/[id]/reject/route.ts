@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { shortId } from '@/lib/constants.mjs';
 import { rejectOutreachLead } from '@/lib/outreach-reject';
+import { learnStep } from '@/lib/axon-step-learn';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,6 +16,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const result = await rejectOutreachLead(id, { reason, source: 'api' });
     if (!result) return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+
+    // One-line learning of the reject + reason — fire-and-forget.
+    learnStep({
+      tool: 'ni-outreach',
+      step: 'reject',
+      after: 'rejected',
+      venture: 'NI Outreach',
+      resourceId: id,
+      meta: result.reason ? { reason: result.reason } : undefined,
+    });
 
     const suffix = result.reason ? ` — ${result.reason}` : '';
     return NextResponse.json({
