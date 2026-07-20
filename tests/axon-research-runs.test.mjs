@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AX-RESEARCH-RUNS lab log helpers — run: node tests/axon-research-runs.test.mjs
+ * AX-RESEARCH-RUNS + AX-SELF-RESEARCH-FIX — run: node tests/axon-research-runs.test.mjs
  */
 import assert from 'node:assert/strict';
 import {
@@ -8,6 +8,10 @@ import {
   buildResearchRunLabLog,
   countRunsThisWeek,
   fetchRecentResearchRuns,
+  heuristicSynthesis,
+  isHardQuotaError,
+  isResearchForceEnabled,
+  isTransientResearchError,
   pickResearchLane,
   writeResearchRunLabLog,
 } from '../lib/axon-research-core.mjs';
@@ -92,5 +96,36 @@ assert.equal(recent.length, 2);
 
 const lane = pickResearchLane(new Date('2026-07-13T12:00:00Z')); // Monday UTC
 assert.ok(['ai_models', 'open_source', 'neuroscience'].includes(lane));
+
+// AX-SELF-RESEARCH-FIX helpers
+assert.equal(isResearchForceEnabled({ AXON_RESEARCH_FORCE: 'false' }), false);
+assert.equal(isResearchForceEnabled({ AXON_RESEARCH_FORCE: '' }), false);
+assert.equal(isResearchForceEnabled({ AXON_RESEARCH_FORCE: 'true' }), true);
+assert.equal(isResearchForceEnabled({ AXON_RESEARCH_FORCE: '1' }), true);
+
+assert.equal(
+  isHardQuotaError(
+    new Error(
+      'Anthropic HTTP 400: {"type":"error","error":{"message":"Your credit balance is too low to access the Anthropic API."}}'
+    )
+  ),
+  true
+);
+assert.equal(isHardQuotaError(new Error('Anthropic HTTP 529 overload')), false);
+assert.equal(isTransientResearchError(new Error('Anthropic HTTP 529')), true);
+assert.equal(isTransientResearchError(new Error('credit balance is too low')), false);
+
+const heuristic = heuristicSynthesis('ai_models', [
+  {
+    title: 'Agent memory architecture',
+    link: 'https://example.com/memory',
+    snippet: 'Persistent workspace memory for agents.',
+  },
+]);
+assert.equal(heuristic._provider, 'heuristic');
+assert.ok(heuristic.findings.length >= 1);
+assert.match(heuristic.findings[0].title, /Agent memory/);
+assert.match(heuristic.briefing_headline, /heuristic/);
+assert.equal(heuristic.jspace_concepts.length, 1);
 
 console.log('axon-research-runs.test.mjs: all assertions passed');

@@ -81,6 +81,8 @@ AXON cannot access Claude's internal activations. We implement a **global worksp
 | `open_source` | GitHub repos — agent frameworks, memory layers, orchestration |
 | `neuroscience` | Global workspace theory, brain gaps, consolidation |
 
+**LLM cascade (AX-SELF-RESEARCH-FIX):** Haiku → Gemini (keys + model fallbacks) → heuristic gather. Hard Anthropic billing/quota fails over immediately (no burn retries). Transient 429/5xx auto-retry in-process; workflow `auto-retry` job re-dispatches once on total failure.
+
 **Outputs:**
 
 - 2–4 findings stored in `axon_research_findings`
