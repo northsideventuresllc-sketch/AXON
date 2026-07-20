@@ -25,16 +25,28 @@ on:
         options:
           - 'false'
           - 'true'
+      retry_attempt:
+        description: 'Internal auto-retry guard (0 = first try, 1 = one re-dispatch)'
+        required: false
+        default: '0'
+        type: choice
+        options:
+          - '0'
+          - '1'
 
 concurrency:
   group: axon-self-research
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   research:
     name: AXON — autonomous intelligence research
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -43,17 +55,21 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Run self-research
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_BACKUP: ${{ secrets.GEMINI_API_KEY_BACKUP }}
           SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AXON_GITHUB_PAT: ${{ secrets.AXON_GITHUB_PAT }}
           AXON_RESEARCH_LANE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.lane || '' }}
           AXON_RESEARCH_FORCE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force || '' }}
+          AXON_RESEARCH_MAX_ATTEMPTS: '3'
+          AXON_RESEARCH_RETRY_BASE_MS: '4000'
         run: node scripts/axon-self-research.mjs
 
       - name: Report failure
@@ -61,3 +77,32 @@ jobs:
         run: |
           echo "❌ AXON self-research failed — check Actions logs"
           echo "Lab log: axon_research_runs should have status=failed for this run (AX-RESEARCH-RUNS)"
+          echo "Cascade: Haiku → Gemini → heuristic; workflow auto-retry job will re-dispatch once."
+
+  # One automatic re-dispatch after total job failure (schedule or first dispatch).
+  # Guarded by retry_attempt so we never loop forever.
+  auto-retry:
+    name: Auto-retry once on failure
+    needs: research
+    if: failure() && (github.event_name != 'workflow_dispatch' || github.event.inputs.retry_attempt != '1')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Re-dispatch AXON Self-Research
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          LANE_ARGS=()
+          FORCE_ARGS=(-f force=true)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.lane }}" ]; then
+            LANE_ARGS=(-f "lane=${{ github.event.inputs.lane }}")
+          fi
+          echo "Re-dispatching axon-self-research.yml with retry_attempt=1 (AX-SELF-RESEARCH-FIX)"
+          gh workflow run axon-self-research.yml \
+            --repo "${{ github.repository }}" \
+            --ref "${{ github.ref_name }}" \
+            "${FORCE_ARGS[@]}" \
+            "${LANE_ARGS[@]}" \
+            -f retry_attempt=1
+          echo "Re-dispatch queued — watch Actions for green MWFSa proof"
