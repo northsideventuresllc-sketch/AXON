@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchDispatchTask, deriveVenture, deriveComplexity } from '@/lib/agent-dispatch';
+import { HAIKU_MODEL } from '@/lib/constants.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ async function callHaiku(apiKey: string, system: string, user: string): Promise<
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-3-5-haiku-20241022',
+      model: HAIKU_MODEL,
       max_tokens: 600,
       system,
       messages: [{ role: 'user', content: user }],

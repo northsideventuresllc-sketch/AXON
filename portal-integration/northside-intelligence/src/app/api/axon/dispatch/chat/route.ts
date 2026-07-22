@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchDispatchTask, deriveVenture, deriveComplexity } from '@/lib/axon/agent-dispatch';
 import { requireAxonOperatorId } from '@/lib/axon/operator';
+import { HAIKU_MODEL } from '@/lib/axon/constants.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ async function callHaiku(apiKey: string, system: string, user: string): Promise<
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-3-5-haiku-20241022',
+      model: HAIKU_MODEL,
       max_tokens: 600,
       system,
       messages: [{ role: 'user', content: user }],
