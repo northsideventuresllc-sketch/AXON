@@ -33,7 +33,7 @@ No auto-send. Telegram approve still required for outbound.
 | ID | Behavior |
 |----|----------|
 | T1 | One ask / outcome per message |
-| T2 | Max 3 bullets; continue next turn |
+| T2 | Narrative in Telegram — never a bulleted/numbered list of jobs or technical items; chat bullets OK for data, capped at 3 |
 | T3 | Lead with answer or next action |
 | T4 | No meta narration of process/techniques |
 | T5 | Plain human language — jargon only when asked |
