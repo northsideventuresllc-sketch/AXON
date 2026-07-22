@@ -23,6 +23,8 @@ import { loadWisdomPromptBlock } from './axon-wisdom';
 import type { ChatMessage, TonePreset } from './axon-types';
 import { createSupabaseClient } from './supabase.mjs';
 
+const GEMINI_MODEL = 'gemini-2.0-flash';
+
 async function callHaiku(apiKey: string, system: string, messages: { role: string; content: string }[]) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -41,6 +43,56 @@ async function callHaiku(apiKey: string, system: string, messages: { role: strin
   if (!r.ok) throw new Error(`Anthropic HTTP ${r.status}: ${await r.text()}`);
   const data = await r.json();
   return data.content?.map((c: { text?: string }) => c.text || '').join('').trim();
+}
+
+async function callGeminiOnce(
+  apiKey: string,
+  system: string,
+  messages: { role: string; content: string }[],
+): Promise<string | null> {
+  const contents = messages.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents,
+        generationConfig: { maxOutputTokens: 900, temperature: 0.6 },
+      }),
+    },
+  );
+  if (!r.ok) return null;
+  const data = await r.json();
+  const text = data.candidates?.[0]?.content?.parts
+    ?.map((p: { text?: string }) => p.text)
+    .join('')
+    ?.trim();
+  return text || null;
+}
+
+/**
+ * Free-tier Gemini first, paid Haiku only if Gemini is unconfigured or fails.
+ * Same call shape as callHaiku so existing call sites need only add geminiKey/geminiBackup.
+ */
+async function callChatModel(
+  keys: { anthropicKey: string; geminiKey?: string; geminiBackup?: string },
+  system: string,
+  messages: { role: string; content: string }[],
+): Promise<string> {
+  for (const key of [keys.geminiKey, keys.geminiBackup].filter((k): k is string => Boolean(k))) {
+    try {
+      const text = await callGeminiOnce(key, system, messages);
+      if (text) return text;
+    } catch {
+      // try next key / fall through to Haiku
+    }
+  }
+  return callHaiku(keys.anthropicKey, system, messages);
 }
 
 function extractJson(text: string) {
@@ -112,7 +164,7 @@ Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand nam
     content: m.content,
   }));
 
-  const reply = await callHaiku(cfg.anthropicKey, system, [
+  const reply = await callChatModel(cfg, system, [
     ...recent,
     { role: 'user', content: userMessage },
   ]);
@@ -137,7 +189,7 @@ Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand nam
   try {
     updatedWorkspace =
       (await analyzeAndLearn(
-        cfg.anthropicKey,
+        cfg,
         userMessage,
         reply,
         profile.tone_preset,
@@ -151,7 +203,7 @@ Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand nam
 }
 
 async function analyzeAndLearn(
-  apiKey: string,
+  cfg: { anthropicKey: string; geminiKey?: string; geminiBackup?: string },
   userMessage: string,
   assistantReply: string,
   currentPreset: TonePreset,
@@ -200,7 +252,7 @@ Return JSON:
 
   let parsed;
   try {
-    const text = await callHaiku(apiKey, system, [{ role: 'user', content: user }]);
+    const text = await callChatModel(cfg, system, [{ role: 'user', content: user }]);
     parsed = extractJson(text);
   } catch {
     return currentWorkspace;
@@ -286,7 +338,7 @@ export async function refreshTonePresetFromSignals() {
   const user = `Signals:\n${JSON.stringify(signals.slice(0, 10), null, 2)}\nCurrent:\n${JSON.stringify(profile.tone_preset)}\n\nReturn: { "style", "warmth", "directness", "formality", "humor", "summary", "learned_patterns", "preferred_phrases", "avoid_phrases" }`;
 
   try {
-    const text = await callHaiku(cfg.anthropicKey, system, [{ role: 'user', content: user }]);
+    const text = await callChatModel(cfg, system, [{ role: 'user', content: user }]);
     const next = extractJson(text) as TonePreset;
     await updateOperatorProfile('default', { tone_preset: next });
     return next;
