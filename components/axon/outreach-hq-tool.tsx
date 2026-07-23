@@ -247,7 +247,7 @@ export function OutreachHqTool({
                 <div className="rounded-xl border border-dashed border-axon-border p-12 text-center">
                   <p className="text-axon-muted">No drafts pending approval.</p>
                   <p className="mt-2 text-xs text-axon-muted">
-                    Nightly outreach runs at 2:30 AM EST via GitHub Actions.
+                    Nightly auto-run is off (training mode) — use &quot;Generate leads&quot; to queue new drafts.
                   </p>
                 </div>
               ) : (

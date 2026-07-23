@@ -5,6 +5,7 @@ import { resendSend } from '@/lib/resend.mjs';
 import { fetchLeadById, getClient, updateLeadStatus } from '@/lib/leads';
 import { recordOutreachApproval } from '@/lib/outreach-learn';
 import { learnStep } from '@/lib/axon-step-learn';
+import { assertFireAllowed, FireHoldError } from '@/lib/axon-fire-gate';
 
 async function logApproval(id: string) {
   try {
@@ -70,6 +71,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const subject = meta.email_subject || `NORTHSiDE Intelligence — ${lead.handle}`;
+    await assertFireAllowed('outreach.run');
     await resendSend(cfg, {
       to,
       subject,
@@ -80,6 +82,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await logApproval(id);
     return NextResponse.json({ message: `Email sent to ${to} for ${lead.handle}` });
   } catch (err) {
+    if (err instanceof FireHoldError) {
+      return NextResponse.json(
+        { error: err.message, hold: true, action: err.action },
+        { status: 423 }
+      );
+    }
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Approve failed' },
       { status: 500 }

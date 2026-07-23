@@ -71,7 +71,7 @@ export function OutreachIcpChecklist({
           <p className="text-xs uppercase tracking-[0.2em] text-axon-gold">Track A · 5a</p>
           <h2 className="mt-1 text-lg font-medium">ICP Operator Checklist</h2>
           <p className="mt-1 max-w-2xl text-sm text-axon-muted">
-            Nightly outreach runs the 8-step ICP pipeline at 2:30 AM EST, or use Generate leads above.
+            Nightly auto-run is off (training mode) — use Generate leads above to run the 8-step ICP pipeline manually.
           </p>
         </div>
         {icpAutoRejectedCount > 0 && (
