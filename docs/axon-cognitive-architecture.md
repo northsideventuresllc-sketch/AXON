@@ -1,7 +1,6 @@
 # AXON cognitive architecture — reasoning core, Core/Personal split, second-brain learning
 
-> **Draft proposal, 2026-07-23.** Design only — no new infra shipped in this pass. Per-user
-> provisioning, OAuth scopes, and connector consent UX are open decisions for JB.
+> **Draft proposal, 2026-07-23.** Design only — no new infra shipped in this pass.
 
 ## 1. AX-REASON-CORE — educated guessing, not lazy prediction
 
@@ -22,15 +21,20 @@ Plug in first at the three surfaces that already produce model output:
 | | Core | Personal |
 |---|---|---|
 | What | Code, prompts, skills, tools | Preferences, history, wisdom, connected-data grants |
-| Where | This repo — versioned | Per-user Supabase (per the 2026-07-14 decision, Context id 421) |
+| Where | This repo — versioned | One Supabase project per user (locked 2026-07-14, Context id 421) |
 | Updates | Ships like normal software updates | Never overwritten by a Core update |
 
 **Cross-device "in seconds" isn't a sync protocol** — it's routing. Core ships static with
 every client; a device authenticates and points at the same per-user Supabase every other
 device already uses. Nothing to copy or reconcile.
 
-Open for JB: provisioning timing (signup vs. lazy), hosting model (per-user projects vs.
-multi-tenant schema) — decide before building.
+**Provisioning: lazy, not on signup.** A per-user Supabase project is created on the first
+event that actually needs personalization (first preference set, first connector enabled,
+first saved chat) — not at account creation. Matches AXON's existing cost discipline (the
+$20/mo API cap and free-tier posture already in the README): most signups won't reach a real
+personalization event, so provisioning on signup would mean paying for empty databases.
+`getOperatorProfile`/`updateOperatorProfile` already have the right shape for this — the
+provision-on-first-write path is an addition to those, not a new subsystem.
 
 ## 3. Second-brain passive learning
 
@@ -39,7 +43,12 @@ and AX-WISDOM-LOOP (absorb pipeline). The gap is the *outside*-AXON surface: opt
 connectors to tools the user already lives in, feeding the same pipeline.
 
 Passive learning ≠ silent access: every connector is a visible, revocable, read-only-by-default
-grant, Personal-layer only, never a Core default. First connector to build is JB's call.
+grant, Personal-layer only, never a Core default.
+
+**First connector: Gmail, read-only.** Highest-signal, most universal source of who someone
+is and what they're working on — richer and more available than calendar or notes alone, and
+this org already has a working Gmail MCP integration pattern to model the adapter on. Calendar
+is the natural second connector once Gmail proves the pipeline.
 
 ## Related
 `lib/axon-fire-gate.ts` · `lib/axon-step-learn.ts` · `lib/axon-profile.ts` ·
