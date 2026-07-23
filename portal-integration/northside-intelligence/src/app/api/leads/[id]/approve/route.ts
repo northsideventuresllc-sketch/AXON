@@ -5,6 +5,7 @@ import { resendSend } from '@/lib/axon/resend.mjs';
 import { fetchLeadById, getClient, updateLeadStatus } from '@/lib/axon/leads';
 import { recordOutreachApproval } from '@/lib/axon/outreach-learn';
 import { requireAxonOperatorId } from '@/lib/axon/operator';
+import { assertFireAllowed, FireHoldError } from '@/lib/axon/axon-fire-gate';
 
 async function logApproval(id: string, operatorId: string) {
   try {
@@ -63,6 +64,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const subject = meta.email_subject || `NORTHSiDE Intelligence — ${lead.handle}`;
+    await assertFireAllowed('outreach.run');
     await resendSend(cfg, {
       to,
       subject,
@@ -73,6 +75,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await logApproval(id, operatorId);
     return NextResponse.json({ message: `Email sent to ${to} for ${lead.handle}` });
   } catch (err) {
+    if (err instanceof FireHoldError) {
+      return NextResponse.json(
+        { error: err.message, hold: true, action: err.action },
+        { status: 423 }
+      );
+    }
     const message = err instanceof Error ? err.message : 'Approve failed';
     const status = message === 'AXON access denied' ? 401 : 500;
     return NextResponse.json({ error: message }, { status });

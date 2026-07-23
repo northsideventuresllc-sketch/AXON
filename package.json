@@ -15,6 +15,7 @@
     "research": "node scripts/axon-self-research.mjs",
     "research:dry": "AXON_DRY_RUN=1 node scripts/axon-self-research.mjs",
     "test:research-runs": "node tests/axon-research-runs.test.mjs",
+    "test:telegram-fire-gate": "node tests/telegram-handler-fire-gate.test.mjs",
     "dashboard": "node scripts/axon-dashboard.mjs",
     "outreach:dry": "AXON_DRY_RUN=1 node scripts/axon-ni-outreach.mjs",
     "ad-tracker": "node scripts/axon-mf-ad-tracker-sync.mjs",

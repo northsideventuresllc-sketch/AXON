@@ -77,7 +77,7 @@ export function OutreachGenerateLeads({ stats }: { stats: PipelineStats }) {
           <h2 className="mt-1 text-lg font-medium">Run outreach now</h2>
           <p className="mt-1 max-w-xl text-sm text-axon-muted">
             Trigger the 8-step ICP pipeline — find, score, draft, queue. Telegram notifies when
-            drafts are ready. Nightly cron still runs at 2:30 AM EST.
+            drafts are ready. Nightly cron is off right now — run this daily until JB re-enables it.
           </p>
         </div>
         <dl className="flex gap-4 text-xs">

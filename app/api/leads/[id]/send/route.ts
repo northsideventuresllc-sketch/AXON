@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { loadConfig } from '@/lib/config.mjs';
 import { formatNotes, parseNotes, shortId } from '@/lib/constants.mjs';
 import { resendSend } from '@/lib/resend.mjs';
+import { assertFireAllowed, FireHoldError } from '@/lib/axon-fire-gate';
 import { fetchLeadById, updateLeadStatus } from '@/lib/leads';
 import { recordOutreachSend } from '@/lib/outreach-learn';
 import {
@@ -91,6 +92,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Resend not configured' }, { status: 503 });
     }
 
+    await assertFireAllowed('outreach.run');
     await resendSend(cfg, {
       to,
       subject,
@@ -129,6 +131,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     return NextResponse.json({ message: `Email sent to ${to} for ${lead.handle}` });
   } catch (err) {
+    if (err instanceof FireHoldError) {
+      return NextResponse.json(
+        { error: err.message, hold: true, action: err.action },
+        { status: 423 }
+      );
+    }
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Send failed' },
       { status: 500 }
