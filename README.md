@@ -121,6 +121,8 @@ npm run telegram:setup # register slash commands
 
 **Wisdom absorb (AX-WISDOM-LOOP):** See `docs/axon-wisdom-loop.md` — Watch→digest→enhance loop over ND corpus / research / Learnings → `axon_wisdom_items`.
 
+**Cognitive architecture (AX-REASON-CORE / Core-Personal split / second-brain learning):** See `docs/axon-cognitive-architecture.md` — draft proposal for a model-agnostic critical-thinking gate, the Core (shared/versioned) vs. Personal (per-user, locked) distribution split with cross-device carry, and widening AX-WISDOM-LOOP's watch surface to opt-in external connectors.
+
 ---
 
 ## Guardrails
