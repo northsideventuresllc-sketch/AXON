@@ -3,7 +3,17 @@ import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE } from '@/lib/auth';
 import { getBasePath, stripBasePath } from '@/lib/paths';
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/waitlist', '/api/telegram-webhook'];
+const PUBLIC_PATHS = [
+  '/login',
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/waitlist',
+  '/api/telegram-webhook',
+  // Inbound server-to-server webhooks — auth'd by their own shared-secret header
+  // (MATCH_FIT_WEBHOOK_SECRET), not the AXON dashboard session cookie.
+  '/api/axon/match-fit/posting-confirmation',
+  '/api/axon/match-fit/outreach-event',
+];
 
 export function middleware(request: NextRequest) {
   const basePath = getBasePath();
