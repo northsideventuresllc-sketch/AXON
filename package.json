@@ -29,7 +29,8 @@
     "wisdom": "node scripts/axon-wisdom-loop.mjs",
     "wisdom:dry": "AXON_DRY_RUN=1 node scripts/axon-wisdom-loop.mjs",
     "test:wisdom": "node tests/wisdom-absorb-loop.test.mjs",
-    "test:match-fit-webhook": "node tests/match-fit-posting-confirmation.test.mjs"
+    "test:match-fit-webhook": "node tests/match-fit-posting-confirmation.test.mjs",
+    "test:match-fit-outreach": "node tests/match-fit-outreach-event.test.mjs"
   },
   "engines": {
     "node": ">=20"
