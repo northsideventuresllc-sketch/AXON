@@ -124,6 +124,8 @@ const LIB_FILES = [
   'resend.d.ts',
   'outreach-learn-core.d.ts',
   'telegram.mjs',
+  'axon-fire-gate.ts',
+  'axon-fire-gate-core.mjs',
 ];
 
 /** Removed from AXON — delete from portal on sync to avoid .ts/.mjs resolution collisions. */

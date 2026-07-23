@@ -33,6 +33,7 @@ on:
       - 'lib/outreach-run-core.mjs'
       - 'lib/icp-config.mjs'
       - 'lib/constants.mjs'
+      - 'lib/axon-fire-gate-core.mjs'
       - 'lib/github-pat.mjs'
       - 'lib/local-model-daily.mjs'
       - 'app/api/axon/outreach/**'
