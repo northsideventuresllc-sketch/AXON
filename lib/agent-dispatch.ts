@@ -22,7 +22,6 @@ export type DispatchRow = {
   owner: string;
   manager_chat: string | null;
   repo: string | null;
-  workflow_repo?: string | null;
   status: string;
   priority: number;
   action_type: string;
@@ -32,75 +31,32 @@ export type DispatchRow = {
   fired_at: string | null;
 };
 
-const DISPATCH_COLUMNS =
-  'id,code,title,owner,manager_chat,repo,workflow_repo,status,priority,action_type,dispatch_phrase,workflow_file,result_summary,fired_at';
-
 export async function fetchDispatchQueue(limit = 50): Promise<DispatchRow[]> {
   const sb = serviceClient();
   const { data, error } = await sb
     .from('agent_dispatch')
-    .select(DISPATCH_COLUMNS)
+    .select(
+      'id,code,title,owner,manager_chat,repo,status,priority,action_type,dispatch_phrase,workflow_file,result_summary,fired_at',
+    )
     .in('status', ['queued', 'running', 'blocked'])
     .order('priority', { ascending: true })
     .limit(limit);
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as DispatchRow[];
+  return data ?? [];
 }
 
-/** Fetch a single dispatch task by its short code. Returns null when missing. */
-export async function fetchDispatchTask(code: string): Promise<DispatchRow | null> {
+export async function fetchCompletedDispatches(limit = 20): Promise<DispatchRow[]> {
   const sb = serviceClient();
   const { data, error } = await sb
     .from('agent_dispatch')
-    .select(DISPATCH_COLUMNS)
-    .eq('code', code)
-    .limit(1)
-    .maybeSingle();
+    .select(
+      'id,code,title,owner,manager_chat,repo,status,priority,action_type,dispatch_phrase,workflow_file,result_summary,fired_at',
+    )
+    .in('status', ['done', 'skipped', 'failed', 'blocked'])
+    .order('fired_at', { ascending: false })
+    .limit(limit);
   if (error) throw new Error(error.message);
-  return (data as unknown as DispatchRow) ?? null;
-}
-
-/** Patch a dispatch task's editable fields (title, description) by code. */
-export async function updateDispatchTask(
-  code: string,
-  patch: { title?: string; dispatch_phrase?: string | null },
-): Promise<DispatchRow> {
-  const sb = serviceClient();
-  const fields: Record<string, unknown> = {};
-  if (patch.title !== undefined) fields.title = patch.title;
-  if (patch.dispatch_phrase !== undefined) fields.dispatch_phrase = patch.dispatch_phrase;
-  const { data, error } = await sb
-    .from('agent_dispatch')
-    .update(fields)
-    .eq('code', code)
-    .select(DISPATCH_COLUMNS)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error('Task not found');
-  return data as unknown as DispatchRow;
-}
-
-/** Best-effort venture label from the task code / repo / title. */
-export function deriveVenture(
-  task: Pick<DispatchRow, 'code' | 'repo' | 'workflow_repo' | 'title'>,
-): string {
-  const hay = `${task.code ?? ''} ${task.repo ?? ''} ${task.workflow_repo ?? ''} ${task.title ?? ''}`.toLowerCase();
-  if (hay.includes('match') || /\bmf\b/.test(hay)) return 'Match Fit';
-  if (hay.includes('replyflow') || hay.includes('reply')) return 'ReplyFlow';
-  if (hay.includes('vault') || hay.includes('hermes')) return 'NI Vault';
-  if (hay.includes('portal')) return 'NI Portal';
-  if (hay.includes('axon')) return 'AXON';
-  return 'NORTHSiDE';
-}
-
-/** Rough complexity heuristic from priority + description length. */
-export function deriveComplexity(
-  task: Pick<DispatchRow, 'dispatch_phrase' | 'priority'>,
-): 'low' | 'medium' | 'high' {
-  const len = (task.dispatch_phrase ?? '').length;
-  if (task.priority <= 1 || len > 400) return 'high';
-  if (len > 150) return 'medium';
-  return 'low';
+  return data ?? [];
 }
 
 export async function triggerHermesDispatch(code?: string) {
