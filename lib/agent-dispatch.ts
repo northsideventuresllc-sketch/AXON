@@ -27,17 +27,53 @@ export type DispatchRow = {
   action_type: string;
   dispatch_phrase: string | null;
   workflow_file: string | null;
+  workflow_repo: string | null;
   result_summary: string | null;
+  risk_tier: string | null;
+  source: string | null;
+  created_at: string | null;
+  updated_at: string | null;
   fired_at: string | null;
+  completed_at: string | null;
 };
+
+export type DispatchComplexity = 'high' | 'medium' | 'low';
+
+const SELECT_FIELDS =
+  'id,code,title,owner,manager_chat,repo,status,priority,action_type,dispatch_phrase,workflow_file,workflow_repo,result_summary,risk_tier,source,created_at,updated_at,fired_at,completed_at';
+
+/** Map repo / owner to venture label for UI filters. */
+export function deriveVenture(
+  row: Pick<DispatchRow, 'repo' | 'workflow_repo' | 'owner' | 'code'>,
+): string {
+  const blob = `${row.repo || ''} ${row.workflow_repo || ''} ${row.code || ''}`.toLowerCase();
+  if (blob.includes('match-fit') || blob.includes('matchfit')) return 'Match Fit';
+  if (blob.includes('northside-intelligence') || blob.includes('ni-portal')) return 'NORTHSiDE Portal';
+  if (blob.includes('axon')) return 'AXON';
+  if (blob.includes('nv-vault') || blob.includes('vault')) return 'nv-vault';
+  if (blob.includes('replyflow')) return 'ReplyFlow';
+  if (blob.includes('grantbot')) return 'GrantBot';
+  return row.owner?.trim() || 'Other';
+}
+
+/** Complexity from risk_tier or priority band. */
+export function deriveComplexity(
+  row: Pick<DispatchRow, 'risk_tier' | 'priority'>,
+): DispatchComplexity {
+  const tier = (row.risk_tier || '').toLowerCase();
+  if (['high', 'critical', 'p0', 'p1'].includes(tier)) return 'high';
+  if (['medium', 'moderate', 'p2'].includes(tier)) return 'medium';
+  if (['low', 'p3', 'routine'].includes(tier)) return 'low';
+  if (row.priority <= 3) return 'high';
+  if (row.priority <= 6) return 'medium';
+  return 'low';
+}
 
 export async function fetchDispatchQueue(limit = 50): Promise<DispatchRow[]> {
   const sb = serviceClient();
   const { data, error } = await sb
     .from('agent_dispatch')
-    .select(
-      'id,code,title,owner,manager_chat,repo,status,priority,action_type,dispatch_phrase,workflow_file,result_summary,fired_at',
-    )
+    .select(SELECT_FIELDS)
     .in('status', ['queued', 'running', 'blocked'])
     .order('priority', { ascending: true })
     .limit(limit);
@@ -49,14 +85,47 @@ export async function fetchCompletedDispatches(limit = 20): Promise<DispatchRow[
   const sb = serviceClient();
   const { data, error } = await sb
     .from('agent_dispatch')
-    .select(
-      'id,code,title,owner,manager_chat,repo,status,priority,action_type,dispatch_phrase,workflow_file,result_summary,fired_at',
-    )
+    .select(SELECT_FIELDS)
     .in('status', ['done', 'skipped', 'failed', 'blocked'])
     .order('fired_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function fetchDispatchTask(code: string): Promise<DispatchRow | null> {
+  const sb = serviceClient();
+  const { data, error } = await sb
+    .from('agent_dispatch')
+    .select(SELECT_FIELDS)
+    .eq('code', code)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export type DispatchTaskPatch = {
+  title?: string;
+  dispatch_phrase?: string | null;
+};
+
+export async function updateDispatchTask(
+  code: string,
+  patch: DispatchTaskPatch,
+): Promise<DispatchRow> {
+  const sb = serviceClient();
+  const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.title !== undefined) row.title = patch.title;
+  if (patch.dispatch_phrase !== undefined) row.dispatch_phrase = patch.dispatch_phrase;
+
+  const { data, error } = await sb
+    .from('agent_dispatch')
+    .update(row)
+    .eq('code', code)
+    .select(SELECT_FIELDS)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function triggerHermesDispatch(code?: string) {
