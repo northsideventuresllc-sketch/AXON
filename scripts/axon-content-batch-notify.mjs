@@ -1,22 +1,27 @@
 #!/usr/bin/env node
 /**
  * CM6 — Notify JB on Telegram when Content Machine posts are pending approval.
- * 2026-07-14/16: Match Fit brand is skipped unless AXON_CM6_ALLOW_MATCH_FIT=1 /
+ * 2026-07-14: Match Fit brand is skipped unless AXON_CM6_ALLOW_MATCH_FIT=1 /
  * CONTENT_MACHINE_ALLOW_MATCH_FIT=1. MF content → match-fit.net/admin, not AXON Telegram.
  */
 import { loadConfig } from '../lib/config.mjs';
 import {
-  allowMatchFitContentTelegram,
   groupPendingBatches,
-  isMatchFitContentBlocked,
   sendBatchNotification,
 } from '../lib/content-machine-telegram.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { recordDraftNotification } from '../lib/telegram-handler.mjs';
 
+function allowMatchFit() {
+  return (
+    process.env.CONTENT_MACHINE_ALLOW_MATCH_FIT === '1' ||
+    process.env.AXON_CM6_ALLOW_MATCH_FIT === '1'
+  );
+}
+
 async function main() {
   console.log(`AXON Content Machine notify — ${new Date().toISOString()}`);
-  if (!allowMatchFitContentTelegram()) {
+  if (!allowMatchFit()) {
     console.log(
       'Match Fit CM6 Telegram paused — fetching non-MF brands only (set AXON_CM6_ALLOW_MATCH_FIT=1 to re-enable MF)',
     );
@@ -38,7 +43,8 @@ async function main() {
 
   let notified = 0;
   for (const [, posts] of batches) {
-    if (isMatchFitContentBlocked(posts[0])) {
+    const brand = posts[0]?.brand_slug || '';
+    if (brand === 'match-fit' && !allowMatchFit()) {
       console.log(`Skip Match Fit batch ${posts[0]?.batch_id || posts[0]?.id} — AXON CM6 MF paused`);
       continue;
     }
@@ -51,7 +57,6 @@ async function main() {
 
     try {
       const text = await sendBatchNotification(cfg, sb, posts);
-      if (!text) continue;
       await recordDraftNotification(sb, cfg.telegramChatId, text);
       notified++;
       console.log(`Notified batch: ${posts[0]?.brand_slug} · ${posts.length} post(s)`);
