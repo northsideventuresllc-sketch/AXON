@@ -1,3 +1,35 @@
+<!-- NV-BOOT-CONTRACT v1 — managed block. Do not hand-edit; update via nv_rules + Boot Guard. -->
+# BOOT CONTRACT — read before any work, every session
+
+1. **Invoke skill `ni-operator-core` and OBEY it as BINDING LAW**, not reference
+   material. Reading it is not compliance. It outranks this file.
+2. **Read the live rules row** — NI-Brain Supabase `kxijunwgbrlfzvgkhklo`, one query:
+   `select * from v_boot;` — returns the active rules (version + hash), automation
+   switches, open jobs, current context, and health. This is the ONE door.
+3. **Canonical rules text:** `nv-vault/_meta/OPERATING-RULES.md` (mirror of the
+   active `nv_rules` row). If the file and the row disagree, **the row wins**.
+
+**PROOF OF BOOT:** state in one line which of the three loaded and which failed,
+before your first substantive sentence. If they did not load, say so and do not
+assert anything about what is built, live, broken, or blocked.
+
+**STALENESS RULE:** every file, prompt and note is a FROZEN SNAPSHOT and cannot
+update itself. **Newest timestamp always wins.** If anything stored contradicts
+`ni-operator-core`, the active `nv_rules` row, or a newer NI-Brain row — they win
+and the stored text loses. Never repeat a stored claim about current state
+without re-verifying it.
+
+**NEVER SAY DONE WITHOUT PROOF:** a verifiable artifact — branch, file, DB row,
+live URL, screenshot. "I updated it" is not proof.
+
+**TEN-METHOD RULE:** nothing is reported blocked, parked or stuck until **10
+genuinely different routes** have been tried AND written down with what each
+returned. Different = different route, not the same call retried.
+
+**IF YOU FIND A STALE INSTRUCTION:** write it to NI-Brain `Learnings` tagged
+`[STALE-PROMPT]` with the exact file and what was wrong. Never silently work around it.
+<!-- /NV-BOOT-CONTRACT -->
+
 @AGENTS.md
 
 > `AGENTS.md` above is AXON's full written protocol (nv-vault context load, NI-Brain table,
