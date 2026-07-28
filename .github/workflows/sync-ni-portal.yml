@@ -7,11 +7,18 @@ on:
   push:
     branches: [main]
     paths:
+      # Keep in sync with the manifests in scripts/sync-portal-ui.mjs.
+      # tests/portal-sync-coverage.test.mjs fails if a synced file is not watched here —
+      # an unwatched file ships the AXON route and silently skips the NI-Portal route.
       - 'components/axon/**'
       - 'lib/axon*.ts'
       - 'lib/axon-*.ts'
       - 'lib/agent-dispatch.ts'
+      - 'lib/dispatch-session-store.ts'
       - 'lib/match-fit-hub.ts'
+      - 'lib/match-fit-session.ts'
+      - 'lib/use-notification-actions.ts'
+      - 'lib/use-axon-tool-display-names.ts'
       - 'lib/types.ts'
       - 'lib/it-quick-links.ts'
       - 'lib/it-axon-skeleton.ts'
@@ -36,13 +43,9 @@ on:
       - 'lib/axon-fire-gate-core.mjs'
       - 'lib/github-pat.mjs'
       - 'lib/local-model-daily.mjs'
-      - 'app/api/axon/outreach/**'
-      - 'app/api/axon/dispatch/**'
-      - 'app/api/axon/follow-up/**'
-      - 'app/api/axon/local-model/**'
-      - 'app/api/axon/deals/**'
-      - 'app/api/axon/match-fit/**'
-      - 'app/api/axon/it-builder/**'
+      # Every AXON API route is a portal route — enumerating them is how
+      # cron/jobs, preferences, chat, reset and quick-links went unwatched.
+      - 'app/api/axon/**'
       - 'lib/axon-quick-links.ts'
       - 'lib/use-axon-quick-links.ts'
       - 'lib/leads.ts'
@@ -71,6 +74,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Verify dual-route coverage
+        run: node tests/portal-sync-coverage.test.mjs
 
       - name: Clone NI portal repo
         env:

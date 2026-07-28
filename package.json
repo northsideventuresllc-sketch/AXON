@@ -29,7 +29,8 @@
     "test:comm-skill": "node tests/axon-comm-skill.test.mjs",
     "wisdom": "node scripts/axon-wisdom-loop.mjs",
     "wisdom:dry": "AXON_DRY_RUN=1 node scripts/axon-wisdom-loop.mjs",
-    "test:wisdom": "node tests/wisdom-absorb-loop.test.mjs"
+    "test:wisdom": "node tests/wisdom-absorb-loop.test.mjs",
+    "test:portal-sync": "node tests/portal-sync-coverage.test.mjs"
   },
   "engines": {
     "node": ">=20"
