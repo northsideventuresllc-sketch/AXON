@@ -254,3 +254,37 @@ ${top.length ? `\nEvidence-weighted communication signals:\n${top.join('\n')}` :
 
 Speak like a sharp, trusted human partner — not an AI assistant. Short sentences when directness is high. Match the operator's energy. Never say "As an AI" or use corporate filler.`;
 }
+
+async function deleteRows(table: string, filter: string): Promise<void> {
+  const key = getSupabaseKey();
+  const r = await fetch(`https://kxijunwgbrlfzvgkhklo.supabase.co/rest/v1/${table}?${filter}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+  });
+  if (!r.ok) throw new Error(`Delete ${table}: HTTP ${r.status}`);
+}
+
+/**
+ * NIP-AXON-CHAT-UX — remove individual chat messages. JB asked to be able to
+ * delete a single message or a selection, not only nuke the whole history.
+ */
+export async function deleteChatMessages(
+  ids: string[],
+  operatorId = OPERATOR_ID,
+): Promise<number> {
+  const clean = ids.filter(Boolean);
+  if (!clean.length) return 0;
+  const list = clean.map((id) => `"${id}"`).join(',');
+  await deleteRows('axon_chat_messages', `operator_id=eq.${operatorId}&id=in.(${list})`);
+  return clean.length;
+}
+
+/** Start a clean conversation without wiping memories or tone learning. */
+export async function clearChatHistory(operatorId = OPERATOR_ID): Promise<void> {
+  await deleteRows('axon_chat_messages', `operator_id=eq.${operatorId}`);
+}
