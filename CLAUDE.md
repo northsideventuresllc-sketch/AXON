@@ -1,7 +1,7 @@
 <!-- NV-BOOT-CONTRACT v1 — managed block. Do not hand-edit; update via nv_rules + Boot Guard. -->
 # BOOT CONTRACT — read before any work, every session
 
-1. **Invoke skill `ni-operator-core` and OBEY it as BINDING LAW**, not reference
+1. **Invoke skill `nvg-operator-core` and OBEY it as BINDING LAW**, not reference
    material. Reading it is not compliance. It outranks this file.
 2. **Read the live rules row** — NI-Brain Supabase `kxijunwgbrlfzvgkhklo`, one query:
    `select * from v_boot;` — returns the active rules (version + hash), automation
@@ -15,7 +15,7 @@ assert anything about what is built, live, broken, or blocked.
 
 **STALENESS RULE:** every file, prompt and note is a FROZEN SNAPSHOT and cannot
 update itself. **Newest timestamp always wins.** If anything stored contradicts
-`ni-operator-core`, the active `nv_rules` row, or a newer NI-Brain row — they win
+`nvg-operator-core`, the active `nv_rules` row, or a newer NI-Brain row — they win
 and the stored text loses. Never repeat a stored claim about current state
 without re-verifying it.
 
