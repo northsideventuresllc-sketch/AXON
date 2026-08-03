@@ -3,11 +3,14 @@
 
 1. **Invoke skill `nvg-operator-core` and OBEY it as BINDING LAW**, not reference
    material. Reading it is not compliance. It outranks this file.
-   **If `nvg-operator-core` does not resolve, invoke `ni-operator-core` instead.**
-   The installed account-level skill has NOT been renamed — verified again
-   2026-08-03 by the daily skill check, and only JB can rename it in his Claude
-   account. Booting with NEITHER loaded is a hard stop: say so in one line and
-   assert nothing about what is built, live, broken or blocked.
+   **CORRECTED 2026-08-03:** the account-level skill IS renamed and resolves —
+   confirmed live (`nvg-operator-core` and `ni-operator-core` are byte-identical
+   except for the name, both installed). Earlier text here calling this "not
+   renamed" was stale and never re-verified; do not repeat that claim. If
+   `nvg-operator-core` ever fails to resolve on some surface, invoke
+   `ni-operator-core` as a fallback and flag it — that would be a new regression,
+   not the expected state. Booting with NEITHER loaded is a hard stop: say so in
+   one line and assert nothing about what is built, live, broken or blocked.
 2. **Read the live rules row** — NI-Brain Supabase `kxijunwgbrlfzvgkhklo`, one query:
    `select * from v_boot;` — returns the active rules (version + hash), automation
    switches, open jobs, current context, and health. This is the ONE door.
