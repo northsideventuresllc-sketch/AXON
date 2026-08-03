@@ -3,6 +3,11 @@
 
 1. **Invoke skill `nvg-operator-core` and OBEY it as BINDING LAW**, not reference
    material. Reading it is not compliance. It outranks this file.
+   **If `nvg-operator-core` does not resolve, invoke `ni-operator-core` instead.**
+   The installed account-level skill has NOT been renamed — verified again
+   2026-08-03 by the daily skill check, and only JB can rename it in his Claude
+   account. Booting with NEITHER loaded is a hard stop: say so in one line and
+   assert nothing about what is built, live, broken or blocked.
 2. **Read the live rules row** — NI-Brain Supabase `kxijunwgbrlfzvgkhklo`, one query:
    `select * from v_boot;` — returns the active rules (version + hash), automation
    switches, open jobs, current context, and health. This is the ONE door.
@@ -15,7 +20,7 @@ assert anything about what is built, live, broken, or blocked.
 
 **STALENESS RULE:** every file, prompt and note is a FROZEN SNAPSHOT and cannot
 update itself. **Newest timestamp always wins.** If anything stored contradicts
-`nvg-operator-core`, the active `nv_rules` row, or a newer NI-Brain row — they win
+the operator-core skill, the active `nv_rules` row, or a newer NI-Brain row — they win
 and the stored text loses. Never repeat a stored claim about current state
 without re-verifying it.
 
