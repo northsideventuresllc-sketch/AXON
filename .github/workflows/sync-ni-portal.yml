@@ -2,6 +2,22 @@ name: Sync AXON UI to NI Portal
 
 # Pushes embedded portal UI into northside-intelligence when AXON web UI changes.
 # Requires NI_GITHUB_PAT secret on this repo (fine-grained PAT, contents:write on NI repo).
+#
+# ── HEALTH-PORTAL-SYNC-DELETES ─────────────────────────────────────────────────────
+# On 2026-07-28 this workflow DELETED live portal code. Sync commit 7d4e12e copied older
+# AXON lib files over the portal ones, removing sbRpc, sbDelete, clearChatHistory,
+# deleteChatMessages and the `since` param on fetchCompletedDispatches. Every portal
+# caller was left behind, the NI-Portal production build exited 1 on three separate
+# errors, and prod stayed on a stale deployment. NOTHING IN THIS WORKFLOW FAILED — it
+# committed and pushed the deletion successfully.
+#
+# The sync script is now PLAN -> ASSERT -> APPLY and refuses the whole run if it would
+# remove an export the portal still imports. The dedicated pre-check step below runs
+# that assertion against a pristine clone BEFORE anything is written, so a breaking sync
+# fails here with a file:symbol:importer report and never reaches the commit step.
+#
+# Verified on a real run 2026-08-04: with fetchChatHistory removed from AXON's
+# axon-profile.ts the script exited 1 and `git status` in the portal clone was empty.
 
 on:
   push:
@@ -85,8 +101,25 @@ jobs:
             "https://x-access-token:${NI_GITHUB_PAT}@github.com/northsideventuresllc-sketch/northside-intelligence.git" \
             ni-portal
 
+      # Refuse first, write later. This step touches nothing — it only builds the plan
+      # and asserts that no still-imported export would disappear.
+      - name: Pre-check — refuse a sync that would delete live portal code
+        run: node scripts/sync-portal-ui.mjs ./ni-portal --check
+
       - name: Run portal sync script
         run: node scripts/sync-portal-ui.mjs ./ni-portal
+
+      - name: Verify nothing vanished
+        working-directory: ni-portal
+        run: |
+          # A deletion is the one change this sync must never make on its own.
+          deleted=$(git diff --name-only --diff-filter=D || true)
+          if [ -n "$deleted" ]; then
+            echo "::error::Sync deleted portal file(s) — refusing to push."
+            echo "$deleted"
+            exit 1
+          fi
+          echo "No portal files deleted."
 
       - name: Commit and push to NI main
         env:
@@ -106,3 +139,13 @@ jobs:
           git push \
             "https://x-access-token:${NI_GITHUB_PAT}@github.com/northsideventuresllc-sketch/northside-intelligence.git" \
             HEAD:main
+
+      - name: Report refusal
+        if: failure()
+        run: |
+          echo "::error::AXON -> NI-Portal sync REFUSED or failed. The portal was not modified."
+          echo "If the log says SYNC REFUSED, an AXON file was about to overwrite a portal"
+          echo "file and drop an export the portal still imports. Port the symbol back into"
+          echo "the AXON copy, or drop that file from LIB_FILES / add it to PORTAL_ONLY_FILES"
+          echo "in scripts/sync-portal-ui.mjs. Do not delete the portal callers."
+

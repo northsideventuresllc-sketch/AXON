@@ -5,15 +5,43 @@
  * Trigger: .github/workflows/sync-ni-portal.yml on push to main (needs NI_GITHUB_PAT).
  *   Manual: gh workflow run sync-ni-portal.yml (or push to watched paths on main).
  *   node scripts/sync-portal-ui.mjs /path/to/northside-intelligence
+ *   node scripts/sync-portal-ui.mjs /path/to/northside-intelligence --check   # plan only
  *
  * Target layout:
  *   src/components/axon-ui/  ← components/axon/
  *   src/lib/axon/            ← selected lib/*.ts
+ *
+ * ── HEALTH-PORTAL-SYNC-DELETES ─────────────────────────────────────────────
+ *
+ * THIS SCRIPT DELETES BY OVERWRITING, and until now nothing noticed.
+ * On 2026-07-28 23:51 UTC sync commit 7d4e12e copied older AXON lib files over the
+ * portal ones and removed sbRpc + sbDelete (supabase.mjs), clearChatHistory +
+ * deleteChatMessages (axon-profile.ts) and the `since` parameter on
+ * fetchCompletedDispatches (agent-dispatch.ts). Every portal caller was left behind,
+ * the NI-Portal production build exited 1 on three separate errors, and prod stayed
+ * stuck on the previous deployment. The sync had already committed and pushed.
+ *
+ * Two structural causes, both fixed here:
+ *   1. NO PRE-CHECK. Files were written one at a time as the script walked its lists,
+ *      so by the time anything could have failed, half the portal was already
+ *      overwritten. The script now runs PLAN -> ASSERT -> APPLY: the whole sync is
+ *      built in memory, checked, and only then written. A refusal writes nothing.
+ *   2. NO CONSENT. Every AXON file won unconditionally, including registries that
+ *      only exist portal-side. PORTAL_ONLY_FILES are now never written.
+ *
+ * The guard lives in scripts/lib/portal-delete-guard.mjs: for each planned write it
+ * diffs the exported symbols of the existing portal file against the incoming one and
+ * finds portal modules that still import anything about to disappear. If any do, the
+ * run fails loudly with file:symbol:importer and commits nothing.
+ *
+ * STALE_LIB_FILES no longer unlinks blindly either — a still-imported stale file is a
+ * refusal, not a delete.
  */
 
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'fs';
+import { findBreakingRemovals, formatViolations } from './lib/portal-delete-guard.mjs';
 import { execSync } from 'child_process';
-import { dirname, join, relative } from 'path';
+import { dirname, join, relative, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -128,12 +156,30 @@ const LIB_FILES = [
   'axon-fire-gate-core.mjs',
 ];
 
-/** Removed from AXON — delete from portal on sync to avoid .ts/.mjs resolution collisions. */
+/**
+ * Removed from AXON — delete from portal on sync to avoid .ts/.mjs resolution collisions.
+ * A stale file that the portal still imports is now a REFUSAL, not a silent unlink.
+ */
 const STALE_LIB_FILES = [
   'outreach-learn.mjs',
   'outreach-reject.mjs',
   'outreach-run.mjs',
 ];
+
+/**
+ * PORTAL-ONLY registries. These exist in both repos but the PORTAL copy is the real
+ * one — it carries entries (monday-review, brain, command-center, droid-space,
+ * ni-content) that AXON does not have. Overwriting them does not break the build, it
+ * just silently empties JB's tool list, which is exactly the kind of delete that got
+ * through unnoticed on 2026-07-28. The sync never writes them.
+ *
+ * NOTE while touching these: MF-KILL-MONDAY-APPROVALS orders the monday-review screen
+ * deleted outright, so nothing here should be taken as a reason to restore that entry.
+ */
+const PORTAL_ONLY_FILES = new Set([
+  'axon-tool-meta.ts',
+  'axon-user-tools.ts',
+]);
 
 const API_FILES = [
   'deals/route.ts',
@@ -194,23 +240,14 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/paths'/g, "from '@/lib/axon/app-path'");
 }
 
-function copyWithRewrite(src, dest) {
-  mkdirSync(dirname(dest), { recursive: true });
-  const content = readFileSync(src, 'utf8');
-  writeFileSync(dest, rewriteImports(content));
-}
-
-function syncApiBase(niRoot) {
-  const dest = join(niRoot, 'src/lib/axon/api-base.ts');
-  const content = `/** Client/API URL — API routes stay at site root; pages use optional AXON vanity base. */
+/** Portal variant of api-base.ts. A constant so it can be PLANNED, not written mid-walk. */
+const API_BASE_SOURCE = `/** Client/API URL — API routes stay at site root; pages use optional AXON vanity base. */
 export function apiUrl(path: string, _basePath = ""): string {
   if (path.startsWith("/api/")) return path;
   const base = _basePath || process.env.NEXT_PUBLIC_AXON_BASE_PATH || "";
   return \`\${base}\${path.startsWith("/") ? path : \`/\${path}\`}\`;
 }
 `;
-  writeFileSync(dest, content);
-}
 
 function appendCss(niRoot) {
   const globalsPath = join(AXON_ROOT, 'app/globals.css');
@@ -234,34 +271,63 @@ function appendCss(niRoot) {
   writeFileSync(axonCssPath, synced);
 }
 
-function applyPortalIntegration(niRoot) {
-  if (!existsSync(INTEGRATION_ROOT)) return;
+/**
+ * Plan the portal-integration overlay. Code files (.ts/.tsx) go through the plan so the
+ * delete guard sees them; non-code assets are copied in the apply phase because they
+ * cannot remove an export.
+ */
+function planPortalIntegration(niRoot) {
+  const planned = [];
+  if (!existsSync(INTEGRATION_ROOT)) return planned;
 
-  function walk(dir, base = INTEGRATION_ROOT) {
+  function walk(dir) {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const srcPath = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(srcPath, base);
-        continue;
-      }
-      const rel = relative(base, srcPath);
+      if (entry.isDirectory()) { walk(srcPath); continue; }
+      const rel = relative(INTEGRATION_ROOT, srcPath);
       if (rel === 'src/components/axon-interface.portal.tsx') {
-        copyWithRewrite(srcPath, join(niRoot, 'src/components/axon-ui/axon-interface.tsx'));
-        console.log('integration: axon-interface.tsx (portal basePath)');
+        planned.push({
+          dest: join(niRoot, 'src/components/axon-ui/axon-interface.tsx'),
+          content: rewriteImports(readFileSync(srcPath, 'utf8')),
+          label: 'integration: axon-interface.tsx (portal basePath)',
+          kind: 'integration',
+        });
         continue;
       }
+      if (rel === 'tailwind.config.ts') continue;                 // config, handled below
+      if (!/\.(ts|tsx|mjs|js|jsx)$/.test(srcPath)) continue;       // asset, handled below
+      planned.push({
+        dest: join(niRoot, rel),
+        content: rewriteImports(readFileSync(srcPath, 'utf8')),
+        label: `integration: ${rel}`,
+        kind: 'integration',
+      });
+    }
+  }
+
+  walk(INTEGRATION_ROOT);
+  return planned;
+}
+
+/** Copy the overlay pieces that carry no exports (assets + tailwind config). */
+function applyIntegrationNonCode(niRoot) {
+  if (!existsSync(INTEGRATION_ROOT)) return;
+
+  function walk(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const srcPath = join(dir, entry.name);
+      if (entry.isDirectory()) { walk(srcPath); continue; }
+      const rel = relative(INTEGRATION_ROOT, srcPath);
+      if (rel === 'src/components/axon-interface.portal.tsx') continue;
       if (rel === 'tailwind.config.ts') {
         cpSync(srcPath, join(niRoot, 'tailwind.config.ts'));
         console.log('integration: tailwind.config.ts');
         continue;
       }
+      if (/\.(ts|tsx|mjs|js|jsx)$/.test(srcPath)) continue;        // already planned
       const dest = join(niRoot, rel);
       mkdirSync(dirname(dest), { recursive: true });
-      if (srcPath.endsWith('.ts') || srcPath.endsWith('.tsx')) {
-        copyWithRewrite(srcPath, dest);
-      } else {
-        cpSync(srcPath, dest);
-      }
+      cpSync(srcPath, dest);
       console.log(`integration: ${rel}`);
     }
   }
@@ -296,64 +362,105 @@ function main() {
     process.exit(1);
   }
 
-  const componentDest = join(niRoot, 'src/components/axon-ui');
-  mkdirSync(componentDest, { recursive: true });
+  const CHECK_ONLY = process.argv.includes('--check');
 
+  // ── PHASE 1: PLAN ───────────────────────────────────────────────────────────
+  // Build every write in memory. Nothing touches the portal yet, so a refusal in
+  // phase 2 leaves the portal exactly as it was. This is the whole fix for
+  // HEALTH-PORTAL-SYNC-DELETES: the old script wrote as it walked, so by the time
+  // anything could fail it had already overwritten half the tree.
+  const plan = [];       // { dest, content|null, label, kind }
+  const skipped = [];
+
+  const addWrite = (dest, content, label, kind) => plan.push({ dest, content, label, kind });
+
+  const componentDest = join(niRoot, 'src/components/axon-ui');
   for (const file of COMPONENT_FILES) {
     const src = join(AXON_ROOT, 'components/axon', file);
     if (!existsSync(src)) {
       console.warn(`skip missing component: ${file}`);
       continue;
     }
-    copyWithRewrite(src, join(componentDest, file));
-    console.log(`component: ${file}`);
+    addWrite(join(componentDest, file), rewriteImports(readFileSync(src, 'utf8')), `component: ${file}`, 'component');
   }
 
   const libDest = join(niRoot, 'src/lib/axon');
-  mkdirSync(libDest, { recursive: true });
-
   for (const file of LIB_FILES) {
+    if (PORTAL_ONLY_FILES.has(file)) {
+      // The portal copy is the real one. Overwriting it does not break the build, it
+      // silently empties JB's tool list — the quietest possible delete.
+      skipped.push(`lib: ${file} (PORTAL-ONLY registry, never written by the sync)`);
+      continue;
+    }
     const src = join(AXON_ROOT, 'lib', file);
     if (!existsSync(src)) {
       console.warn(`skip missing lib: ${file}`);
       continue;
     }
-    copyWithRewrite(src, join(libDest, file));
-    console.log(`lib: ${file}`);
+    addWrite(join(libDest, file), rewriteImports(readFileSync(src, 'utf8')), `lib: ${file}`, 'lib');
   }
 
+  // A stale file is only removable if nothing imports it. content:null = planned delete,
+  // which the guard treats as "removes every symbol this file exports".
   for (const file of STALE_LIB_FILES) {
     const stale = join(libDest, file);
-    if (existsSync(stale)) {
-      unlinkSync(stale);
-      console.log(`removed stale lib: ${file}`);
-    }
+    if (existsSync(stale)) plan.push({ dest: stale, content: null, label: `stale lib: ${file}`, kind: 'delete' });
   }
 
-  syncApiBase(niRoot);
-  console.log('lib: api-base.ts (portal variant)');
+  addWrite(join(libDest, 'api-base.ts'), API_BASE_SOURCE, 'lib: api-base.ts (portal variant)', 'lib');
 
   const appPathSrc = join(INTEGRATION_ROOT, 'src/lib/axon/app-path.ts');
-  const appPathDest = join(niRoot, 'src/lib/axon/app-path.ts');
-  if (existsSync(appPathSrc) && appPathSrc !== appPathDest) {
-    cpSync(appPathSrc, appPathDest);
-    console.log('lib: app-path.ts (portal vanity routes)');
-  } else if (existsSync(appPathSrc)) {
-    console.log('lib: app-path.ts (already in target)');
+  const appPathDest = join(libDest, 'app-path.ts');
+  if (existsSync(appPathSrc) && resolvePath(appPathSrc) !== resolvePath(appPathDest)) {
+    addWrite(appPathDest, readFileSync(appPathSrc, 'utf8'), 'lib: app-path.ts (portal vanity routes)', 'lib');
   }
 
   for (const file of API_FILES) {
     const src = join(AXON_ROOT, 'app/api/axon', file);
-    const dest = join(niRoot, 'src/app/api/axon', file);
     if (!existsSync(src)) continue;
-    copyWithRewrite(src, dest);
-    console.log(`api: ${file}`);
+    addWrite(join(niRoot, 'src/app/api/axon', file), rewriteImports(readFileSync(src, 'utf8')), `api: ${file}`, 'api');
+  }
+
+  for (const entry of planPortalIntegration(niRoot)) plan.push(entry);
+
+  // ── PHASE 2: ASSERT ─────────────────────────────────────────────────────────
+  // Refuse to remove an export the portal still imports. Fails the workflow; commits
+  // nothing. This is the check whose absence let 7d4e12e reach production.
+  const violations = findBreakingRemovals(
+    niRoot,
+    plan.map((p) => ({ dest: p.dest, incoming: p.content, label: p.label })),
+  );
+
+  if (violations.length > 0) {
+    console.error(formatViolations(violations));
+    console.error(`${plan.length} planned write(s) DISCARDED. The portal was not modified.`);
+    process.exit(1);
+  }
+
+  console.log(`Plan checked: ${plan.length} write(s), 0 breaking removals.`);
+  for (const s2 of skipped) console.log(`  ${s2}`);
+
+  if (CHECK_ONLY) {
+    console.log('\n--check: plan verified, nothing written.');
+    return;
+  }
+
+  // ── PHASE 3: APPLY ──────────────────────────────────────────────────────────
+  for (const item of plan) {
+    if (item.content === null) {
+      unlinkSync(item.dest);
+      console.log(`removed ${item.label} (verified unimported)`);
+      continue;
+    }
+    mkdirSync(dirname(item.dest), { recursive: true });
+    writeFileSync(item.dest, item.content);
+    console.log(item.label);
   }
 
   appendCss(niRoot);
   console.log('styles: axon.css appended');
 
-  applyPortalIntegration(niRoot);
+  applyIntegrationNonCode(niRoot);
   patchPackageJson(niRoot);
   writeSyncManifest(niRoot);
 
