@@ -12,8 +12,8 @@
  *   SUPABASE_SERVICE_KEY / SUPABASE_SERVICE_ROLE_KEY
  *   META_ADS_ACCESS_TOKEN + META_AD_ACCOUNT_ID
  *   TIKTOK_ADS_ACCESS_TOKEN + TIKTOK_ADS_ADVERTISER_ID
- * Optional Telegram notify when keys missing or sync completes:
- *   TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID
+ * This job does NOT message JB. It is a data sync; the summary stays in the
+ * run log. See NOTIFY-TELEGRAM-REBUILD-V2.
  */
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { SUPABASE_URL } from '../lib/constants.mjs';
@@ -23,7 +23,6 @@ import {
   easternDayWindow,
   pullLivePlatformSnapshots,
 } from '../lib/mf-ad-tracker.mjs';
-import { telegramSend } from '../lib/telegram.mjs';
 
 const dryRun = process.env.AXON_DRY_RUN === '1';
 
@@ -179,8 +178,6 @@ async function main() {
     metaAccount,
     tiktokToken,
     tiktokAdvertiser,
-    telegramToken,
-    telegramChatId,
     matchfitSupabaseUrl,
     matchfitServiceKey,
   ] = await Promise.all([
@@ -188,8 +185,6 @@ async function main() {
     secret(client.sbSelect, 'META_AD_ACCOUNT_ID'),
     secret(client.sbSelect, 'TIKTOK_ADS_ACCESS_TOKEN'),
     secret(client.sbSelect, 'TIKTOK_ADS_ADVERTISER_ID'),
-    secret(client.sbSelect, 'TELEGRAM_BOT_TOKEN'),
-    secret(client.sbSelect, 'TELEGRAM_CHAT_ID'),
     secret(client.sbSelect, 'MATCHFIT_SUPABASE_URL'),
     secret(client.sbSelect, 'MATCHFIT_SUPABASE_SERVICE_KEY'),
   ]);
@@ -253,8 +248,19 @@ async function main() {
 
   for (const line of summaryLines) console.log(line);
 
-  if (args.notify && telegramToken && telegramChatId && (missing.length || pull.synced.length || attributionSnaps.length)) {
-    await telegramSend(telegramToken, telegramChatId, summaryLines.join('\n'), dryRun);
+  // NOTIFY-TELEGRAM-REBUILD-V2 (2026-08-04) — KILLED.
+  //
+  // This used to Telegram JB the raw block above four times a day: job codes,
+  // table names, secret names, "re-run Actions → ...". JB named it as the
+  // single worst message he gets. It is a data sync, not something he acts on,
+  // so it now logs to the run output only. If the sync genuinely breaks, the
+  // daily wrap picks it up from the job status — JB does not get paged for it.
+  //
+  // Do not re-add a send here. If ad numbers ever need to reach JB they go
+  // through the daily wrap in nv-vault (scripts/lib/jb-notify.mjs), in plain
+  // English, with the number that matters in bold.
+  if (args.notify) {
+    console.log('[AX-AD] Telegram notify retired — summary above stays in the run log.');
   }
 
   if (missing.length && !pull.synced.length) {
