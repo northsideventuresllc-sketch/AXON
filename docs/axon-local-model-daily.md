@@ -76,7 +76,7 @@ Defined as: **daily outreach and follow-up workflows live in AXON** (generate â†
 |-----|----------|-------|
 | `SUPABASE_SERVICE_KEY` | Live persist | NI-Brain service role |
 | `OLLAMA_HOST` | No | Default localhost:11434 |
-| `OLLAMA_MODEL` | No | Default `llama3.2` |
+| `OLLAMA_MODEL` | No | Default `llama3.2`; prefers `axon-ornith` / `axon-llama` when present on Mac |
 | `AXON_DRY_RUN` | No | `1` = no writes |
 | `AXON_LOCAL_MODEL_HEURISTIC` | No | Force heuristic |
 

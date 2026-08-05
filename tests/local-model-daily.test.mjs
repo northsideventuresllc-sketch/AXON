@@ -85,3 +85,8 @@ assert.ok(checklist.some((line) => line.includes('ollama pull')));
 assert.ok(checklist.some((line) => line.includes('Phase 1')));
 
 console.log('local-model-daily.test.mjs OK');
+
+import { pickPreferredAxonModel } from '../lib/prefer-axon-local-models.mjs';
+assert.equal(pickPreferredAxonModel(['llama3.2', 'axon-ornith:latest']), 'axon-ornith:latest');
+assert.equal(pickPreferredAxonModel(['axon-llama:latest']), 'axon-llama:latest');
+console.log('prefer-axon-local-models OK');
