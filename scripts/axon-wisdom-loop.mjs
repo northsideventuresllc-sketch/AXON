@@ -30,6 +30,46 @@ const dryRun = process.env.AXON_DRY_RUN === '1' || process.argv.includes('--dry'
 const useHaiku = process.argv.includes('--haiku');
 const showChecklist = process.argv.includes('--checklist');
 
+/**
+ * Self-register this run in axon_cron_jobs (id='axon-wisdom-loop') so AXON's own
+ * cron dashboard and Daily AXON Report can see it actually ran — same
+ * register-cron pattern as scripts/connections_digest.py's _register_cron()
+ * in nv-vault (proven live 2026-08-05). Never throws — a logging failure must
+ * not fail the real wisdom-absorb work.
+ */
+async function registerCron(serviceKey, { status, summary }) {
+  if (!serviceKey) return false;
+  const now = new Date();
+  const next = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/axon_cron_jobs?on_conflict=id`, {
+      method: 'POST',
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({
+        id: 'axon-wisdom-loop',
+        enabled: true,
+        last_run_at: now.toISOString(),
+        last_run_status: status,
+        last_run_summary: summary.slice(0, 500),
+        next_run_at: next.toISOString(),
+      }),
+    });
+    if (!r.ok) {
+      console.warn(`registerCron failed: HTTP ${r.status} ${await r.text()}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('registerCron failed:', err.message);
+    return false;
+  }
+}
+
 async function secret(sbSelect, key) {
   if (process.env[key]?.trim()) return process.env[key].trim();
   if (!sbSelect) return '';
@@ -181,6 +221,12 @@ async function main() {
   if (effectiveDry) {
     console.log('\n[DRY RUN] No rows written to axon_wisdom_items / axon_wisdom_runs.');
     console.log('Tip: npm run wisdom:dry  |  npm run wisdom -- --checklist');
+  } else {
+    const summary = result.ok
+      ? `${result.itemRows.length} absorbed, ${result.digested.length} digested (${result.provider})`
+      : `run failed: ${result.summary || 'unknown error'}`;
+    const registered = await registerCron(serviceKey, { status: result.ok ? 'ok' : 'error', summary });
+    console.log(registered ? '[axon_cron_jobs] registered run.' : '[axon_cron_jobs] registration skipped/failed — see warning above.');
   }
 }
 
