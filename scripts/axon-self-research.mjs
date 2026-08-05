@@ -67,6 +67,7 @@ async function main() {
         sbSelect,
         sbInsert,
         sbPatch,
+        supabaseKey: cfg.supabaseKey,
         anthropicKey: cfg.anthropicKey,
         geminiKey: cfg.geminiKey,
         geminiBackup: cfg.geminiBackup,

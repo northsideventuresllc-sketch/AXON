@@ -22,6 +22,7 @@ import { loadJspacePromptBlock } from './axon-j-space';
 import { loadWisdomPromptBlock } from './axon-wisdom';
 import type { ChatMessage, TonePreset } from './axon-types';
 import { createSupabaseClient } from './supabase.mjs';
+import { callAxonLocal } from './axon-local-relay.mjs';
 
 const GEMINI_MODEL = 'gemini-2.0-flash';
 
@@ -76,14 +77,21 @@ async function callGeminiOnce(
 }
 
 /**
- * Free-tier Gemini first, paid Haiku only if Gemini is unconfigured or fails.
+ * AXON-EVERYWHERE-PROJECT (2026-08-05): AXON-local first, then free-tier Gemini,
+ * then paid Haiku only as the last resort — per JB directive DW-LOCAL-MODEL-MIGRATION
+ * and the locked tier order (Decision #598 item 11 / #619). callHaiku and the Gemini
+ * calls below are unchanged; AXON-local is a new attempt prepended so behavior never
+ * regresses below what shipped before this change whenever it fails/times out.
  * Same call shape as callHaiku so existing call sites need only add geminiKey/geminiBackup.
  */
 async function callChatModel(
-  keys: { anthropicKey: string; geminiKey?: string; geminiBackup?: string },
+  keys: { anthropicKey: string; geminiKey?: string; geminiBackup?: string; supabaseKey?: string },
   system: string,
   messages: { role: string; content: string }[],
 ): Promise<string> {
+  const local = await callAxonLocal(keys.supabaseKey ?? '', system, messages).catch(() => null);
+  if (local) return local;
+
   for (const key of [keys.geminiKey, keys.geminiBackup].filter((k): k is string => Boolean(k))) {
     try {
       const text = await callGeminiOnce(key, system, messages);
