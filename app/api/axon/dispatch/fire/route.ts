@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { triggerHermesDispatch } from '@/lib/agent-dispatch';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}));
-    const code = typeof body?.code === 'string' ? body.code : undefined;
-    await triggerHermesDispatch(code);
-    return NextResponse.json({
-      ok: true,
-      message: code ? `Fired dispatch for ${code}` : 'Dispatch batch started — check Telegram',
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'dispatch fire failed';
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
-  }
+// RETIRED 2026-08-11 (JB directive): this used to POST a GitHub Actions
+// workflow_dispatch (triggerHermesDispatch) which ran on GitHub's cloud using
+// paid Anthropic Sonnet. That path is retired for good — real dispatch now
+// runs locally on the Mac mini via AXON (nvg-dispatch-local-runner.py),
+// polling every 30s, zero GitHub/Anthropic dependency. This endpoint is kept
+// so the existing "Fire" button doesn't 404; it just confirms local dispatch
+// is already running instead of firing anything.
+export async function POST(_req: NextRequest) {
+  return NextResponse.json({
+    ok: true,
+    message: 'Local AXON dispatch runner already handles this automatically — no manual fire needed.',
+    retired: true,
+  });
 }
