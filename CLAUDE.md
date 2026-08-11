@@ -55,3 +55,22 @@ returned. Different = different route, not the same call retried.
 > task "complete." `portal-integration/` pushes UI/API routes into the `northside-intelligence`
 > repo via `scripts/sync-portal-ui.mjs` — that's a real cross-repo production deploy, treat it
 > with the same care as a direct push to `northside-intelligence`.
+
+## MERGE + DEPLOY — BOTH ROUTES, ALWAYS
+
+JB, 2026-07-28: **"When merging and deploying, this needs to be done on the NI-Portal route
+and AXON route."** AXON ships to two surfaces — the **AXON route** (Vercel workspace,
+standalone) and the **NI-Portal route** (`northside-intelligence`, via
+`.github/workflows/sync-ni-portal.yml`). Landing on one and not the other is a **failed
+deploy**, not a partial one.
+
+**Read [`docs/merge-deploy-dual-route.md`](docs/merge-deploy-dual-route.md) before any merge.**
+It carries the pre-merge checks, the post-merge verification for each route, and the trap:
+the workflow's `paths:` filter and the manifests in `scripts/sync-portal-ui.mjs` are two
+lists that must agree, or a change ships to AXON and silently skips the portal.
+
+Guard: `npm run test:portal-sync` — add a file to a sync manifest, add its path to the
+workflow filter in the same commit, or the test fails. It also runs inside the sync workflow.
+
+Never report deployed without an artifact from **both** routes: the workflow run, the sync
+commit SHA on `northside-intelligence`, and both Vercel deployments at `READY`.
