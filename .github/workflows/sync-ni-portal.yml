@@ -52,6 +52,7 @@ on:
       - 'lib/axon-fire-gate-core.mjs'
       - 'lib/github-pat.mjs'
       - 'lib/local-model-daily.mjs'
+      - 'lib/prefer-axon-local-models.mjs'
       - 'app/api/axon/outreach/**'
       - 'app/api/axon/dispatch/**'
       - 'app/api/axon/follow-up/**'

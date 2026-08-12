@@ -139,6 +139,7 @@ const LIB_FILES = [
   'icp-config.mjs',
   'constants.mjs',
   'local-model-daily.mjs',
+  'prefer-axon-local-models.mjs',
   'github-pat.mjs',
   'axon-quick-links.ts',
   'use-axon-quick-links.ts',
