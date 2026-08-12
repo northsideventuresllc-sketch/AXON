@@ -61,6 +61,21 @@ Without webhook, GitHub Actions polls as fallback (best-effort ~hourly on free t
 
 ---
 
+## Match Fit posting-confirmation webhook
+
+`POST /api/axon/match-fit/posting-confirmation` — Match Fit's Content Calendar v2.1 calls this
+after posting a scheduled batch, so AXON can notify JB the posts went live.
+
+- **Auth:** `X-Match-Fit-Webhook-Secret` header must equal `MATCH_FIT_WEBHOOK_SECRET`. Whitelisted
+  in `middleware.ts` `PUBLIC_PATHS` (server-to-server call, no AXON dashboard session cookie).
+- **Body:** `{ batchId: string, posts: [{ platform, url, postedAt: ISO-8601 }] }`.
+- **On success:** records + surfaces an operator notification via `addNotification`
+  (`lib/axon-preferences.ts`) — same inbox the [Notifications panel](components/axon/notifications-panel.tsx)
+  reads, source `Match Fit`, one link per post.
+- Malformed payloads return `400`; missing/wrong secret returns `401`.
+
+---
+
 ## GitHub Actions secrets
 
 Add in **Settings → Secrets → Actions** on this repo:
@@ -79,6 +94,7 @@ Add in **Settings → Secrets → Actions** on this repo:
 | `AXON_WEBHOOK_URL` | Optional | Override default Vercel webhook URL |
 | `AXON_DASHBOARD_SECRET` | **Yes** | Web UI login |
 | `GEMINI_API_KEY_BACKUP` | Optional | Fallback |
+| `MATCH_FIT_WEBHOOK_SECRET` | For MF posting-confirmation webhook | Vercel env var (not a GH Action secret) — shared secret Match Fit sends as `X-Match-Fit-Webhook-Secret` on `POST /api/axon/match-fit/posting-confirmation`. Set the identical value in both repos' Vercel projects. |
 
 Keys can also live in NI-Brain `ni_platform_secrets` — env vars take precedence.
 
