@@ -52,7 +52,6 @@ async function registerCron(serviceKey, { status, summary }) {
       },
       body: JSON.stringify({
         id: 'axon-wisdom-loop',
-        enabled: true,
         last_run_at: now.toISOString(),
         last_run_status: status,
         last_run_summary: summary.slice(0, 500),
