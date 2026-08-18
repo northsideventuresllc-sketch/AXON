@@ -17,7 +17,18 @@
  *
  * Usage:
  *   node scripts/build-starter-kit.mjs
- *   node scripts/build-starter-kit.mjs --source-dirs=agents,skills,templates
+ *   node scripts/build-starter-kit.mjs --source-dirs=.claude/skills,.cursor/skills
+ *
+ * SOURCE LOCATION — corrected after real recon (2026-08-18, post-review):
+ * this repo has no top-level agents/skills/templates/workflows dirs. The
+ * real skill/agent-instruction content lives at .claude/skills/ and
+ * .cursor/skills/ (confirmed present and non-empty via live `find` on the
+ * mini). A separate DB-backed source, `nvg_skill_registry` (NI-Brain,
+ * kxijunwgbrlfzvgkhklo, 27 rows as of this check), also holds registered
+ * skills and is NOT covered by this filesystem scan — increment 2 should
+ * decide whether the starter kit needs both sources or just one, and if
+ * both, add a DB-export step alongside this file scan rather than trying
+ * to fake DB rows into the filesystem walk.
  *
  * First eligible run per the dispatch ticket = next nightly cycle after
  * 2026-08-17. This script is safe to run standalone any time — it only reads
@@ -32,8 +43,10 @@ const REPO_ROOT = join(__dirname, '..');
 
 // Candidate source directories for "skills/workflows/agent templates" —
 // only directories that actually exist are scanned, so this stays safe as
-// the repo's structure evolves.
-const DEFAULT_SOURCE_DIRS = ['agents', 'skills', 'templates', 'workflows'];
+// the repo's structure evolves. Corrected to real, confirmed-present paths
+// (.claude/skills, .cursor/skills) after the original agents/skills/
+// templates/workflows guess scanned to file_count: 0 on the live repo.
+const DEFAULT_SOURCE_DIRS = ['.claude/skills', '.cursor/skills'];
 
 const STARTER_KIT_EXTENSIONS = new Set(['.md', '.mjs', '.json', '.yml', '.yaml']);
 
