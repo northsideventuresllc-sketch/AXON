@@ -7,8 +7,12 @@ import assert from 'node:assert/strict';
 import { callWithFailover, DEFAULT_ORDER, PROVIDERS } from '../lib/omni-router.mjs';
 
 // --- PROVIDERS metadata sanity ---
-assert.ok(PROVIDERS.length >= 3, 'expected at least local/claude/gemini registered');
+assert.ok(PROVIDERS.length >= 4, 'expected at least local/claude/gemini/deepseek registered');
 assert.ok(PROVIDERS.some((p) => p.id === 'local' && p.requiresKey === false));
+assert.ok(PROVIDERS.some((p) => p.id === 'deepseek' && p.requiresKey === true && p.envKey === 'DEEPSEEK_API_KEY'));
+// DEFAULT_ORDER intentionally unchanged by the deepseek increment — see lib/omni-router.mjs
+// top-of-file scope note: no live call site uses this module yet, so widening the default
+// has zero production effect either way; kept minimal on purpose.
 assert.deepEqual(DEFAULT_ORDER, ['local', 'claude', 'gemini']);
 
 // --- 1. Primary succeeds: no failover needed, single attempt ---
@@ -81,4 +85,20 @@ assert.deepEqual(DEFAULT_ORDER, ['local', 'claude', 'gemini']);
   assert.match(result.attempts[0].error, /no caller registered/);
 }
 
-console.log('omni-router.test.mjs: all assertions passed (5 cases)');
+// --- 6. deepseek is a real BUILTIN_CALLERS entry (not just PROVIDERS metadata) — proven
+//        by including it in `order` with NO injected override and NO network call: it must
+//        reach the real callDeepSeek and fail on the real "missing API key" guard, not on
+//        "no caller registered for this provider id" (which is what an unwired id would hit).
+{
+  const result = await callWithFailover('sys', 'hi', {
+    order: ['deepseek', 'fallback'],
+    deepseekApiKey: undefined, // force the missing-key path — never a real network call
+    providers: { fallback: async () => 'fallback-text' },
+  });
+  assert.equal(result.provider, 'fallback');
+  assert.equal(result.attempts[0].provider, 'deepseek');
+  assert.equal(result.attempts[0].ok, false);
+  assert.match(result.attempts[0].error, /DEEPSEEK_API_KEY missing/);
+}
+
+console.log('omni-router.test.mjs: all assertions passed (6 cases)');
