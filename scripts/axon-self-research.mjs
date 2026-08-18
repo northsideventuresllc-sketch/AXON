@@ -15,6 +15,7 @@ import {
   runAutonomousResearch,
   writeResearchRunLabLog,
 } from '../lib/axon-research-core.mjs';
+import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 
 const MAX_ATTEMPTS = Math.max(1, Number(process.env.AXON_RESEARCH_MAX_ATTEMPTS || 3));
@@ -29,6 +30,8 @@ async function main() {
 
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const { sbSelect, sbInsert, sbPatch } = createSupabaseClient(key);
+
+  if (await cronGuardShouldSkip('axon-self-research', sbSelect)) return;
   const cfg = await loadConfig(sbSelect);
   const dryRun = cfg.dryRun || process.env.AXON_DRY_RUN === '1';
 

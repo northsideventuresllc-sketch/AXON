@@ -5,6 +5,7 @@
  * CONTENT_MACHINE_ALLOW_MATCH_FIT=1. MF content → match-fit.net/admin, not AXON Telegram.
  */
 import { loadConfig } from '../lib/config.mjs';
+import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import {
   groupPendingBatches,
   sendBatchNotification,
@@ -28,6 +29,8 @@ async function main() {
   }
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const sb = createSupabaseClient(key);
+
+  if (await cronGuardShouldSkip('axon-content-batch-notify', sb.sbSelect)) return;
   const cfg = await loadConfig(sb.sbSelect);
 
   if (!cfg.telegramToken || !cfg.telegramChatId) {

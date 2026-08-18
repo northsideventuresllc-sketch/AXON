@@ -3,6 +3,7 @@
  * AXON Telegram command handler — polls for JB messages (fallback when no webhook)
  */
 import { loadConfig } from '../lib/config.mjs';
+import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { handleTelegramCallback, handleTelegramMessage } from '../lib/telegram-handler.mjs';
 import {
@@ -32,6 +33,8 @@ async function main() {
   console.log(`AXON Telegram poll — ${new Date().toISOString()}`);
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const sb = createSupabaseClient(key);
+
+  if (await cronGuardShouldSkip('axon-telegram-poll', sb.sbSelect)) return;
   const cfg = await loadConfig(sb.sbSelect);
 
   if (!cfg.telegramToken || !cfg.telegramChatId) {
