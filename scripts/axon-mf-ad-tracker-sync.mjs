@@ -16,6 +16,7 @@
  * run log. See NOTIFY-TELEGRAM-REBUILD-V2.
  */
 import { createSupabaseClient } from '../lib/supabase.mjs';
+import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import { SUPABASE_URL } from '../lib/constants.mjs';
 import {
   attributionRowsToPlatformSnapshots,
@@ -172,6 +173,8 @@ async function main() {
 
   const client = createSupabaseClient(serviceKey);
   const sb = { ...client, key: serviceKey };
+
+  if (await cronGuardShouldSkip('axon-mf-ad-tracker', client.sbSelect)) return;
 
   const [
     metaToken,
