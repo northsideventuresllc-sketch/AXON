@@ -27,6 +27,7 @@ import { loadOutreachTrainingPrompt, logOutreachIcpDropSignal } from '../lib/out
 import { sweepOutreachLeadLifecycle } from '../lib/outreach-lifecycle-core.mjs';
 import { searchProspects } from '../lib/serpapi.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
+import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import { recordDraftNotification } from '../lib/telegram-handler.mjs';
 import { formatDraftMessage, telegramSend } from '../lib/telegram.mjs';
 
@@ -88,6 +89,8 @@ async function main() {
   const { sbSelect, sbInsert, sbPatch } = createSupabaseClient(
     process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
   );
+
+  if (await cronGuardShouldSkip('axon-ni-outreach', sbSelect)) return;
   const cfg = await loadConfig(sbSelect);
 
   try {
