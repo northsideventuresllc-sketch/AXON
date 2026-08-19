@@ -15,6 +15,7 @@
  */
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { SUPABASE_URL } from '../lib/constants.mjs';
+import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import {
   WISDOM_ITEMS_TABLE,
   WISDOM_RUNS_TABLE,
@@ -147,6 +148,8 @@ async function main() {
     sbSelect = client.sbSelect;
     sbInsert = client.sbInsert;
     sbPatch = client.sbPatch;
+
+    if (await cronGuardShouldSkip('axon-wisdom-loop', sbSelect)) return;
     if (!anthropicKey) anthropicKey = await secret(sbSelect, 'ANTHROPIC_API_KEY');
 
     try {
