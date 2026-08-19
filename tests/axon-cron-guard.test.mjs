@@ -41,6 +41,10 @@ assert.equal(await cronGuardShouldSkip('x', async () => []), false);
 // ---------- Layer 2: every real scheduled entrypoint ----------
 
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key-not-real';
+// axon-ni-outreach.mjs has its own separate training-mode gate ahead of the
+// cron guard (AXON_OUTREACH_MANUAL_RUN) — set it so this test actually
+// reaches the guard call instead of returning before it.
+process.env.AXON_OUTREACH_MANUAL_RUN = '1';
 
 const SUPABASE_URL = 'https://kxijunwgbrlfzvgkhklo.supabase.co';
 
@@ -56,6 +60,7 @@ const GUARDED_ENTRYPOINTS = [
   ['../scripts/axon-wisdom-loop.mjs', 'axon-wisdom-loop'],
   ['../scripts/axon-local-model-daily.mjs', 'axon-local-model-daily'],
   ['../scripts/axon-comm-skill.mjs', 'axon-comm-skill'],
+  ['../scripts/axon-ni-outreach.mjs', 'axon-ni-outreach'],
 ];
 
 async function runEntrypoint(modPath, enabled) {
@@ -131,4 +136,4 @@ for (const [modPath, jobId] of GUARDED_ENTRYPOINTS) {
   );
 }
 
-console.log('axon-cron-guard.test.mjs OK — 7/7 scheduled entrypoints honor axon_cron_jobs.enabled');
+console.log('axon-cron-guard.test.mjs OK — 8/8 scheduled entrypoints honor axon_cron_jobs.enabled');
