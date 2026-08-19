@@ -2,18 +2,11 @@
 /**
  * AXON cron guard tests — run: node tests/axon-cron-guard.test.mjs
  *
- * FIX-AXON-CRON-ENABLED-OVERWRITE-0817 (2 of 2) added lib/axon-cron-guard.mjs
- * so every scheduled entrypoint checks axon_cron_jobs.enabled itself before
- * doing real work, instead of relying only on the GitHub Actions schedule
- * toggle. That integration point had zero test coverage — for any of the 7
- * scripts that call it — until this file. Confirmed live 2026-08-19: three
- * Mac-cron entrypoints (axon-wisdom-loop, axon-local-model-daily,
- * axon-comm-skill) never called the guard at all; axon_cron_jobs shows
- * axon-wisdom-loop was toggled enabled=false on 2026-08-05 but still had a
- * real last_run_at of 2026-08-13 (8 days later) — proof it kept running
- * on the Mac cron regardless of the dashboard toggle, because nothing in
- * the script ever checked it. Fixed by wiring cronGuardShouldSkip into all
- * three; this file guards the regression for all 7, not just those 3.
+ * lib/axon-cron-guard.mjs is the only thing standing between JB's dashboard
+ * enabled toggle and a scheduled job actually running. Mac-cron entrypoints
+ * have no GitHub Actions schedule to fall back on, so a missing guard call
+ * there means the toggle does nothing at all — and it's a silent failure:
+ * the dashboard still shows "disabled," the job just keeps running anyway.
  *
  * Two layers:
  *  1. Unit tests of isCronJobEnabled/cronGuardShouldSkip against an injected
