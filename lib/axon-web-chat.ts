@@ -23,6 +23,7 @@ import { loadWisdomPromptBlock } from './axon-wisdom';
 import type { ChatMessage, TonePreset } from './axon-types';
 import { createSupabaseClient } from './supabase.mjs';
 import { callAxonLocal } from './axon-local-relay.mjs';
+import { callAxonV1Cloud } from './axon-v1-cloud-relay.mjs';
 
 const GEMINI_MODEL = 'gemini-2.0-flash';
 
@@ -83,6 +84,11 @@ async function callGeminiOnce(
  * calls below are unchanged; AXON-local is a new attempt prepended so behavior never
  * regresses below what shipped before this change whenever it fails/times out.
  * Same call shape as callHaiku so existing call sites need only add geminiKey/geminiBackup.
+ *
+ * AXON-TIER-SYSTEM (2026-08-20, JB direct order): RunPod (AXON v1) tier inserted right
+ * after AXON-local and before Gemini, per the canonical org-wide tier order. callAxonV1Cloud
+ * is a documented no-op (returns null) until RunPod is deployed, so this is a no-op change
+ * until then.
  */
 async function callChatModel(
   keys: { anthropicKey: string; geminiKey?: string; geminiBackup?: string; supabaseKey?: string },
@@ -91,6 +97,9 @@ async function callChatModel(
 ): Promise<string> {
   const local = await callAxonLocal(keys.supabaseKey ?? '', system, messages).catch(() => null);
   if (local) return local;
+
+  const runpod = await callAxonV1Cloud(keys.supabaseKey ?? '', system, messages).catch(() => null);
+  if (runpod) return runpod;
 
   for (const key of [keys.geminiKey, keys.geminiBackup].filter((k): k is string => Boolean(k))) {
     try {
