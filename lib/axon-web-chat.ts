@@ -1,4 +1,4 @@
-import { HAIKU_MODEL } from './constants.mjs';
+import { HAIKU_MODEL, GEMINI_MODEL } from './constants.mjs';
 import { loadConfig } from './config.mjs';
 import {
   buildToneInstructions,
@@ -25,7 +25,7 @@ import { createSupabaseClient } from './supabase.mjs';
 import { callAxonLocal } from './axon-local-relay.mjs';
 import { callAxonV1Cloud } from './axon-v1-cloud-relay.mjs';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+// GEMINI_MODEL now imported from constants.mjs (retired model removed - same root cause as Telegram path).
 
 async function callHaiku(apiKey: string, system: string, messages: { role: string; content: string }[]) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
