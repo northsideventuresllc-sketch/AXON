@@ -3,7 +3,6 @@ import { loadConfig } from './config.mjs';
 import {
   buildToneInstructions,
   fetchCommunicationTechniques,
-  fetchMemories,
   fetchTopSignals,
   getOperatorProfile,
   insertChatMessage,
@@ -19,6 +18,7 @@ import {
   setWorkspaceFlags,
 } from './axon-workspace';
 import { loadJspacePromptBlock } from './axon-j-space';
+import { fetchMemoriesGated } from './axon-inhibitor';
 import { loadWisdomPromptBlock } from './axon-wisdom';
 import type { ChatMessage, TonePreset } from './axon-types';
 import { createSupabaseClient } from './supabase.mjs';
@@ -134,16 +134,25 @@ export async function generateAxonReply(
   const { sbSelect } = createSupabaseClient(key);
   const cfg = await loadConfig(sbSelect);
 
-  const [profile, signals, memories, workspace, jspaceBlock, techniques, wisdomBlock] =
+  // Inhibitor: retrieval gain computed live per query — full pool competes,
+  // a budgeted subset surfaces. Store never touched (AXON NEVER FORGETS).
+  const retrievalContext = {
+    taskText: userMessage,
+    recentTurnsText: history.slice(-6).map((m) => m.content).join('\n'),
+    channel,
+  } as const;
+
+  const [profile, signals, gated, workspace, jspaceBlock, techniques, wisdomBlock] =
     await Promise.all([
       getOperatorProfile(),
       fetchTopSignals(),
-      fetchMemories(undefined, 15),
+      fetchMemoriesGated(retrievalContext),
       getWorkspace(),
       loadJspacePromptBlock(),
       fetchCommunicationTechniques(),
       loadWisdomPromptBlock(),
     ]);
+  const memories = gated.memories;
 
   const toneBlock = buildToneInstructions(profile.tone_preset, signals, techniques, channel);
   const memoryBlock = memories.length
