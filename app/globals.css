@@ -1220,3 +1220,8 @@
 .v0-carousel > * { scroll-snap-align: center; }
 .v0-holo-card { transform-style: preserve-3d; transition: transform .35s ease, box-shadow .35s ease; }
 .v0-holo-card:hover { transform: translateY(-8px) rotateX(4deg); box-shadow: 0 24px 60px rgba(0,212,255,.16); }
+@keyframes v0-droid-bob {
+  0%, 100% { transform: translateY(0); filter: brightness(1); }
+  50% { transform: translateY(-6px); filter: brightness(1.35); }
+}
+.v0-droid { animation: v0-droid-bob 3.2s ease-in-out infinite; }

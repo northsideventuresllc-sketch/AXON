@@ -204,6 +204,39 @@ const API_FILES = [
   'it-builder/route.ts',
 ];
 
+/**
+ * AXON v0 harness (Jarvis dash). These live in their own subtrees so the flat lists
+ * above stay untouched:
+ *   components/axon-v0/*  → src/components/axon-v0/*        (imports unchanged)
+ *   lib/axon-v0/*         → src/lib/axon/axon-v0/*          (the axon-* rewrite lands here)
+ *   app/api/axon-v0/*     → src/app/api/axon-v0/*
+ * The v0 PAGES (app/(axon-v0)/…) are NOT synced yet — the portal gets its page shells
+ * via the portal-integration overlay once JB approves the slice.
+ */
+const V0_COMPONENT_FILES = [
+  'voice.ts',
+  'orb-home.tsx',
+  'venture-carousel.tsx',
+  'venture-room.tsx',
+  'notifications-board.tsx',
+  'quick-links-rail.tsx',
+];
+
+const V0_LIB_FILES = [
+  'types.ts',
+  'store.ts',
+  'omni-router.ts',
+];
+
+const V0_API_FILES = [
+  'ventures/route.ts',
+  'agent-chat/route.ts',
+  'providers/route.ts',
+  'venture-tools/route.ts',
+  'brain-graph/route.ts',
+  'notifications/route.ts',
+];
+
 function rewriteImports(content) {
   return content
     .replace(/from '@\/lib\/api-base'/g, "from '@/lib/axon/api-base'")
@@ -238,6 +271,7 @@ function rewriteImports(content) {
     .replace(/from '@\/lib\/axon-tool-meta'/g, "from '@/lib/axon/axon-tool-meta'")
     .replace(/from '@\/lib\/axon-copy'/g, "from '@/lib/axon/axon-copy'")
     .replace(/from '@\/lib\/match-fit-hub'/g, "from '@/lib/axon/match-fit-hub'")
+    .replace(/from '@\/lib\/supabase\.mjs'/g, "from '@/lib/axon/supabase.mjs'")
     .replace(/from '@\/lib\/paths'/g, "from '@/lib/axon/app-path'");
 }
 
@@ -420,6 +454,29 @@ function main() {
     const src = join(AXON_ROOT, 'app/api/axon', file);
     if (!existsSync(src)) continue;
     addWrite(join(niRoot, 'src/app/api/axon', file), rewriteImports(readFileSync(src, 'utf8')), `api: ${file}`, 'api');
+  }
+
+  // AXON v0 harness subtrees (see the V0_* lists for the path mapping).
+  for (const file of V0_COMPONENT_FILES) {
+    const src = join(AXON_ROOT, 'components/axon-v0', file);
+    if (!existsSync(src)) {
+      console.warn(`skip missing v0 component: ${file}`);
+      continue;
+    }
+    addWrite(join(niRoot, 'src/components/axon-v0', file), rewriteImports(readFileSync(src, 'utf8')), `v0 component: ${file}`, 'component');
+  }
+  for (const file of V0_LIB_FILES) {
+    const src = join(AXON_ROOT, 'lib/axon-v0', file);
+    if (!existsSync(src)) {
+      console.warn(`skip missing v0 lib: ${file}`);
+      continue;
+    }
+    addWrite(join(niRoot, 'src/lib/axon/axon-v0', file), rewriteImports(readFileSync(src, 'utf8')), `v0 lib: ${file}`, 'lib');
+  }
+  for (const file of V0_API_FILES) {
+    const src = join(AXON_ROOT, 'app/api/axon-v0', file);
+    if (!existsSync(src)) continue;
+    addWrite(join(niRoot, 'src/app/api/axon-v0', file), rewriteImports(readFileSync(src, 'utf8')), `v0 api: ${file}`, 'api');
   }
 
   for (const entry of planPortalIntegration(niRoot)) plan.push(entry);

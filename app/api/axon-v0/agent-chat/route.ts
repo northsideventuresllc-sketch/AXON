@@ -108,9 +108,12 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ userMsg, agentMsg, route });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Agent chat failed' },
-      { status: 500 }
-    );
+    const raw = err instanceof Error ? err.message : 'Agent chat failed';
+    // Keep infrastructure jargon off the operator's screen.
+    const friendly = /supabase|http \d|fetch failed|econn/i.test(raw)
+      ? 'The router could not reach its model keys. Check server credentials and try again.'
+      : raw;
+    console.error('[axon-v0 agent-chat]', raw);
+    return NextResponse.json({ error: friendly }, { status: 500 });
   }
 }
