@@ -35,7 +35,7 @@ export function NotificationsBoard() {
 
   return (
     <section className="v0-panel p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">Notifications</p>
         <div className="flex gap-1.5">
           {(['recent', 'venture'] as const).map((m) => (

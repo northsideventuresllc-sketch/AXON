@@ -214,6 +214,7 @@ const API_FILES = [
  * via the portal-integration overlay once JB approves the slice.
  */
 const V0_COMPONENT_FILES = [
+  'remotion/axon-boot.tsx',
   'voice.ts',
   'orb-home.tsx',
   'venture-carousel.tsx',
@@ -378,6 +379,8 @@ function patchPackageJson(niRoot) {
   for (const [name, version] of Object.entries({
     three: '^0.185.1',
     'jarvis-ai-web-animation': '^0.1.2',
+    remotion: '^4.0.515',
+    '@remotion/player': '^4.0.515',
   })) {
     if (pkg.dependencies[name] !== version) {
       pkg.dependencies[name] = version;

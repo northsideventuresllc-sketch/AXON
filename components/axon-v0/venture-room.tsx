@@ -329,7 +329,7 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
                 ? 'one-off build order…'
                 : `Message ${venture.agents.find((a) => a.id === targetAgent)?.name || exec?.name || 'the room'}…`
             }
-            className={`w-full resize-none bg-transparent text-sm outline-none placeholder:text-slate-600 ${
+            className={`w-full resize-none bg-transparent text-sm outline-none placeholder:text-slate-500 ${
               inputMode === 'cli' ? 'text-emerald-200' : 'text-slate-100'
             }`}
           />

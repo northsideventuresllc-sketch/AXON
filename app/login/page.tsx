@@ -101,7 +101,7 @@ export default function LoginPage() {
         </div>
       ) : (
         <div className="v0-rise v0-panel relative z-10 w-full max-w-md p-8">
-          <p className="text-[10px] uppercase tracking-[0.35em] text-cyan-300/80">Northside Intelligence</p>
+          <p className="text-[10px] tracking-[0.35em] text-cyan-300/80">NORTHSiDE Intelligence</p>
           <h1 className="v0-neon mt-2 text-4xl">AXON</h1>
           <p className="mt-2 text-sm text-slate-400">The master harness. Identify yourself.</p>
           <div className="mt-8">

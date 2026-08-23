@@ -1216,8 +1216,8 @@
 }
 .v0-ring { animation: v0-ring 14s linear infinite; }
 .v0-dot { animation: v0-pulse-dot 1.8s ease-in-out infinite; }
-.v0-carousel { scroll-snap-type: x mandatory; }
-.v0-carousel > * { scroll-snap-align: center; }
+/* No scroll-snap: it resnaps to the far card while v0-page-in scales the page. */
+.v0-carousel { overscroll-behavior-x: contain; }
 .v0-holo-card { transform-style: preserve-3d; transition: transform .35s ease, box-shadow .35s ease; }
 .v0-holo-card:hover { transform: translateY(-8px) rotateX(4deg); box-shadow: 0 24px 60px rgba(0,212,255,.16); }
 @keyframes v0-droid-bob {
@@ -1225,3 +1225,25 @@
   50% { transform: translateY(-6px); filter: brightness(1.35); }
 }
 .v0-droid { animation: v0-droid-bob 3.2s ease-in-out infinite; }
+
+/* Keyboard focus is part of the harness, not an afterthought. */
+.v0-chip { transition: color .15s ease, background-color .15s ease, border-color .15s ease; }
+.v0-chip:focus-visible,
+.v0-page a:focus-visible,
+.v0-page button:focus-visible,
+.v0-page input:focus-visible,
+.v0-page select:focus-visible,
+.v0-page textarea:focus-visible {
+  outline: 2px solid rgba(0,212,255,.75);
+  outline-offset: 2px;
+  border-radius: .4rem;
+}
+
+/* The cinematic lives on /boot; everything ambient stands down on request. */
+@media (prefers-reduced-motion: reduce) {
+  .v0-page, .v0-rise, .v0-wave-layer, .v0-neon, .v0-panel::before,
+  .v0-ring, .v0-dot, .v0-droid {
+    animation: none !important;
+  }
+  .v0-holo-card, .v0-holo-card:hover { transform: none; transition: none; }
+}

@@ -75,9 +75,11 @@ export default function BrainPage() {
           byKind[n.kind] = (byKind[n.kind] || 0) + 1;
         });
         const seen: Record<string, number> = {};
+        let hubIndex = 0;
         nodes.forEach((n) => {
           if (n.kind === 'hub') {
-            positions.set(n.id, new THREE.Vector3(0, 0, 0));
+            const a = (hubIndex++ / 3) * Math.PI * 2;
+            positions.set(n.id, new THREE.Vector3(Math.cos(a) * 10, Math.sin(a) * 10, 0));
             return;
           }
           const i = (seen[n.kind] = (seen[n.kind] || 0) + 1);

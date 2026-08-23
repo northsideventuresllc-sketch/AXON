@@ -48,7 +48,8 @@ export function VentureCarousel() {
   }
 
   return (
-    <section className="v0-rise mt-8">
+    // No entrance animation on this section: scroll-snap resnaps mid-transform and lands on the last card.
+    <section className="mt-8">
       <p className="mb-3 text-[10px] uppercase tracking-[0.35em] text-cyan-300/70">Ventures</p>
       {error && <p className="mb-2 text-xs text-rose-300">{error}</p>}
       <div className="v0-carousel flex gap-4 overflow-x-auto pb-4">

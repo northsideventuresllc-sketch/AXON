@@ -17,7 +17,7 @@ export default function AxonV0Layout({ children }: { children: React.ReactNode }
 
       <div className="relative z-10 flex min-h-screen">
         <aside className="hidden w-52 shrink-0 flex-col gap-1 border-r border-cyan-400/10 bg-black/30 p-4 backdrop-blur md:flex">
-          <p className="mb-4 text-[10px] uppercase tracking-[0.35em] text-cyan-300/70">
+          <p className="mb-4 text-[10px] tracking-[0.35em] text-cyan-300/70">
             NORTHSiDE Intelligence
           </p>
           {LEFT_NAV.map((item) => (
