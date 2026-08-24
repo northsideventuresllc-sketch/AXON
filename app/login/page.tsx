@@ -26,7 +26,8 @@ function LoginForm() {
     });
 
     if (!res.ok) {
-      setError('That AXON code does not match this NI account.');
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || 'That AXON code does not match this NI account.');
       setLoading(false);
       return;
     }
