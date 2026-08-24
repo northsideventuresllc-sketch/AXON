@@ -6,7 +6,7 @@ import { getCookiePath } from '@/lib/paths';
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
-    const result = validateLogin(email, password);
+    const result = await validateLogin(email, password);
     if (!result.ok) {
       const error =
         result.reason === 'email'
