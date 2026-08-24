@@ -1,13 +1,15 @@
 'use client';
 
 import { apiUrl } from '@/lib/api-base';
+import { stripBasePath } from '@/lib/paths';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get('next') || '/boot';
+  // router.push re-adds basePath, so strip any basePath the `next` param already carries.
+  const next = stripBasePath(searchParams.get('next') || '/boot');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
