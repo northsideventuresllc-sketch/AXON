@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Player, type PlayerRef } from '@remotion/player';
 import {
   AxonBootComposition,
@@ -11,7 +10,6 @@ import {
 import { speak } from '@/components/axon-v0/voice';
 
 export default function BootPage() {
-  const router = useRouter();
   const playerRef = useRef<PlayerRef>(null);
   const [mounted, setMounted] = useState(false);
   const doneRef = useRef(false);
@@ -20,7 +18,9 @@ export default function BootPage() {
     if (doneRef.current) return;
     doneRef.current = true;
     speak('Welcome.');
-    router.push('/');
+    // Hard nav to the command deck — reliable on mobile even if the player janks.
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    window.location.assign(base || '/');
   };
 
   useEffect(() => {

@@ -2,13 +2,12 @@
 
 import { apiUrl } from '@/lib/api-base';
 import { stripBasePath } from '@/lib/paths';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  // router.push re-adds basePath, so strip any basePath the `next` param already carries.
+  // Strip any basePath the `next` param carries; we re-add it once for a hard nav.
   const next = stripBasePath(searchParams.get('next') || '/boot');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -33,8 +32,11 @@ function LoginForm() {
       setLoading(false);
       return;
     }
-    router.push(next === '/' ? '/boot' : next);
-    router.refresh();
+    // Hard navigation, not router.push: a soft nav to the heavy boot route stalls
+    // on mobile / in-app browsers, leaving the button stuck on "Verifying…".
+    const dest = next === '/' ? '/boot' : next;
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    window.location.assign(`${base}${dest}`);
   }
 
   return (
