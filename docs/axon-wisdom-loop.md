@@ -1,6 +1,6 @@
 # AXON wisdom absorb loop (AX-WISDOM-LOOP)
 
-> Watch → digest → enhance → absorb. Mac ON / Slow Takeover path so NORTHSiDE AXON keeps durable operator wisdom without burning paid API quota.
+> Watch → digest → enhance → absorb. Mac ON / Slow Takeover path so Northside AXON keeps durable operator wisdom without burning paid API quota.
 
 ## What it does
 
@@ -46,4 +46,4 @@ Runs before `model:daily` so scoring inherits fresh wisdom.
 
 - No auto-send outbound
 - No secrets in git
-- Brand casing: **NORTHSiDE** · Operator: **JB**
+- Brand casing: **Northside** · Operator: **JB**

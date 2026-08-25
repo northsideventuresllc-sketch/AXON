@@ -1,4 +1,4 @@
-# AXON — NORTHSiDE Autonomous Systems
+# AXON — Northside Autonomous Systems
 
 > **Phase 1:** 24/7 NI Services outreach — find → score → draft → **JB approve via Telegram** → send → close 4 paid clients.
 

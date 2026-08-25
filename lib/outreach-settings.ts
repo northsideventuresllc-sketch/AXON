@@ -178,7 +178,7 @@ export const DEFAULT_OUTREACH_SETTINGS: OutreachSettings = {
   ],
   socialAccounts: [],
   signature: {
-    text: '— JB\nNORTHSiDE Intelligence',
+    text: '— JB\nNorthside Intelligence',
     logoDataUrl: null,
   },
 };

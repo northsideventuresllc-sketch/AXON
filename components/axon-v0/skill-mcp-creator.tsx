@@ -27,7 +27,7 @@ const KIND_COPY: Record<Kind, { label: string; icon: string; placeholder: string
   skill: {
     label: 'Skill',
     icon: '✦',
-    placeholder: 'e.g. a skill that reviews outreach copy for NORTHSiDE brand voice before it sends',
+    placeholder: 'e.g. a skill that reviews outreach copy for Northside brand voice before it sends',
     opener:
       'Describe the skill you want and I will draft its spec — a name, what it does, and when it should trigger. Drafts a spec — building it comes next.',
   },

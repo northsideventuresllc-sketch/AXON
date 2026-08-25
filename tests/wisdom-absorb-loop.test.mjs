@@ -167,7 +167,7 @@ assert.match(run.summary, /Wisdom absorb/i);
 const dry = await runWisdomAbsorbLoop({
   corpus: [],
   findings: [],
-  learnings: [{ id: 2, learning: 'Keep brand NORTHSiDE casing.', category: 'brand' }],
+  learnings: [{ id: 2, learning: 'Keep brand Northside casing.', category: 'brand' }],
   signals: [],
   dryRun: true,
   forceHeuristic: true,

@@ -2,7 +2,7 @@
 
 > Phase 1: keep **outreach + follow-up scoring** interactive inside AXON so JB is not paying extra SaaS/API loop costs for routine calibration.
 
-Brand: **NORTHSiDE** · Operator: **JB** · Brain: NI-Brain `kxijunwgbrlfzvgkhklo`
+Brand: **Northside** · Operator: **JB** · Brain: NI-Brain `kxijunwgbrlfzvgkhklo`
 
 ---
 

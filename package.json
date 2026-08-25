@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "AXON — NORTHSiDE autonomous profit engines",
+  "description": "AXON — Northside autonomous profit engines",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

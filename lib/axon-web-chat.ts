@@ -174,7 +174,7 @@ ${memoryBlock}
 ${workspaceBlock}
 ${jspaceBlock}${wisdomBlock}${notificationBlock}
 
-Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand name). Never auto-send outreach. Phase 1 goal: close 4 paid NI Services clients.`;
+Brand: Northside Intelligence — standard title case (use NORTHSIDE only in intentional all-caps design contexts). Never auto-send outreach. Phase 1 goal: close 4 paid NI Services clients.`;
 
   const recent = history.slice(-12).map((m) => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',

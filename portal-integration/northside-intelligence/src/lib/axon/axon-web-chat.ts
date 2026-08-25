@@ -82,7 +82,7 @@ ${workspaceBlock}
 
 ${channel === 'voice' ? 'This is a voice conversation. Keep responses concise (2-4 sentences unless detail is requested). Sound natural when spoken aloud.' : 'This is text chat. Be conversational and human — not bullet-heavy unless listing data.'}
 
-Brand: Northside Intelligence / NORTHSiDE (exact casing when using the brand name). Never auto-send outreach. Phase 1 goal: close 4 paid NI Services clients.`;
+Brand: Northside Intelligence — standard title case (use NORTHSIDE only in intentional all-caps design contexts). Never auto-send outreach. Phase 1 goal: close 4 paid NI Services clients.`;
 
   const recent = history.slice(-12).map((m) => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',

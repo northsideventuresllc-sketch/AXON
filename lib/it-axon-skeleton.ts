@@ -1,5 +1,5 @@
 /**
- * AXON IT Skeleton Config — NORTHSiDE Intelligence Tools (live ITs).
+ * AXON IT Skeleton Config — Northside Intelligence Tools (live ITs).
  *
  * Tracks per-IT skeleton setup state for the AXON sidebar and future IT-clone
  * tool panels. Complements `lib/it-quick-links.ts` (sidebar external links)
@@ -60,7 +60,7 @@ export const IT_SKELETON_CONFIGS: ItAxonSkeletonConfig[] = [
     name: 'ReplyFlow',
     itHref: 'https://northsideintelligence.com/tools/replyflow',
     defaultPrompt:
-      'You are helping JB manage ReplyFlow — NORTHSiDE\'s AI-powered reply and follow-up automation tool ($15/mo). ' +
+      'You are helping JB manage ReplyFlow — Northside\'s AI-powered reply and follow-up automation tool ($15/mo). ' +
       'Assist with reviewing reply queues, drafting follow-up copy, and tracking reply performance metrics. ' +
       'Surface anything that needs approval before sending.',
     skeletonStatus: 'stub',
@@ -70,7 +70,7 @@ export const IT_SKELETON_CONFIGS: ItAxonSkeletonConfig[] = [
     name: 'GrantBot',
     itHref: 'https://northsideintelligence.com/tools/grantbot',
     defaultPrompt:
-      'You are helping JB manage GrantBot — NORTHSiDE\'s AI grant-discovery and application drafting tool ($39/mo). ' +
+      'You are helping JB manage GrantBot — Northside\'s AI grant-discovery and application drafting tool ($39/mo). ' +
       'Help surface relevant grant opportunities, review draft applications, and track submission deadlines. ' +
       'Flag high-priority grants that need JB\'s review.',
     skeletonStatus: 'stub',
@@ -80,8 +80,8 @@ export const IT_SKELETON_CONFIGS: ItAxonSkeletonConfig[] = [
     name: 'SignalDesk',
     itHref: 'https://northsideintelligence.com/tools/signaldesk',
     defaultPrompt:
-      'You are helping JB manage SignalDesk — NORTHSiDE\'s AI market-signal monitoring desk ($24/mo). ' +
-      'Surface new signals, competitor moves, and industry alerts that are relevant to NORTHSiDE ventures. ' +
+      'You are helping JB manage SignalDesk — Northside\'s AI market-signal monitoring desk ($24/mo). ' +
+      'Surface new signals, competitor moves, and industry alerts that are relevant to Northside ventures. ' +
       'Highlight anything actionable that warrants a same-day response.',
     skeletonStatus: 'stub',
   },
@@ -90,8 +90,8 @@ export const IT_SKELETON_CONFIGS: ItAxonSkeletonConfig[] = [
     name: 'GapScan',
     itHref: 'https://northsideintelligence.com/tools/gapscan',
     defaultPrompt:
-      'You are helping JB manage GapScan — NORTHSiDE\'s AI market-gap analysis scanner ($18/mo). ' +
-      'Help review gap reports, score opportunity quality, and map findings to NORTHSiDE service offerings. ' +
+      'You are helping JB manage GapScan — Northside\'s AI market-gap analysis scanner ($18/mo). ' +
+      'Help review gap reports, score opportunity quality, and map findings to Northside service offerings. ' +
       'Prioritise gaps that align with the current ICP and outreach pipeline.',
     skeletonStatus: 'stub',
   },
@@ -100,7 +100,7 @@ export const IT_SKELETON_CONFIGS: ItAxonSkeletonConfig[] = [
     name: 'BridgeAI',
     itHref: 'https://northsideintelligence.com/tools/bridgeai',
     defaultPrompt:
-      'You are helping JB manage BridgeAI — NORTHSiDE\'s AI integration and workflow-bridge tool ($29/mo). ' +
+      'You are helping JB manage BridgeAI — Northside\'s AI integration and workflow-bridge tool ($29/mo). ' +
       'Assist with mapping integration tasks, reviewing connection health, and surfacing workflow bottlenecks. ' +
       'Flag any broken bridges or stalled automations that need immediate attention.',
     skeletonStatus: 'stub',

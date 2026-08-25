@@ -1,6 +1,6 @@
 # AXON J-Space & Autonomous Self-Research
 
-> Application-layer implementation of Anthropic's J-space global workspace discovery (Jul 2026), tuned for NORTHSiDE AXON self-improvement.
+> Application-layer implementation of Anthropic's J-space global workspace discovery (Jul 2026), tuned for Northside AXON self-improvement.
 
 ## What is J-Space?
 

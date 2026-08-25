@@ -73,7 +73,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const sendAccount = resolveSendEmail(settings, body.fromEmailId);
     const receiveAccount = resolveReceiveEmail(settings, body.replyToEmailId);
-    const subject = String(body.subject || meta.email_subject || `NORTHSiDE Intelligence — ${lead.handle}`);
+    const subject = String(body.subject || meta.email_subject || `Northside Intelligence — ${lead.handle}`);
     const emailBody = String(body.body || lead.comment_draft || '');
     const includeSignature = body.includeSignature !== false;
     const signatureText = String(body.signatureText || settings.signature.text || '');
