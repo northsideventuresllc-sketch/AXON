@@ -76,7 +76,6 @@ export function JarvisOrb({
             </span>
           ))}
         </h2>
-        <p className="axon-orb-tagline mt-1.5">Autonomous Intelligence Core</p>
       </div>
     </div>
   );

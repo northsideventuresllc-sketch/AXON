@@ -9,7 +9,7 @@ interface QuickLink {
   href: string;
 }
 
-export function QuickLinksRail() {
+export function QuickLinksRail({ bare = false }: { bare?: boolean }) {
   const [links, setLinks] = useState<QuickLink[]>([]);
 
   useEffect(() => {
@@ -19,11 +19,8 @@ export function QuickLinksRail() {
       .catch(() => setLinks([]));
   }, []);
 
-  if (!links.length) return null;
-  return (
-    <section className="v0-panel p-4">
-      <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">Quick Links</p>
-      <div className="mt-2 grid gap-1.5">
+  const inner = (
+    <div className="grid gap-1.5 p-3">
         {links.map((l, i) => (
           <a
             key={l.id || i}
@@ -35,7 +32,15 @@ export function QuickLinksRail() {
             ↗ {l.label}
           </a>
         ))}
-      </div>
+    </div>
+  );
+
+  if (!links.length) return bare ? <p className="p-3 text-xs text-slate-500">No quick links yet.</p> : null;
+  if (bare) return inner;
+  return (
+    <section className="v0-panel p-4">
+      <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">Quick Links</p>
+      {inner}
     </section>
   );
 }

@@ -1,0 +1,319 @@
+/* AXON Settings workstream — hub layout + section styling.
+   All classes/keyframes prefixed st- to stay clear of shared globals.css. */
+
+@keyframes st-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- two-column hub shell --- */
+.st-hub {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .st-hub {
+    grid-template-columns: 210px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+/* --- left mini-index (glossary of section links) --- */
+.st-index {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.st-index-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: rgba(0, 212, 255, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.st-index-link {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  font-size: 12px;
+  color: rgb(148, 163, 184);
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.st-index-link:hover {
+  color: rgb(103, 232, 249);
+  background: rgba(0, 212, 255, 0.06);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.st-index-link-active {
+  color: rgb(165, 243, 252);
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.35);
+}
+
+/* --- section cards --- */
+.st-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.st-section {
+  animation: st-fade-in 0.4s ease both;
+  scroll-margin-top: 1rem;
+}
+
+.st-section-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 0;
+}
+
+.st-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgb(226, 232, 240);
+}
+
+.st-section-sub {
+  margin-top: 0.15rem;
+  font-size: 11px;
+  color: rgb(100, 116, 139);
+}
+
+.st-caret {
+  color: rgba(0, 212, 255, 0.6);
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.st-caret-open {
+  transform: rotate(90deg);
+}
+
+.st-section-body {
+  margin-top: 1rem;
+  animation: st-fade-in 0.3s ease both;
+}
+
+/* --- glossary card --- */
+.st-glossary-item {
+  display: grid;
+  grid-template-columns: minmax(0, 150px) 1fr;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.08);
+}
+
+.st-glossary-item:last-child {
+  border-bottom: none;
+}
+
+.st-glossary-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(103, 232, 249);
+}
+
+.st-glossary-desc {
+  font-size: 12px;
+  color: rgb(148, 163, 184);
+  line-height: 1.5;
+}
+
+/* --- form controls --- */
+.st-label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgb(100, 116, 139);
+  margin-bottom: 0.4rem;
+}
+
+.st-input,
+.st-textarea,
+.st-select {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  color: rgb(226, 232, 240);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.st-input:focus,
+.st-textarea:focus,
+.st-select:focus {
+  border-color: rgba(0, 212, 255, 0.6);
+}
+
+.st-textarea {
+  min-height: 130px;
+  resize: vertical;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.st-field {
+  margin-bottom: 1rem;
+}
+
+.st-field:last-child {
+  margin-bottom: 0;
+}
+
+.st-hint {
+  margin-top: 0.4rem;
+  font-size: 11px;
+  color: rgb(100, 116, 139);
+  line-height: 1.5;
+}
+
+/* --- read-only note block --- */
+.st-note {
+  border-left: 2px solid rgba(0, 212, 255, 0.3);
+  padding: 0.35rem 0 0.35rem 0.75rem;
+  font-size: 11px;
+  color: rgb(148, 163, 184);
+  line-height: 1.55;
+}
+
+.st-note + .st-note {
+  margin-top: 0.6rem;
+}
+
+.st-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: rgba(0, 212, 255, 0.08);
+  padding: 0.05rem 0.5rem;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(103, 232, 249, 0.9);
+  vertical-align: middle;
+}
+
+/* --- segmented toggle group --- */
+.st-seg {
+  display: inline-flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.st-seg-btn {
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.4rem 0.85rem;
+  font-size: 12px;
+  color: rgb(148, 163, 184);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.st-seg-btn:hover {
+  color: rgb(203, 213, 225);
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+.st-seg-btn-active {
+  color: rgb(165, 243, 252);
+  background: rgba(0, 212, 255, 0.12);
+  border-color: rgba(0, 212, 255, 0.55);
+}
+
+/* --- notification toggle rows --- */
+.st-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.08);
+}
+
+.st-toggle-row:last-child {
+  border-bottom: none;
+}
+
+.st-toggle-label {
+  font-size: 13px;
+  color: rgb(203, 213, 225);
+}
+
+.st-toggle-desc {
+  margin-top: 0.15rem;
+  font-size: 11px;
+  color: rgb(100, 116, 139);
+}
+
+.st-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 42px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  background: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.st-switch-on {
+  background: rgba(0, 212, 255, 0.25);
+  border-color: rgba(0, 212, 255, 0.6);
+}
+
+.st-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgb(148, 163, 184);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.st-switch-on .st-switch-knob {
+  transform: translateX(20px);
+  background: rgb(103, 232, 249);
+}
+
+/* --- saved flash --- */
+.st-saved {
+  font-size: 11px;
+  color: rgba(103, 232, 249, 0.9);
+  margin-top: 0.5rem;
+}

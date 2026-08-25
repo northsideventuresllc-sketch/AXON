@@ -1,0 +1,445 @@
+/* AXON v0 — Holographic rotating venture carousel.
+   All classes prefixed vc- to avoid collisions with globals.css.
+   Uses CSS vars from globals.css: --ni-cyan, --ni-ink, --ni-navy.
+   Per-item accent is passed in as --vc-accent (inline style). */
+
+.vc-section {
+  margin-top: 2rem;
+}
+
+.vc-eyebrow {
+  margin-bottom: 0.75rem;
+  font-size: 10px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ni-cyan, #00d4ff) 70%, transparent);
+}
+
+/* ---- Stage: 3D perspective host. Generous padding + overflow visible so a
+   scaled/hovered card is NEVER clipped (the old scroll version clipped). ---- */
+.vc-stage {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  perspective: 1200px;
+  overflow: visible;
+  padding: 40px 24px 96px; /* bottom room for the hover caption */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vc-ring {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+/* Each venture. Absolutely centered; the data-pos state moves it on the ring. */
+.vc-item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 190px;
+  margin-top: -110px;
+  margin-left: -95px;
+  transform-style: preserve-3d;
+  transition:
+    transform 1000ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 900ms ease,
+    filter 900ms ease;
+  will-change: transform, opacity;
+  cursor: pointer;
+}
+
+/* Ring positions ------------------------------------------------------------ */
+.vc-item[data-pos='center'] {
+  transform: translateX(0) translateZ(70px) rotateY(0deg) scale(1);
+  opacity: 1;
+  z-index: 30;
+}
+.vc-item[data-pos='right'] {
+  transform: translateX(158px) translateZ(-30px) rotateY(-40deg) scale(0.78);
+  opacity: 0.42;
+  filter: saturate(0.7) brightness(0.85);
+  z-index: 20;
+}
+.vc-item[data-pos='left'] {
+  transform: translateX(-158px) translateZ(-30px) rotateY(40deg) scale(0.78);
+  opacity: 0.42;
+  filter: saturate(0.7) brightness(0.85);
+  z-index: 20;
+}
+.vc-item[data-pos='back'] {
+  transform: translateX(0) translateZ(-200px) scale(0.5);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Lift the focused card a touch more when the ring is paused (hover). */
+.vc-stage[data-hover='true'] .vc-item[data-pos='center'] {
+  transform: translateX(0) translateZ(96px) rotateY(0deg) scale(1.06);
+}
+
+/* ---- Holographic icon ----------------------------------------------------- */
+.vc-icon {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  border-radius: 30px;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--vc-accent, #00d4ff) 34%, transparent), transparent 60%),
+    linear-gradient(160deg, color-mix(in srgb, var(--ni-navy, #0a1628) 92%, transparent), rgba(7, 8, 12, 0.9));
+  border: 1px solid color-mix(in srgb, var(--vc-accent, #00d4ff) 45%, transparent);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 24px 60px -20px color-mix(in srgb, var(--vc-accent, #00d4ff) 60%, transparent),
+    0 0 40px -6px color-mix(in srgb, var(--vc-accent, #00d4ff) 45%, transparent);
+  backdrop-filter: blur(6px);
+  animation: vc-float 6s ease-in-out infinite;
+}
+
+/* Rotating conic halo behind the glyph — the "holographic" spin. */
+.vc-icon::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 32px;
+  padding: 1px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--vc-accent, #00d4ff) 90%, transparent) 90deg,
+    transparent 200deg,
+    color-mix(in srgb, var(--vc-accent, #00d4ff) 55%, transparent) 300deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: vc-halo 9s linear infinite;
+  z-index: -1;
+  opacity: 0.85;
+}
+
+/* Diagonal holographic sheen sweeping across the face. */
+.vc-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 30px;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.16) 45%,
+    color-mix(in srgb, var(--vc-accent, #00d4ff) 30%, transparent) 52%,
+    transparent 70%
+  );
+  background-size: 240% 240%;
+  animation: vc-sheen 5.5s ease-in-out infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.vc-glyph {
+  font-size: 62px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: #eaf9ff;
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--vc-accent, #00d4ff) 80%, transparent),
+    0 0 4px rgba(255, 255, 255, 0.6);
+  user-select: none;
+}
+
+/* An accent dot-grid to read as a "hologram projection". */
+.vc-glyph-sub {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 8px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--vc-accent, #00d4ff) 75%, transparent);
+}
+
+/* ---- Hover caption (title / subtitle / counts) — shown only for center ---- */
+.vc-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translate(-50%, 8px);
+  width: min(420px, 90%);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+.vc-stage[data-hover='true'] .vc-caption {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.vc-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f1fbff;
+}
+.vc-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: color-mix(in srgb, #cbd5e1 90%, transparent);
+}
+.vc-counts {
+  margin-top: 8px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ni-cyan, #00d4ff) 75%, transparent);
+}
+.vc-counts .vc-dot {
+  opacity: 0.4;
+  margin: 0 6px;
+}
+
+/* ---- Arrows --------------------------------------------------------------- */
+.vc-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--ni-cyan, #00d4ff) 35%, transparent);
+  background: rgba(7, 8, 12, 0.55);
+  color: color-mix(in srgb, var(--ni-cyan, #00d4ff) 90%, white 10%);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+.vc-arrow:hover {
+  background: color-mix(in srgb, var(--ni-cyan, #00d4ff) 18%, rgba(7, 8, 12, 0.55));
+  box-shadow: 0 0 20px -4px color-mix(in srgb, var(--ni-cyan, #00d4ff) 70%, transparent);
+}
+.vc-arrow:active {
+  transform: translateY(-50%) scale(0.92);
+}
+.vc-arrow-left {
+  left: 4px;
+}
+.vc-arrow-right {
+  right: 4px;
+}
+
+/* ---- Footer controls ------------------------------------------------------ */
+.vc-footer {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.vc-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--ni-cyan, #00d4ff) 85%, transparent);
+  padding: 0;
+}
+.vc-link:hover {
+  color: #e6faff;
+}
+
+/* Manage popover */
+.vc-manage-wrap {
+  position: relative;
+}
+.vc-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  width: 300px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--ni-cyan, #00d4ff) 22%, transparent);
+  background: rgba(7, 8, 12, 0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+}
+.vc-prow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.vc-prow:last-child {
+  border-bottom: none;
+}
+.vc-prow-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: #dbeafe;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vc-prow-name.vc-is-hidden {
+  color: #64748b;
+  text-decoration: line-through;
+}
+.vc-mini {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: #cbd5e1;
+  font-size: 12px;
+  cursor: pointer;
+}
+.vc-mini:hover {
+  border-color: color-mix(in srgb, var(--ni-cyan, #00d4ff) 45%, transparent);
+  color: #e6faff;
+}
+.vc-mini:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* See-all list */
+.vc-all {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+.vc-all-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  color: #e2e8f0;
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.vc-all-item:hover {
+  border-color: color-mix(in srgb, var(--ni-cyan, #00d4ff) 40%, transparent);
+  background: rgba(0, 212, 255, 0.05);
+}
+.vc-all-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: none;
+  box-shadow: 0 0 10px currentColor;
+}
+.vc-all-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.vc-all-name .vc-tag {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #64748b;
+}
+
+.vc-empty {
+  height: 340px;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* ---- Keyframes ------------------------------------------------------------ */
+@keyframes vc-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes vc-halo {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes vc-sheen {
+  0% {
+    background-position: 200% 0%;
+  }
+  50% {
+    background-position: 0% 100%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+/* ---- Mobile: pull the ring in so faded cards stay on screen --------------- */
+@media (max-width: 640px) {
+  .vc-stage {
+    height: 300px;
+    padding: 28px 8px 92px;
+  }
+  .vc-item {
+    width: 150px;
+    margin-left: -75px;
+    margin-top: -95px;
+  }
+  .vc-icon {
+    width: 150px;
+    height: 150px;
+  }
+  .vc-glyph {
+    font-size: 48px;
+  }
+  .vc-item[data-pos='right'] {
+    transform: translateX(108px) translateZ(-30px) rotateY(-38deg) scale(0.74);
+  }
+  .vc-item[data-pos='left'] {
+    transform: translateX(-108px) translateZ(-30px) rotateY(38deg) scale(0.74);
+  }
+}
+
+/* ---- Reduced motion: kill all spin/float/sheen, keep it usable ------------ */
+@media (prefers-reduced-motion: reduce) {
+  .vc-icon,
+  .vc-icon::before,
+  .vc-icon::after {
+    animation: none !important;
+  }
+  .vc-item {
+    transition: opacity 200ms ease;
+  }
+}

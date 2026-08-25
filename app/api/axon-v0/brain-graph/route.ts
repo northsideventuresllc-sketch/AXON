@@ -8,8 +8,18 @@ export interface BrainNode {
   at: string | null;
 }
 
+export interface BrainTable {
+  key: 'decisions' | 'learnings' | 'context';
+  label: string;
+  kind: BrainNode['kind'];
+  source: string;
+  count: number;
+}
+
 // Serves the 3D brain graph: recent Decisions / Learnings / Context rows as
 // glowing nodes, linked hub-and-spoke by kind plus chronological threads.
+// Also returns `tables` metadata so the CLI can render an "organization tables"
+// view. Never 500s in a way that breaks the client — on error returns empties.
 export async function GET() {
   try {
     const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -34,7 +44,13 @@ export async function GET() {
       { source: 'hub:context', target: 'hub:decisions' },
     ];
 
-    const addGroup = (rows: any[], kind: BrainNode['kind'], hub: string, text: (r: any) => string, at: (r: any) => string | null) => {
+    const addGroup = (
+      rows: any[],
+      kind: BrainNode['kind'],
+      hub: string,
+      text: (r: any) => string,
+      at: (r: any) => string | null
+    ) => {
       let prev: string | null = null;
       for (const r of rows) {
         const id = `${kind}:${r.id}`;
@@ -48,11 +64,38 @@ export async function GET() {
     addGroup(learnings, 'learning', 'hub:learnings', (r) => r.learning, (r) => r.date);
     addGroup(context, 'context', 'hub:context', (r) => r.content, (r) => r.updated_at);
 
-    return NextResponse.json({ nodes, links });
+    const tables: BrainTable[] = [
+      {
+        key: 'decisions',
+        label: 'Decisions',
+        kind: 'decision',
+        source: 'NI-Brain · Decisions',
+        count: decisions.length,
+      },
+      {
+        key: 'learnings',
+        label: 'Learnings',
+        kind: 'learning',
+        source: 'NI-Brain · Learnings',
+        count: learnings.length,
+      },
+      {
+        key: 'context',
+        label: 'Context',
+        kind: 'context',
+        source: 'NI-Brain · Context',
+        count: context.length,
+      },
+    ];
+
+    return NextResponse.json({ nodes, links, tables });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to load brain graph' },
-      { status: 500 }
-    );
+    // Fail safe: never break the client. Return empty graph + tables.
+    return NextResponse.json({
+      nodes: [],
+      links: [],
+      tables: [],
+      error: err instanceof Error ? err.message : 'Failed to load brain graph',
+    });
   }
 }

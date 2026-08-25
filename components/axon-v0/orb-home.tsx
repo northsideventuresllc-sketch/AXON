@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiUrl } from '@/lib/api-base';
 import { JarvisOrb } from '@/components/axon/jarvis-orb';
 import { speak, startDictation, stopSpeaking } from './voice';
+import { toSentenceCase } from '@/lib/axon-v0/view-prefs';
 
 interface ChatMsg {
   id?: string;
@@ -27,9 +28,25 @@ export function OrbHome() {
   }, [messages, open]);
 
   const log = useCallback(
-    (line: string) => setActivity((prev) => [...prev.slice(-5), line]),
+    (line: string) => setActivity((prev) => [...prev.slice(-5), toSentenceCase(line)]),
     []
   );
+
+  // Chat closes on Esc or Backspace (Backspace only when the input is empty,
+  // so it never eats a real edit while typing).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      const emptyInput = input.trim().length === 0;
+      if (e.key === 'Escape' || (e.key === 'Backspace' && emptyInput)) {
+        e.preventDefault();
+        stopSpeaking();
+        setOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, input]);
 
   const send = useCallback(
     async (text: string) => {
@@ -175,6 +192,15 @@ export function OrbHome() {
                 Send
               </button>
             </form>
+            <div className="flex items-center gap-2 px-3 pb-2.5 text-[10px] uppercase tracking-[0.25em] text-slate-500">
+              <span
+                className={`v0-status ${
+                  busy ? 'v0-status-think' : listening ? 'v0-status-live' : 'v0-status-idle'
+                }`}
+                aria-hidden
+              />
+              {busy ? 'Working…' : listening ? 'Listening…' : 'Ready'}
+            </div>
           </section>
 
           {/* Side visuals — what AXON is doing to complete the request */}

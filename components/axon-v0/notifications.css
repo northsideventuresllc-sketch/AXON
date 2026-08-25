@@ -1,0 +1,190 @@
+/* Notifications workstream — cinematic holographic styling.
+   All classes/keyframes prefixed nt- to stay clear of shared globals.css. */
+
+/* --- board rows --- */
+@keyframes nt-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nt-row {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  animation: nt-row-in 0.4s ease both;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
+}
+.nt-row:hover {
+  transform: translateX(2px);
+}
+.nt-row:focus-visible {
+  outline: 1px solid rgba(0, 212, 255, 0.6);
+  outline-offset: 1px;
+}
+
+/* sweep of light on hover, like a scanner passing over */
+.nt-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(0, 212, 255, 0.08) 45%,
+    transparent 60%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+.nt-row:hover::after {
+  transform: translateX(120%);
+}
+
+/* unread accent bar + pulsing dot */
+.nt-unread {
+  border-left: 2px solid rgba(0, 212, 255, 0.7);
+}
+.nt-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #00d4ff;
+  box-shadow: 0 0 6px 1px rgba(0, 212, 255, 0.8);
+  animation: nt-pulse 2s ease-in-out infinite;
+}
+@keyframes nt-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+
+/* --- modal --- */
+@keyframes nt-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes nt-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.nt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(3, 5, 10, 0.72);
+  backdrop-filter: blur(6px);
+  animation: nt-backdrop-in 0.25s ease both;
+}
+
+.nt-modal {
+  position: relative;
+  width: 100%;
+  max-width: 34rem;
+  max-height: 85vh;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  background: linear-gradient(160deg, rgba(10, 22, 40, 0.96), rgba(7, 8, 12, 0.98));
+  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.08), 0 30px 80px -20px rgba(0, 212, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  animation: nt-modal-in 0.35s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+/* scanning holo line across the top edge */
+.nt-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+  animation: nt-scan 3s linear infinite;
+}
+@keyframes nt-scan {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* faint holographic grid backdrop inside the modal */
+.nt-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(0, 212, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
+  opacity: 0.5;
+}
+
+.nt-btn {
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: rgba(0, 212, 255, 0.08);
+  color: #d6f6ff;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.nt-btn:hover {
+  background: rgba(0, 212, 255, 0.18);
+  border-color: rgba(0, 212, 255, 0.55);
+}
+.nt-btn:active {
+  transform: translateY(1px);
+}
+.nt-btn-ghost {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: transparent;
+  color: #94a3b8;
+}
+.nt-btn-ghost:hover {
+  border-color: rgba(148, 163, 184, 0.5);
+  color: #cbd5e1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-row,
+  .nt-backdrop,
+  .nt-modal,
+  .nt-dot {
+    animation: none !important;
+  }
+  .nt-row::after,
+  .nt-modal::before {
+    display: none;
+  }
+  .nt-row:hover {
+    transform: none;
+  }
+}

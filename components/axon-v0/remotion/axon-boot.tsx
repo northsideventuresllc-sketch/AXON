@@ -11,7 +11,9 @@ import {
 } from 'remotion';
 
 export const BOOT_FPS = 30;
-export const BOOT_DURATION_IN_FRAMES = 195; // 6.5s
+export const BOOT_DURATION_IN_FRAMES = 255; // 8.5s (Cerebro → neon → WELCOME)
+/** Frame the WELCOME line lands on — the boot page fires the voice here. */
+export const WELCOME_FRAME = 182;
 
 const CYAN = '#00D4FF';
 const INK = '#07080C';
@@ -244,9 +246,53 @@ const Waves: React.FC = () => {
   );
 };
 
-export const AxonBootComposition: React.FC = () => {
+/** Final phase — the operator's WELCOME line resolves out of the holographic field. */
+const Welcome: React.FC<{ welcome: string }> = ({ welcome }) => {
   const frame = useCurrentFrame();
-  const fadeToBlack = interpolate(frame, [185, BOOT_DURATION_IN_FRAMES], [0, 1], {
+  const local = frame - (WELCOME_FRAME - 14);
+  if (local < 0) return null;
+  const rise = interpolate(local, [0, 22], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const blur = interpolate(local, [0, 22], [16, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  return (
+    <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', opacity: rise, filter: `blur(${blur}px)`, transform: `translateY(${(1 - rise) * 18}px)` }}>
+        <p
+          style={{
+            margin: 0,
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            fontSize: 13,
+            letterSpacing: '0.55em',
+            color: 'rgba(140,225,255,0.75)',
+          }}
+        >
+          NORTHSiDE INTELLIGENCE
+        </p>
+        <h2
+          style={{
+            margin: '14px 0 0',
+            fontFamily: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif',
+            fontSize: 64,
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            color: '#EAFBFF',
+            textShadow: `0 0 26px ${CYAN}, 0 0 70px rgba(0,212,255,0.5)`,
+          }}
+        >
+          {welcome}
+        </h2>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+export const AxonBootComposition: React.FC<{ welcome?: string }> = ({ welcome = 'Welcome' }) => {
+  const frame = useCurrentFrame();
+  // hold the neon, then cross-fade it under the WELCOME line
+  const neonOut = interpolate(frame, [WELCOME_FRAME - 18, WELCOME_FRAME], [1, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const fadeToBlack = interpolate(frame, [245, BOOT_DURATION_IN_FRAMES], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -254,7 +300,10 @@ export const AxonBootComposition: React.FC = () => {
     <AbsoluteFill style={{ backgroundColor: INK }}>
       <Waves />
       <Lattice />
-      <NeonReveal />
+      <AbsoluteFill style={{ opacity: neonOut }}>
+        <NeonReveal />
+      </AbsoluteFill>
+      <Welcome welcome={welcome} />
       <AbsoluteFill style={{ backgroundColor: INK, opacity: fadeToBlack, pointerEvents: 'none' }} />
     </AbsoluteFill>
   );

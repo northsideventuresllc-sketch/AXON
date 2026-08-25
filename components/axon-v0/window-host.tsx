@@ -21,6 +21,7 @@ const DEFAULT_BOX: PanelBox = { x: 4, y: 4, w: 30, h: 40, slot: 0, collapsed: fa
 export function WindowHost({ panels }: { panels: HostPanel[] }) {
   const [mode, setMode] = useState<WindowMode>('default');
   const [boxes, setBoxes] = useState<Record<string, PanelBox>>({});
+  const [focused, setFocused] = useState<string | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -135,6 +136,7 @@ export function WindowHost({ panels }: { panels: HostPanel[] }) {
       >
         <div
           className={mode === 'free' ? '' : 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3'}
+          style={{ perspective: '1400px' }}
         >
           {(mode === 'puzzle' ? puzzleOrdered : visible).map((panel) => {
             const box = boxes[panel.id] || DEFAULT_BOX;
@@ -147,7 +149,10 @@ export function WindowHost({ panels }: { panels: HostPanel[] }) {
               <section
                 key={panel.id}
                 data-mode={mode}
-                className={`v0-window v0-panel ${mode === 'default' && panel.span === 2 ? 'sm:col-span-2' : ''}`}
+                onClick={() => setFocused((f) => (f === panel.id ? null : panel.id))}
+                className={`v0-window v0-panel v0-swayer ${
+                  focused === panel.id ? 'v0-sway-focus' : focused ? 'v0-sway-back' : ''
+                } ${mode === 'default' && panel.span === 2 ? 'sm:col-span-2' : ''}`}
                 style={freeStyle}
               >
                 <header className="flex items-center justify-between px-3 pt-3">
