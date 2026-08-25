@@ -31,7 +31,7 @@ function fmtDue(due?: string | null): { label: string; late: boolean } | null {
   return { label, late };
 }
 
-export function MasterTodo() {
+export function MasterTodo({ bare = false }: { bare?: boolean } = {}) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [autonomous, setAutonomous] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -124,10 +124,12 @@ export function MasterTodo() {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="wg-head">Master To-Do</span>
-        {autonomous && <span className="wg-sub">autonomous</span>}
-      </div>
+      {(!bare || autonomous) && (
+        <div className="flex items-center justify-between">
+          {bare ? <span /> : <span className="wg-head">Master To-Do</span>}
+          {autonomous && <span className="wg-sub">autonomous</span>}
+        </div>
+      )}
 
       {/* add form */}
       <div className="space-y-1.5">

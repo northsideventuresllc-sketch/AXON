@@ -24,7 +24,7 @@ function money(n: number): string {
   return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
-export function UsageBar() {
+export function UsageBar({ bare = false }: { bare?: boolean } = {}) {
   const [connectors, setConnectors] = useState<UsageConnector[]>([]);
   const [live, setLive] = useState<boolean | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -57,12 +57,14 @@ export function UsageBar() {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="wg-head">Usage · Monthly spend</span>
-        {live !== null && (
-          <span className="wg-sub">{live ? 'live' : 'sample data'}</span>
-        )}
-      </div>
+      {(!bare || live !== null) && (
+        <div className="flex items-center justify-between">
+          {bare ? <span /> : <span className="wg-head">Usage · Monthly spend</span>}
+          {live !== null && (
+            <span className="wg-sub">{live ? 'live' : 'sample data'}</span>
+          )}
+        </div>
+      )}
 
       {loaded && connectors.length === 0 && (
         <p className="wg-sub">No connector usage to show yet.</p>

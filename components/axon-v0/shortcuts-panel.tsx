@@ -9,7 +9,7 @@ import './widgets.css';
  * Shortcuts panel — create-only deep-links into a specific spot in a venture.
  * Labels render ALL CAPS, no emojis. Stored per-viewer in view-prefs.
  */
-export function ShortcutsPanel() {
+export function ShortcutsPanel({ bare = false }: { bare?: boolean } = {}) {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [creating, setCreating] = useState(false);
   const [label, setLabel] = useState('');
@@ -57,7 +57,7 @@ export function ShortcutsPanel() {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="wg-head">Shortcuts</span>
+        {bare ? <span /> : <span className="wg-head">Shortcuts</span>}
         {!creating && (
           <button className="wg-link" onClick={() => setCreating(true)}>
             + CREATE SHORTCUT

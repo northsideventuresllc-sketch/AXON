@@ -178,7 +178,6 @@ export function VentureCarousel() {
 
   return (
     <section className="vc-section">
-      <p className="vc-eyebrow">Ventures</p>
       {error && <p className="mb-2 text-xs text-rose-300">{error}</p>}
 
       {visible.length === 0 ? (
@@ -253,11 +252,21 @@ export function VentureCarousel() {
         </div>
       )}
 
-      {/* ---- Footer: manage · see all · new venture ---- */}
+      {/* ---- Title + controls (below the carousel) ---- */}
+      <p className="vc-label">VENTURES</p>
+
       <div className="vc-footer">
+        <button className="vc-link" onClick={() => setAdding(true)}>
+          NEW VENTURE
+        </button>
+
+        <button className="vc-link" onClick={() => setShowAll((s) => !s)}>
+          {showAll ? 'HIDE LIST' : 'ALL VENTURES'}
+        </button>
+
         <div className="vc-manage-wrap">
           <button className="vc-link" onClick={() => setManageOpen((o) => !o)}>
-            {manageOpen ? '✕ Close' : '⚙ Manage'}
+            {manageOpen ? '✕ CLOSE' : 'MANAGE VENTURES'}
           </button>
           {manageOpen && (
             <div className="vc-popover v0-scroll">
@@ -296,10 +305,6 @@ export function VentureCarousel() {
             </div>
           )}
         </div>
-
-        <button className="vc-link" onClick={() => setShowAll((s) => !s)}>
-          {showAll ? 'Hide list' : 'See all ventures →'}
-        </button>
       </div>
 
       {showAll && (
@@ -316,16 +321,9 @@ export function VentureCarousel() {
         </div>
       )}
 
-      {/* ---- New venture (below the carousel) ---- */}
-      <div className="mt-4">
-        {!adding ? (
-          <button
-            onClick={() => setAdding(true)}
-            className="v0-chip bg-cyan-400/15 text-cyan-100"
-          >
-            ＋ New venture
-          </button>
-        ) : (
+      {/* ---- New venture create form (opens below the controls row) ---- */}
+      {adding && (
+        <div className="vc-create mt-4">
           <form onSubmit={create} className="v0-panel max-w-md space-y-2 p-4">
             <input
               autoFocus
@@ -350,8 +348,8 @@ export function VentureCarousel() {
             </div>
             <p className="text-[10px] text-slate-500">5 default agents auto-built</p>
           </form>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }

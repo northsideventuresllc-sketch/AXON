@@ -38,7 +38,7 @@ export function TopNav() {
       <Link href="/" className="flex items-center gap-2 pr-3" aria-label="AXON home">
         <span className="v0-logomark" />
         <span className="hidden text-[10px] tracking-[0.28em] text-cyan-300/80 sm:inline">
-          NORTHSiDE Intelligence
+          Northside Intelligence
         </span>
       </Link>
 

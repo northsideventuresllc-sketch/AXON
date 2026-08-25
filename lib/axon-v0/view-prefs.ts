@@ -18,6 +18,44 @@ export interface PanelBox {
   slot: number;
   collapsed: boolean;
   hidden: boolean;
+  /** puzzle-grid column span (1–3). Optional, added Build-2. */
+  col?: number;
+  /** puzzle-grid row span (1–2). Optional, added Build-2. */
+  rowSpan?: number;
+  /** free-flow pixel width (from the corner resize handle). Optional, added Build-2. */
+  fw?: number;
+  /** free-flow pixel height (from the corner resize handle). Optional, added Build-2. */
+  fh?: number;
+}
+
+/** One cell in a puzzle template — a target geometry a panel gets arranged into. */
+export interface TemplateSlot {
+  /** grid column span, 1–3 */
+  col: number;
+  /** grid row span, 1–2 */
+  rowSpan?: number;
+}
+
+/** A saved home-space arrangement: presets ship in code, user builds get stored here. */
+export interface PuzzleTemplate {
+  id: string;
+  name: string;
+  slots: TemplateSlot[];
+  /** apply the CSS-3D curve when this template is active */
+  is3D: boolean;
+  /** variant that exposes a live 2D↔3D toggle in the toolbar */
+  toggle2D3D?: boolean;
+  /** true for the code-shipped presets (not user-created) */
+  builtin?: boolean;
+}
+
+/** A user-described widget drafted in the custom-widget maker (spec only, not yet provisioned). */
+export interface CustomWidgetSpec {
+  id: string;
+  name: string;
+  summary: string;
+  icon?: string;
+  createdAt: string;
 }
 
 export interface Shortcut {
@@ -36,6 +74,12 @@ export interface ViewPrefs {
   welcomeTemplate: string; // e.g. "Welcome" / "Welcome back, JB"
   bootVoiceLine: string; // spoken on boot
   defaultLanding: string; // where login lands: '/boot' | '/'
+  // ---- Build-2 home widget-space additions (all additive) ----
+  widgetCurve: number; // CSS-3D curve depth 0–100 (0 = flat plane)
+  activeWidgets: string[]; // widget ids currently mounted in the space
+  templates: PuzzleTemplate[]; // user-built puzzle templates (presets live in code)
+  activeTemplateId: string | null; // currently applied template, if any
+  customWidgets: CustomWidgetSpec[]; // specs drafted in the custom-widget maker
 }
 
 const KEY = 'axon.v0.viewprefs.v1';
@@ -49,6 +93,11 @@ export const DEFAULT_PREFS: ViewPrefs = {
   welcomeTemplate: 'Welcome',
   bootVoiceLine: 'Welcome.',
   defaultLanding: '/boot',
+  widgetCurve: 35,
+  activeWidgets: ['todo', 'notifications', 'usage', 'shortcuts', 'quicklinks'],
+  templates: [],
+  activeTemplateId: null,
+  customWidgets: [],
 };
 
 export function loadPrefs(): ViewPrefs {

@@ -11,10 +11,10 @@ import { WindowHost, type HostPanel } from './window-host';
 
 export function HomeDeck() {
   const panels: HostPanel[] = [
-    { id: 'todo', title: 'Master To-Do', node: <MasterTodo />, span: 1 },
+    { id: 'todo', title: 'Master To-Do', node: <MasterTodo bare />, span: 1 },
     { id: 'notifications', title: 'Notifications', node: <NotificationsBoard bare />, span: 1 },
-    { id: 'usage', title: 'Usage', node: <UsageBar />, span: 1 },
-    { id: 'shortcuts', title: 'Shortcuts', node: <ShortcutsPanel />, span: 1 },
+    { id: 'usage', title: 'Usage', node: <UsageBar bare />, span: 1 },
+    { id: 'shortcuts', title: 'Shortcuts', node: <ShortcutsPanel bare />, span: 1 },
     { id: 'quicklinks', title: 'Quick Links', node: <QuickLinksRail bare />, span: 1 },
   ];
 

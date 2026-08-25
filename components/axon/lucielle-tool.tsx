@@ -38,7 +38,7 @@ export function LucielleTool({ basePath }: { basePath?: string }) {
         <p className="mt-3 text-xs uppercase tracking-[0.25em] text-axon-gold">AXON Tool</p>
         <h1 className="mt-1 text-3xl font-semibold">Lucielle</h1>
         <p className="mt-2 max-w-2xl text-sm text-axon-muted">
-          Financial command center across the NORTHSiDE portfolio. Roll up revenue, profit and cash
+          Financial command center across the Northside portfolio. Roll up revenue, profit and cash
           by venture, then drill into sectors.
         </p>
       </header>
@@ -164,7 +164,7 @@ export function LucielleTool({ basePath }: { basePath?: string }) {
         <p className="mt-2 text-sm text-axon-muted">
           Lucielle learns your portfolio over time — as connectors come online it will benchmark
           venture margins, flag cash-timing risks, and tune recommendations to how you actually run
-          NORTHSiDE. Today&apos;s figures are representative until banks, Stripe, P2P and credit
+          Northside. Today&apos;s figures are representative until banks, Stripe, P2P and credit
           feeds are linked.
         </p>
       </section>

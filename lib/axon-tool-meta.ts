@@ -51,7 +51,7 @@ export const AXON_TOOL_META: Record<string, AxonToolMeta> = {
   },
   'content-machine': {
     setupDescription:
-      'NORTHSiDE Intelligence content pipeline — product-first 3/2/2, one post per platform per day across LinkedIn, Instagram, Facebook and Threads (Reddit is handled separately). Approve, edit, adjust and optimize drafts here. Publishing and scheduling stay blocked while the FIRE gate is on HOLD.',
+      'Northside Intelligence content pipeline — product-first 3/2/2, one post per platform per day across LinkedIn, Instagram, Facebook and Threads (Reddit is handled separately). Approve, edit, adjust and optimize drafts here. Publishing and scheduling stay blocked while the FIRE gate is on HOLD.',
     builderPrompt:
       'Help JB adjust NI Content Machine — the 3/2/2 mix, platform cadence, approval flow, and publish gating.',
   },

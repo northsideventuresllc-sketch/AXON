@@ -7,12 +7,16 @@
   margin-top: 2rem;
 }
 
-.vc-eyebrow {
-  margin-bottom: 0.75rem;
-  font-size: 10px;
-  letter-spacing: 0.35em;
+/* ---- Section title — sits BELOW the stage, above the controls row ---- */
+.vc-label {
+  margin: 0.25rem 0 0.75rem;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--ni-cyan, #00d4ff) 70%, transparent);
+  color: color-mix(in srgb, var(--ni-cyan, #00d4ff) 92%, white 8%);
+  text-shadow: 0 0 22px color-mix(in srgb, var(--ni-cyan, #00d4ff) 45%, transparent);
 }
 
 /* ---- Stage: 3D perspective host. Generous padding + overflow visible so a
@@ -252,7 +256,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 18px;
+}
+/* Centered create-form container so it lines up under the controls trio. */
+.vc-create {
+  display: flex;
+  justify-content: center;
 }
 .vc-link {
   background: none;

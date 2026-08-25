@@ -583,7 +583,7 @@ export default function SettingsPage() {
                     value={customInstructions}
                     onChange={(e) => setCustomInstructions(e.target.value)}
                     onBlur={saveInstructions}
-                    placeholder="e.g. Always use NORTHSiDE casing. Never auto-send outreach. Keep replies to one outcome."
+                    placeholder="e.g. Always use Northside casing. Never auto-send outreach. Keep replies to one outcome."
                   />
                   <p className="st-hint">
                     Applied as standing context before any agent acts. Saved on blur or with the button.

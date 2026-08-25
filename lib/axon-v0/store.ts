@@ -56,7 +56,7 @@ function seedMem() {
   if (m.seeded) return;
   m.seeded = true;
   const seedVentures: Array<[string, string, string]> = [
-    ['NORTHSiDE Intelligence', 'AI tools & services', '#00D4FF'],
+    ['Northside Intelligence', 'AI tools & services', '#00D4FF'],
     ['Match Fit', 'Athlete resume & recruiting', '#38F2A8'],
     ['AXON', 'The harness itself', '#8AB4FF'],
     ['North-Stars Foundation', 'Nonprofit', '#F2C14E'],

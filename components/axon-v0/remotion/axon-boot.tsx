@@ -19,7 +19,7 @@ const CYAN = '#00D4FF';
 const INK = '#07080C';
 
 const BOOT_LINES = [
-  'NORTHSiDE KERNEL … LINK ESTABLISHED',
+  'NORTHSIDE KERNEL … LINK ESTABLISHED',
   'NEURAL LATTICE … ONLINE',
   'TIER CHAIN … ARMED',
   'VENTURE GRID … SYNCED',
@@ -203,7 +203,7 @@ const NeonReveal: React.FC = () => {
             opacity: subOpacity,
           }}
         >
-          NORTHSiDE Intelligence
+          Northside Intelligence
         </p>
         <p
           style={{
@@ -265,7 +265,7 @@ const Welcome: React.FC<{ welcome: string }> = ({ welcome }) => {
             color: 'rgba(140,225,255,0.75)',
           }}
         >
-          NORTHSiDE INTELLIGENCE
+          NORTHSIDE INTELLIGENCE
         </p>
         <h2
           style={{

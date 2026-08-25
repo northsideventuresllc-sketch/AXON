@@ -49,6 +49,8 @@
   border-radius: 0.5rem;
   border: 1px solid transparent;
   font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: rgb(148, 163, 184);
   text-align: left;
   cursor: pointer;
@@ -93,14 +95,19 @@
 }
 
 .st-section-title {
+  display: block;
   font-size: 1rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: rgb(226, 232, 240);
 }
 
 .st-section-sub {
-  margin-top: 0.15rem;
+  display: block;
+  margin-top: 0.45rem;
   font-size: 11px;
+  line-height: 1.5;
   color: rgb(100, 116, 139);
 }
 

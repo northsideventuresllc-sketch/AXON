@@ -1,0 +1,378 @@
+/* AXON v0 Build-2 — curved CSS-3D widget space + toolbar/catalog/template/maker chrome.
+   Prefix: w3-  ·  aesthetic: #07080C ground, #00D4FF cyan holo. No external assets. */
+
+/* ---- Curved arc slot ------------------------------------------------------ */
+/* Each grid child is wrapped in .w3-slot; the curve transform lives here so it
+   composes with (never fights) the inner section's focus-sway transform. The
+   angle/depth are driven by CSS vars set inline per panel. */
+.w3-slot {
+  transform: rotateY(var(--w3-ry, 0deg)) translateZ(var(--w3-tz, 0px));
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.22, 0.8, 0.3, 1);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* Flatten entirely for reduced-motion viewers. */
+@media (prefers-reduced-motion: reduce) {
+  .w3-slot {
+    --w3-ry: 0deg !important;
+    --w3-tz: 0px !important;
+    transition: none;
+  }
+}
+
+/* ---- Toolbar chrome ------------------------------------------------------- */
+.w3-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.w3-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  background: rgba(0, 212, 255, 0.07);
+  color: #a5f3fc;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.w3-tool-btn:hover {
+  background: rgba(0, 212, 255, 0.16);
+  border-color: rgba(0, 212, 255, 0.55);
+}
+.w3-tool-btn[data-on='true'] {
+  background: rgba(0, 212, 255, 0.18);
+  color: #e0faff;
+  border-color: rgba(0, 212, 255, 0.6);
+}
+
+/* Curve slider */
+.w3-curve-ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(148, 163, 184, 0.85);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.w3-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  width: 84px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #00d4ff, rgba(0, 212, 255, 0.15));
+  outline: none;
+  cursor: pointer;
+}
+.w3-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #00d4ff;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.7);
+  cursor: pointer;
+}
+.w3-range::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border: none;
+  border-radius: 50%;
+  background: #00d4ff;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.7);
+  cursor: pointer;
+}
+
+/* ---- Free-flow resize handle --------------------------------------------- */
+.w3-resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+  border-right: 2px solid rgba(0, 212, 255, 0.5);
+  border-bottom: 2px solid rgba(0, 212, 255, 0.5);
+  border-bottom-right-radius: 6px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+.w3-resize:hover {
+  opacity: 1;
+}
+
+/* ---- Modal / drawer shell (templates, catalog, maker) --------------------- */
+.w3-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 5, 10, 0.72);
+  backdrop-filter: blur(4px);
+  animation: w3-fade 0.2s ease both;
+}
+.w3-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 86vh;
+  overflow-y: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 212, 255, 0.22);
+  background: linear-gradient(180deg, #0a1220, #07080c);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 212, 255, 0.05) inset;
+  padding: 22px;
+}
+.w3-modal--wide {
+  max-width: 640px;
+}
+@keyframes w3-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.w3-modal-title {
+  font-size: 17px;
+  color: #e6f8ff;
+}
+.w3-modal-kicker {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: rgba(103, 232, 249, 0.6);
+  margin-top: 2px;
+}
+.w3-x {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.06);
+  color: #cbd5e1;
+  border-radius: 8px;
+  padding: 4px 9px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.w3-x:hover { color: #a5f3fc; border-color: rgba(0, 212, 255, 0.4); }
+
+/* ---- Widget catalog rows -------------------------------------------------- */
+.w3-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(10, 22, 40, 0.4);
+  padding: 11px 13px;
+}
+.w3-cat-row[data-on='true'] {
+  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.06);
+}
+.w3-cat-ico {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  font-size: 16px;
+}
+.w3-cat-name { font-size: 13px; color: #e2e8f0; }
+.w3-cat-desc { font-size: 11px; color: rgba(148, 163, 184, 0.8); margin-top: 1px; }
+.w3-tag {
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: rgba(103, 232, 249, 0.8);
+}
+
+/* toggle pill */
+.w3-toggle {
+  flex: none;
+  width: 42px;
+  height: 22px;
+  border-radius: 9999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.12);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.w3-toggle[data-on='true'] {
+  background: rgba(0, 212, 255, 0.25);
+  border-color: rgba(0, 212, 255, 0.6);
+}
+.w3-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+.w3-toggle[data-on='true']::after {
+  transform: translateX(20px);
+  background: #00d4ff;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.7);
+}
+
+/* ---- Template picker cards ------------------------------------------------ */
+.w3-tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.w3-tpl {
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(10, 22, 40, 0.4);
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.w3-tpl:hover { border-color: rgba(0, 212, 255, 0.5); background: rgba(0, 212, 255, 0.05); }
+.w3-tpl[data-on='true'] { border-color: rgba(0, 212, 255, 0.7); background: rgba(0, 212, 255, 0.08); }
+.w3-tpl-name { font-size: 13px; color: #e2e8f0; }
+.w3-tpl-meta { font-size: 10px; color: rgba(148, 163, 184, 0.75); margin-top: 3px; }
+
+/* mini preview of a template's slots */
+.w3-tpl-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  margin-top: 9px;
+}
+.w3-tpl-cell {
+  height: 12px;
+  border-radius: 3px;
+  background: rgba(0, 212, 255, 0.22);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+/* build-your-own editor slots */
+.w3-slot-edit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(10, 22, 40, 0.4);
+  padding: 7px 10px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+/* shared small helpers reused across the Build-2 chrome */
+.w3-field {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 212, 255, 0.22);
+  background: rgba(10, 22, 40, 0.55);
+  color: #e2e8f0;
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+}
+.w3-field:focus { border-color: rgba(0, 212, 255, 0.55); }
+.w3-field::placeholder { color: rgba(148, 163, 184, 0.6); }
+
+.w3-primary {
+  border-radius: 8px;
+  border: 1px solid rgba(0, 212, 255, 0.45);
+  background: rgba(0, 212, 255, 0.12);
+  color: #d7f9ff;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.w3-primary:hover { background: rgba(0, 212, 255, 0.2); }
+.w3-primary:disabled { opacity: 0.4; cursor: default; }
+
+.w3-ghost {
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.w3-ghost:hover { border-color: rgba(0, 212, 255, 0.4); color: #a5f3fc; }
+
+.w3-danger { color: rgba(251, 113, 133, 0.85); }
+.w3-danger:hover { color: #fb7185; }
+
+/* small stat block used by the new AXON widgets */
+.w3-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.w3-stat-num {
+  font-size: 26px;
+  line-height: 1;
+  color: #e6f8ff;
+  font-variant-numeric: tabular-nums;
+}
+.w3-stat-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(148, 163, 184, 0.8);
+}
+.w3-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+.w3-pill--fire { border-color: rgba(52, 211, 153, 0.5); color: #6ee7b7; background: rgba(52, 211, 153, 0.08); }
+.w3-pill--hold { border-color: rgba(251, 191, 36, 0.5); color: #fcd34d; background: rgba(251, 191, 36, 0.08); }
+.w3-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 7px currentColor;
+}
+.w3-placeholder {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.6);
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  padding: 3px 7px;
+  display: inline-block;
+}

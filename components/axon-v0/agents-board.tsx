@@ -1,8 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiUrl } from '@/lib/api-base';
+import { DefaultAgentsPanel } from './default-agents-panel';
 import './agents.css';
+
+const OPEN_KEY = 'axon.v0.agents.open';
+
+function loadOpen(): Record<string, boolean> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(OPEN_KEY);
+    if (!raw) return {};
+    const obj = JSON.parse(raw) as Record<string, boolean>;
+    return obj && typeof obj === 'object' ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveOpen(map: Record<string, boolean>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(OPEN_KEY, JSON.stringify(map));
+  } catch {
+    /* private window / storage blocked — non-fatal */
+  }
+}
 
 type AgentStatus = 'running' | 'blocked' | 'active' | 'idle';
 
@@ -93,6 +117,19 @@ function AgentCard({ agent, ventureName }: { agent: Agent; ventureName: string }
 export function AgentsBoard() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setOpen(loadOpen());
+  }, []);
+
+  const toggle = useCallback((ventureId: string) => {
+    setOpen((prev) => {
+      const next = { ...prev, [ventureId]: prev[ventureId] === false ? true : false };
+      saveOpen(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -119,28 +156,47 @@ export function AgentsBoard() {
 
   const hasAgents = groups.some((g) => g.agents.length > 0);
   if (!hasAgents) {
-    return <div className="v0-panel mt-6 p-6 text-sm text-slate-500">No agents wired yet.</div>;
+    return (
+      <div className="mt-6">
+        <div className="v0-panel p-6 text-sm text-slate-500">No agents wired yet.</div>
+        <DefaultAgentsPanel />
+      </div>
+    );
   }
 
   return (
     <div className="mt-6 space-y-8">
       {groups
         .filter((g) => g.agents.length > 0)
-        .map((g) => (
-          <section key={g.ventureId} className="ag-group">
-            <div className="flex items-baseline gap-3">
-              <h2 className="ag-venture-title text-lg">{g.ventureName.toUpperCase()}</h2>
-              <span className="text-[10px] uppercase tracking-[0.2em] text-slate-600">
-                {g.agents.length} agent{g.agents.length === 1 ? '' : 's'}
-              </span>
-            </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {g.agents.map((a) => (
-                <AgentCard key={a.id} agent={a} ventureName={g.ventureName} />
-              ))}
-            </div>
-          </section>
-        ))}
+        .map((g) => {
+          const isOpen = open[g.ventureId] !== false;
+          return (
+            <section key={g.ventureId} className="ag-group">
+              <button
+                type="button"
+                onClick={() => toggle(g.ventureId)}
+                aria-expanded={isOpen}
+                className="ag-venture-toggle flex w-full items-baseline gap-3 text-left"
+              >
+                <span className={`ag-caret ${isOpen ? 'ag-caret--open' : ''}`} aria-hidden>
+                  ▶
+                </span>
+                <h2 className="ag-venture-title text-lg">{g.ventureName.toUpperCase()}</h2>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-slate-600">
+                  {g.agents.length} agent{g.agents.length === 1 ? '' : 's'}
+                </span>
+              </button>
+              {isOpen && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {g.agents.map((a) => (
+                    <AgentCard key={a.id} agent={a} ventureName={g.ventureName} />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      <DefaultAgentsPanel />
     </div>
   );
 }

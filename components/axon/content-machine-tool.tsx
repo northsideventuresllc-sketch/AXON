@@ -107,7 +107,7 @@ export function ContentMachineTool({ basePath }: { basePath?: string }) {
           </span>
         </div>
         <p className="mt-2 max-w-2xl text-sm text-axon-muted">
-          NORTHSiDE Intelligence content — product-first 3/2/2, one post per platform per day across
+          Northside Intelligence content — product-first 3/2/2, one post per platform per day across
           LinkedIn, Instagram, Facebook and Threads. Reddit is handled in its own tool.
         </p>
       </header>
