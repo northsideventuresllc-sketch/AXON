@@ -1247,3 +1247,98 @@
   }
   .v0-holo-card, .v0-holo-card:hover { transform: none; transition: none; }
 }
+
+/* ============ AXON build 1.5 — cinematic shell ============ */
+:root {
+  --ni-ink: #07080C;
+  --ni-cyan: #00D4FF;
+  --ni-navy: #0A1628;
+  --ni-cyan-soft: rgba(0, 212, 255, 0.14);
+  --ni-cyan-line: rgba(0, 212, 255, 0.30);
+  --ni-panel: rgba(7, 8, 12, 0.72);
+}
+
+/* Themed scrollbar — replaces the generic OS bar inside v0 panels/carousels */
+.v0-scroll { scrollbar-width: thin; scrollbar-color: rgba(0,212,255,.35) transparent; }
+.v0-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.v0-scroll::-webkit-scrollbar-track { background: transparent; }
+.v0-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0,212,255,.5), rgba(0,212,255,.15));
+  border-radius: 9999px;
+}
+.v0-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,.7); }
+
+/* Horizontal top nav */
+.v0-topnav {
+  display: flex; align-items: center; gap: .25rem;
+  border-bottom: 1px solid rgba(0,212,255,.12);
+  background: rgba(7,8,12,.55); backdrop-filter: blur(12px);
+}
+.v0-navlink {
+  font-size: .68rem; letter-spacing: .16em; text-transform: uppercase;
+  padding: .5rem .8rem; color: #9fb2c4; white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: color .15s ease, border-color .15s ease;
+}
+.v0-navlink:hover { color: #cfe9ff; }
+.v0-navlink[data-active="true"] { color: #eafbff; border-bottom-color: rgba(0,212,255,.7); }
+
+/* Logo mark button (CSS-drawn — no asset in repo) */
+.v0-logomark {
+  width: 26px; height: 26px; border-radius: 7px; position: relative;
+  background: radial-gradient(circle at 30% 30%, rgba(0,212,255,.9), rgba(10,22,40,.9));
+  box-shadow: 0 0 14px rgba(0,212,255,.5), inset 0 0 6px rgba(255,255,255,.35);
+}
+.v0-logomark::after {
+  content: ''; position: absolute; inset: 6px; border-radius: 4px;
+  border: 1.5px solid rgba(255,255,255,.7); border-right-color: transparent; border-bottom-color: transparent;
+  transform: rotate(45deg);
+}
+
+/* Status light (under orb prompt) */
+@keyframes v0-status-breathe { 0%,100% { opacity: .5; box-shadow: 0 0 6px currentColor; } 50% { opacity: 1; box-shadow: 0 0 14px currentColor; } }
+.v0-status { width: 8px; height: 8px; border-radius: 9999px; background: currentColor; animation: v0-status-breathe 2.4s ease-in-out infinite; }
+.v0-status-idle { color: #64748b; }
+.v0-status-live { color: #34d399; }
+.v0-status-think { color: var(--ni-cyan); }
+.v0-status-error { color: #fb7185; }
+
+/* Iron-Man focus sway — panels lean toward the pointer / on focus */
+.v0-swayer { transform-style: preserve-3d; transition: transform .5s cubic-bezier(.22,.8,.3,1); }
+.v0-sway-focus { transform: translateZ(40px) scale(1.02); }
+.v0-sway-back { transform: translateZ(-30px) scale(.97); opacity: .8; }
+
+/* Cerebro-style chamber iris open (login/boot) */
+@keyframes v0-iris {
+  0% { clip-path: inset(50% 50% 50% 50% round 40%); opacity: 0; filter: brightness(2.2); }
+  60% { opacity: 1; }
+  100% { clip-path: inset(0 0 0 0 round 0%); opacity: 1; filter: brightness(1); }
+}
+.v0-iris { animation: v0-iris 1.4s cubic-bezier(.16,.84,.32,1) both; }
+@keyframes v0-chamber-ring { from { transform: rotate(0) scale(.6); opacity: 0; } to { transform: rotate(180deg) scale(1); opacity: 1; } }
+.v0-chamber-ring { animation: v0-chamber-ring 1.6s cubic-bezier(.16,.84,.32,1) both; }
+
+/* Blank holographic screen fill (post-login, before AXON neon) */
+@keyframes v0-holo-fill {
+  0% { transform: scaleY(0); opacity: 0; }
+  40% { transform: scaleY(1); opacity: .9; }
+  100% { transform: scaleY(1); opacity: .12; }
+}
+.v0-holo-fill { transform-origin: center; animation: v0-holo-fill 1.1s ease-out both; }
+
+/* Window system */
+.v0-window-host { position: relative; }
+.v0-window { transition: box-shadow .2s ease, border-color .2s ease; }
+.v0-window[data-mode="free"] { position: absolute; cursor: grab; touch-action: none; }
+.v0-window[data-mode="free"].v0-dragging { cursor: grabbing; box-shadow: 0 30px 80px rgba(0,212,255,.2); z-index: 40; }
+.v0-window[data-mode="puzzle"] { transition: transform .3s cubic-bezier(.22,.8,.3,1), box-shadow .2s ease; }
+.v0-window-grip {
+  cursor: grab; font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(0,212,255,.5);
+}
+
+/* Vertical collapse for panels */
+.v0-collapse-body { overflow: hidden; transition: max-height .3s ease, opacity .25s ease; }
+.v0-collapse-body[data-open="false"] { max-height: 0 !important; opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .v0-iris, .v0-chamber-ring, .v0-holo-fill, .v0-status, .v0-swayer { animation: none !important; transition: none !important; }
+}
