@@ -7,7 +7,7 @@ import { AXON_USER_TOOLS } from '@/lib/axon-user-tools';
 import { getAxonToolMeta } from '@/lib/axon-tool-meta';
 import { ToolDetailModal, type ToolkitToolView } from '@/components/axon-v0/tool-detail-modal';
 import { ToolMaker } from '@/components/axon-v0/tool-maker';
-import './toolkit.css';
+import '@/components/axon-v0/toolkit.css';
 
 interface VentureToolRow {
   id: string;

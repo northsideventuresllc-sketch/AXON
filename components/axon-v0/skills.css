@@ -1,0 +1,102 @@
+/* SKILLS & MCP slice — prefixed `sk-`. No globals.css edits. */
+
+.sk-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+@media (min-width: 640px) {
+  .sk-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.sk-card {
+  padding: 1rem;
+  animation: sk-rise 0.4s ease both;
+}
+@keyframes sk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sk-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sk-name {
+  font-size: 0.9rem;
+  color: #e6f6ff;
+  line-height: 1.3;
+}
+
+.sk-desc {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.sk-meta {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+/* Enabled / disabled state dot. */
+.sk-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.85);
+}
+.sk-state-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: #475569;
+  box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+}
+.sk-state-on .sk-state-dot {
+  background: #00d4ff;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.7), 0 0 0 3px rgba(0, 212, 255, 0.12);
+}
+
+/* Golden marker. */
+.sk-gold {
+  color: #ffd76a;
+  border-color: rgba(255, 215, 106, 0.4) !important;
+}
+
+.sk-section-label {
+  margin-top: 1.75rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(0, 212, 255, 0.7);
+}
+
+.sk-count {
+  color: rgba(148, 163, 184, 0.6);
+  margin-left: 0.4rem;
+}
+
+.sk-empty {
+  padding: 1.5rem;
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.75);
+}

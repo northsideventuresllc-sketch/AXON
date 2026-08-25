@@ -1,0 +1,142 @@
+/* AGENTS board — holographic styling.
+   All classes/keyframes prefixed ag- to stay clear of shared globals.css. */
+
+@keyframes ag-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ag-group {
+  animation: ag-in 0.4s ease both;
+}
+
+.ag-venture-title {
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.28em;
+  color: #dff8ff;
+}
+
+.ag-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0, 212, 255, 0.12);
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 0.75rem;
+  transition: border-color 0.2s ease, transform 0.15s ease, background-color 0.2s ease;
+}
+.ag-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 212, 255, 0.35);
+  background: rgba(0, 212, 255, 0.04);
+}
+
+/* scanning sweep on hover */
+.ag-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 0%, rgba(0, 212, 255, 0.07) 45%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+.ag-card:hover::after {
+  transform: translateX(120%);
+}
+
+/* --- status chips --- */
+.ag-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.ag-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+}
+.ag-status--running {
+  color: #9adfff;
+  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.1);
+}
+.ag-status--running .ag-status-dot {
+  background: #00d4ff;
+  box-shadow: 0 0 6px 1px rgba(0, 212, 255, 0.8);
+  animation: ag-pulse 1.8s ease-in-out infinite;
+}
+.ag-status--blocked {
+  color: #ffb4b4;
+  border-color: rgba(240, 113, 120, 0.4);
+  background: rgba(240, 113, 120, 0.1);
+}
+.ag-status--blocked .ag-status-dot {
+  background: #f07178;
+}
+.ag-status--active {
+  color: #7ff2c0;
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.08);
+}
+.ag-status--active .ag-status-dot {
+  background: #34d399;
+}
+.ag-status--idle {
+  color: #8fa3b8;
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.06);
+}
+.ag-status--idle .ag-status-dot {
+  background: #7a8fa8;
+}
+
+@keyframes ag-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.65);
+  }
+}
+
+/* --- task progress bar --- */
+.ag-bar {
+  height: 5px;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+}
+.ag-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(0, 212, 255, 0.7), #34d399);
+  transition: width 0.5s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ag-group,
+  .ag-status--running .ag-status-dot {
+    animation: none !important;
+  }
+  .ag-card::after {
+    display: none;
+  }
+  .ag-card:hover {
+    transform: none;
+  }
+}
