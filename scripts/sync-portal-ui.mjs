@@ -207,11 +207,12 @@ const API_FILES = [
 /**
  * AXON v0 harness (Jarvis dash). These live in their own subtrees so the flat lists
  * above stay untouched:
- *   components/axon-v0/*  → src/components/axon-v0/*        (imports unchanged)
- *   lib/axon-v0/*         → src/lib/axon/axon-v0/*          (the axon-* rewrite lands here)
- *   app/api/axon-v0/*     → NOT synced (pruned) — see the V0_API_FILES loop below.
- *     These routes call AXON's generateAxonReply(options-object) signature the portal
- *     does not share; syncing them broke the portal build (a84af7b, 2026-08-25).
+ *   components/axon-v0/*  → NOT synced (2026-08-26 incident — see the v0 skip block below)
+ *   lib/axon-v0/*         → NOT synced (same)
+ *   app/api/axon-v0/*     → NOT synced (same)
+ * The ENTIRE v0 harness is un-synced: the vintage V0_* lists reference newer build-1.5/2
+ * files never synced, and the v0 API targets a generateAxonReply signature the portal does
+ * not share, so it does not compile in the portal. Re-enable only once it is portal-compatible.
  * The v0 PAGES (app/(axon-v0)/…) are NOT synced yet — the portal gets its page shells
  * via the portal-integration overlay once JB approves the slice.
  */
@@ -461,32 +462,18 @@ function main() {
     addWrite(join(niRoot, 'src/app/api/axon', file), rewriteImports(readFileSync(src, 'utf8')), `api: ${file}`, 'api');
   }
 
-  // AXON v0 harness subtrees (see the V0_* lists for the path mapping).
-  for (const file of V0_COMPONENT_FILES) {
-    const src = join(AXON_ROOT, 'components/axon-v0', file);
-    if (!existsSync(src)) {
-      console.warn(`skip missing v0 component: ${file}`);
-      continue;
-    }
-    addWrite(join(niRoot, 'src/components/axon-v0', file), rewriteImports(readFileSync(src, 'utf8')), `v0 component: ${file}`, 'component');
-  }
-  for (const file of V0_LIB_FILES) {
-    const src = join(AXON_ROOT, 'lib/axon-v0', file);
-    if (!existsSync(src)) {
-      console.warn(`skip missing v0 lib: ${file}`);
-      continue;
-    }
-    addWrite(join(niRoot, 'src/lib/axon/axon-v0', file), rewriteImports(readFileSync(src, 'utf8')), `v0 lib: ${file}`, 'lib');
-  }
-  // AXON v0 API routes are NOT synced into the portal. They call AXON's own
-  // generateAxonReply(options-object) signature, which the portal's copy does not
-  // share — syncing them broke the portal production build (a84af7b, 2026-08-25;
-  // JB call to exclude). Prune any a prior sync left behind so the portal stays
-  // green. Re-enable syncing here only once the portal's generateAxonReply matches.
-  for (const file of V0_API_FILES) {
-    const dest = join(niRoot, 'src/app/api/axon-v0', file);
-    if (existsSync(dest)) plan.push({ dest, content: null, label: `prune v0 api (not synced): ${file}`, kind: 'delete' });
-  }
+  // AXON v0 harness (components/axon-v0, lib/axon-v0, app/api/axon-v0) is NOT synced
+  // into the portal. The 2026-08-26 incident: the vintage V0_* file lists reference
+  // newer build-1.5/2 files that were never synced, and the v0 API targets AXON's own
+  // generateAxonReply(options-object) signature the portal's copy does not share — so
+  // the harness does not compile in the portal (build ERROR a84af7b → 0fbf2c4). JB call:
+  // fully un-sync it. We write NOTHING here (and never delete — the workflow's no-delete
+  // guard forbids that; the already-synced files were removed directly in the portal).
+  // Re-enable by restoring the write loops only once the whole v0 harness is made
+  // portal-compatible (complete + correct V0_* lists + a matching portal generateAxonReply).
+  void V0_COMPONENT_FILES;
+  void V0_LIB_FILES;
+  void V0_API_FILES;
 
   for (const entry of planPortalIntegration(niRoot)) plan.push(entry);
 
