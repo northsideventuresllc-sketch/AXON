@@ -4,8 +4,8 @@ on:
   # Schedule stays commented out on purpose — this is a brand-new v1 tool,
   # PR-gated and registered active=false. JB/BUILD turn the schedule on
   # (uncomment below) after reviewing a few manual runs.
-  # schedule:
-  #   - cron: '0 13 * * *'
+  schedule:
+    - cron: '0 13 * * *'
   workflow_dispatch: {}
 
 jobs:

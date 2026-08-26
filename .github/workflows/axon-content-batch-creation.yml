@@ -4,6 +4,8 @@ name: AXON Content Batch Creation
 # (which only notifies). Manual trigger only until JB/EXEC review this PR —
 # do not add a schedule: trigger here without that review.
 on:
+  schedule:
+    - cron: '0 14 * * *'  # daily, 30min after the last IT product batch window
   workflow_dispatch:
     inputs:
       allow_match_fit:
