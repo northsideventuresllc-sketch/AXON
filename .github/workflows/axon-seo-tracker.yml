@@ -1,9 +1,11 @@
 name: AXON SEO Tracker
 
-# NEW job, scaffolding only. Built 2026-08-26 (JB direct order).
-# Zero external API calls this pass — real SEO data source isn't wired in
-# yet. Manual trigger only until JB/EXEC review this PR.
+# REBUILT 2026-08-26 (JB direct correction). Does real public SEO signal now
+# via SerpApi + Gemini/Anthropic — does NOT wait on Search Console or other
+# first-party SEO credentials. Nightly + manual trigger, enabled.
 on:
+  schedule:
+    - cron: '30 9 * * *'  # nightly, 09:30 UTC (offset from Social Media Research)
   workflow_dispatch: {}
 
 concurrency:
@@ -12,9 +14,9 @@ concurrency:
 
 jobs:
   track:
-    name: AXON — SEO tracker (scaffold, NEEDS_CREDENTIALS by design)
+    name: AXON — SEO tracker (real public search signal)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -25,11 +27,15 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run per-venture SEO dispatch
+      - name: Run per-venture SEO search + synthesis
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_BACKUP: ${{ secrets.GEMINI_API_KEY_BACKUP }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node scripts/axon-seo-tracker.mjs
 
       - name: Report failure

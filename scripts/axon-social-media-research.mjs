@@ -1,22 +1,25 @@
 #!/usr/bin/env node
 /**
- * AXON Social Media Research — NEW job, SCAFFOLDING ONLY.
- * JB direct order 2026-08-26.
+ * AXON Social Media Research — REBUILT 2026-08-26, JB direct correction.
  *
- * Real per-venture social platform research (engagement, follower counts,
- * trending content, competitor posts) needs real platform API credentials
- * that are NOT wired in yet. This pass builds the real job structure and
- * per-venture dispatch loop, and — at the exact point a real platform call
- * would go — self-reports NEEDS_CREDENTIALS and stops that venture cleanly.
+ * Original scaffold (PR #126) waited on JB's own first-party social platform
+ * credentials and self-reported NEEDS_CREDENTIALS for everything. JB's
+ * correction: it must NOT wait on those. Real EXTERNAL/PUBLIC research runs
+ * now — competitor content and what's trending in each venture's niche —
+ * using SerpApi (Google search, real key already in this repo's secrets),
+ * synthesized into one usable plain-English finding per venture via Gemini
+ * (fallback Anthropic Haiku). First-party analytics (JB's own account
+ * engagement/follower data) stays a clearly marked extension point —
+ * getFirstPartyAnalytics() in lib/axon-content-scaffold-shared.mjs — that
+ * gets ADDED later once JB wires in NVG's own social accounts, never a
+ * prerequisite for this job to do real work today.
  *
  * NEVER simulate fake engagement numbers, fake follower counts, or fake
- * trending posts here. A NEEDS_CREDENTIALS line is always the honest output
- * until real API keys exist in ni_platform_secrets.
+ * trending posts. Real SerpApi results in, a real synthesis out, or an
+ * honest "no results" — nothing invented.
  *
- * Ventures come from content_machine_brand_profiles (verified 2026-08-26,
- * live table) — no venture_offering_dpmo table/view exists in this project,
- * so that name from the original ask does not resolve to anything real;
- * flagged here rather than silently guessing at it.
+ * Ventures come from content_machine_brand_profiles (verified live table;
+ * no venture_offering_dpmo table/view exists in this project).
  */
 import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import {
@@ -26,33 +29,86 @@ import {
   scheduleResumeIn12h,
   notifyJbUrgent,
   writeAgentBus,
-  needsCredentials,
+  writeDecision,
   plainEnglish,
   loadVentureList,
+  getFirstPartyAnalytics,
 } from '../lib/axon-content-scaffold-shared.mjs';
+import { externalSearch, synthesizeFinding } from '../lib/axon-research-synthesis.mjs';
 
 const JOB_ID = 'axon-social-media-research';
-
-/** Platforms this job would eventually research per venture, once credentialed. */
 const PLATFORMS = ['Instagram', 'TikTok', 'X (Twitter)', 'LinkedIn'];
 
-/**
- * Per-venture subagent dispatch. In this scaffold pass this is a plain
- * function call (no external agent runtime needed) — the dispatch SHAPE is
- * what's being built: one independent unit of work per venture, each one
- * able to fail/skip on its own without blocking the others.
- */
-async function researchVenture(brand) {
-  const findings = [];
-  for (const platform of PLATFORMS) {
-    // This is exactly where a real platform API call would go.
-    findings.push({ platform, status: needsCredentials(platform) });
+/** Build the niche/keyword string this venture's search should target, from real brand data — never hardcoded per-venture copy. */
+function nicheKeyword(brand) {
+  const vp = brand?.skeleton?.value_props?.[0]?.text;
+  return vp ? `${brand.name} (${vp})` : brand.name;
+}
+
+/** One real external research pass for one venture: SerpApi -> synthesis. */
+async function researchVenture(cfg, brand) {
+  const keyword = nicheKeyword(brand);
+  const query = `"${brand.name}" OR (${keyword}) social media trends competitors 2026`;
+
+  let results = [];
+  let searchError = null;
+  if (cfg.serpApiKey) {
+    try {
+      results = await externalSearch(cfg.serpApiKey, query, 6);
+    } catch (err) {
+      searchError = err.message;
+      console.warn(`SerpApi search failed for ${brand.slug}: ${err.message}`);
+    }
   }
+
+  const firstParty = await getFirstPartyAnalytics(brand, PLATFORMS);
+
+  if (!cfg.serpApiKey) {
+    return {
+      venture: brand.venture,
+      brand: brand.name,
+      slug: brand.slug,
+      status: 'NEEDS_CREDENTIALS: SERPAPI_API_KEY not configured',
+      finding: null,
+      firstParty,
+    };
+  }
+  if (!results.length) {
+    return {
+      venture: brand.venture,
+      brand: brand.name,
+      slug: brand.slug,
+      status: searchError ? `SEARCH_FAILED: ${searchError}` : 'NO_RESULTS: SerpApi returned nothing for this query',
+      finding: null,
+      firstParty,
+    };
+  }
+
+  const system = `You are AXON's social media research analyst for Northside Ventures Group (NVG).
+You turn raw Google search results into ONE clear, useful finding about a venture's niche —
+what kind of content and topics are getting traction right now, and what NVG's competitors
+are doing on social. Plain English, no jargon, no marketing fluff, under 130 words.
+End with one concrete, specific content idea NVG could act on this week.
+Only use what's actually in the search results below — never invent a stat, a post, or a
+competitor that isn't there.`;
+
+  const prompt = `Venture: ${brand.name} (${brand.venture})
+What this venture does: ${brand?.skeleton?.value_props?.[0]?.text || 'not specified'}
+
+Raw Google search results for "${query}":
+${JSON.stringify(results.map((r) => ({ title: r.title, snippet: r.snippet, link: r.link, source: r.source })), null, 2)}`;
+
+  const synthesis = await synthesizeFinding(cfg, { system, prompt, rawResults: results });
+
   return {
     venture: brand.venture,
     brand: brand.name,
     slug: brand.slug,
-    findings,
+    status: 'OK',
+    finding: synthesis.text,
+    findingSource: synthesis.source,
+    resultCount: results.length,
+    firstParty,
   };
 }
 
@@ -69,52 +125,79 @@ async function main() {
   const ventures = await loadVentureList(sb.sbSelect);
 
   if (!ventures.length) {
-    console.log('No ventures found in content_machine_brand_profiles — nothing to dispatch.');
+    console.log('No ventures found in content_machine_brand_profiles — nothing to research.');
     return;
   }
 
   const results = [];
   for (const brand of ventures) {
     if (budget.expired()) {
-      console.log(`Time budget hit after ${budget.elapsedSec()}s — stopping cleanly, will resume.`);
+      console.log(`Time budget hit after ${budget.elapsedSec()}s — stopping cleanly, will resume within ~12h.`);
       await scheduleResumeIn12h(sb, JOB_ID);
       break;
     }
     try {
-      results.push(await researchVenture(brand));
+      results.push(await researchVenture(cfg, brand));
     } catch (err) {
-      console.warn(`Research dispatch failed for ${brand.slug}: ${err.message}`);
+      console.warn(`Research failed for ${brand.slug}: ${err.message}`);
+      results.push({ venture: brand.venture, brand: brand.name, slug: brand.slug, status: `ERROR: ${err.message}`, finding: null });
+    }
+  }
+
+  const ok = results.filter((r) => r.status === 'OK');
+
+  // Loop-engineer: write each real finding to Decisions so it's searchable
+  // by brand name — the exact lookup axon-content-batch-creation.mjs already
+  // does (decision ILIKE brand name) — so tomorrow's draft batch can build on
+  // today's real research instead of starting cold.
+  for (const r of ok) {
+    try {
+      await writeDecision(sb, {
+        decision: `[AXON Social Media Research, ${new Date().toISOString().slice(0, 10)}] ${r.brand}: ${r.finding} (source: ${r.findingSource}, ${r.resultCount} search result(s) reviewed. First-party account analytics: not wired in yet — external/public research only this pass.)`,
+        status: 'active',
+        durability: 'durable',
+      });
+    } catch (err) {
+      console.warn(`Decisions write failed for ${r.slug}: ${err.message}`);
     }
   }
 
   const busBody = plainEnglish([
-    `Social Media Research scaffold run — ${new Date().toISOString().slice(0, 10)}.`,
-    `Checked ${results.length} of ${ventures.length} venture(s).`,
-    `Every venture needs real platform credentials before this can pull real data — none exist yet, so nothing was faked.`,
+    `Social Media Research run — ${new Date().toISOString().slice(0, 10)}.`,
+    `Checked ${results.length} of ${ventures.length} venture(s). Real external research via SerpApi + Gemini/Anthropic synthesis — ${ok.length} finding(s), ${results.length - ok.length} blocked/empty.`,
+    `First-party account analytics (JB's own social accounts) still NEEDS_CREDENTIALS — that stays a separate add-on, not a blocker for this run.`,
     '',
-    ...results.map(
-      (r) => `${r.brand} (${r.venture}): ${r.findings.map((f) => f.status).join(' | ')}`,
-    ),
+    ...results.map((r) => (r.status === 'OK' ? `${r.brand} (${r.venture}): ${r.finding}` : `${r.brand} (${r.venture}): ${r.status}`)),
   ]);
 
   try {
     await writeAgentBus(sb, {
       from_agent: 'AXON Social Media Research',
       to_agent: 'AXON Executive Agent',
-      subject: `Social Media Research scaffold run — ${results.length} venture(s), all NEEDS_CREDENTIALS`,
+      subject: `Social Media Research — ${ok.length}/${results.length} real finding(s)`,
       body: busBody,
       needs_answer: false,
     });
-    console.log('Wrote run summary to agent_bus (to_agent=AXON Executive Agent).');
+    await writeAgentBus(sb, {
+      from_agent: 'AXON Social Media Research',
+      to_agent: 'CONTENT',
+      subject: `Fresh niche/competitor research for content drafts — ${ok.length} venture(s)`,
+      body: busBody,
+      needs_answer: false,
+    });
+    console.log('Wrote run summary to agent_bus (AXON Executive Agent + CONTENT).');
   } catch (err) {
     console.warn(`agent_bus write failed: ${err.message}`);
   }
 
+  if (ok.length === 0 && results.length > 0) {
+    await notifyJbUrgent(cfg, `⚠️ Social Media Research ran but got zero real findings (${results.length} venture(s) checked) — worth a look when you have a sec.`);
+  }
+
   const humanSummary = plainEnglish([
-    `AXON checked ${results.length} of your ventures for social media research.`,
-    `Every single one is blocked on the same thing: no social platform login/API keys are set up yet.`,
-    `Nothing fake was made up — it just says clearly what's missing for each one.`,
-    `The structure's ready to go the moment real credentials exist.`,
+    `AXON did real social media research for ${ok.length} of your ${ventures.length} ventures today. 🔎`,
+    `It searched Google for what's trending and what competitors are doing in each niche, then summed it up in plain English — not raw data dumps.`,
+    `Your own accounts aren't hooked up yet, so that part's still off — but this doesn't need them to be useful. Nothing here was made up.`,
   ]);
   console.log(humanSummary);
 }
