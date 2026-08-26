@@ -66,6 +66,8 @@ jobs:
           SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AXON_GITHUB_PAT: ${{ secrets.AXON_GITHUB_PAT }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           AXON_RESEARCH_LANE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.lane || '' }}
           AXON_RESEARCH_FORCE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force || '' }}
           AXON_RESEARCH_MAX_ATTEMPTS: '3'
