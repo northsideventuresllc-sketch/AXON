@@ -180,6 +180,9 @@ const STALE_LIB_FILES = [
 const PORTAL_ONLY_FILES = new Set([
   'axon-tool-meta.ts',
   'axon-user-tools.ts',
+  'types.ts',
+  'leads.ts',
+  'outreach-hq-tool.tsx',
 ]);
 
 const API_FILES = [
@@ -417,6 +420,13 @@ function main() {
 
   const componentDest = join(niRoot, 'src/components/axon-ui');
   for (const file of COMPONENT_FILES) {
+    if (PORTAL_ONLY_FILES.has(file)) {
+      // Same guard as LIB_FILES below -- this loop had NO PORTAL_ONLY_FILES check at all,
+      // which is the actual reason outreach-hq-tool.tsx kept getting reclobbered even
+      // after being "fixed" upstream. Fixed 2026-08-26 per Learnings #7634/#7635.
+      skipped.push(`component: ${file} (PORTAL-ONLY, never written by the sync)`);
+      continue;
+    }
     const src = join(AXON_ROOT, 'components/axon', file);
     if (!existsSync(src)) {
       console.warn(`skip missing component: ${file}`);
