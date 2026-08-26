@@ -1,0 +1,46 @@
+name: AXON Executive Agent
+
+# scripts/axon-executive-agent.mjs merged to main 2026-08-26 (rebuild of
+# AX-WISDOM-LOOP, JB direct order) with no workflow to run it — this PR is
+# the missing schedule. Nightly brain + cross-platform bridge for AXON:
+# durable-signal ingest, git history, RunPod sync, agent_bus/Slack/Telegram
+# bridge, on top of the unchanged wisdom-absorb loop.
+#
+# SAFETY: this PR only adds the workflow file — nothing fires until this
+# branch is reviewed and merged into main by EXEC/JB (scheduled workflows
+# only run from the default branch). Do not merge without sign-off.
+
+on:
+  schedule:
+    - cron: '20 3 * * *' # nightly, off-peak — no other AXON/nv-vault cron fires in this window
+  workflow_dispatch: {}
+
+concurrency:
+  group: axon-executive-agent
+  cancel-in-progress: false
+
+jobs:
+  exec-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run AXON Executive Agent
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run exec-agent
+
+      - name: Report failure
+        if: failure()
+        run: echo "AXON Executive Agent failed — check Actions logs"
