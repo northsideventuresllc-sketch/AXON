@@ -1,0 +1,24 @@
+name: AXON-ARCEUS Registry Check
+
+on:
+  # Schedule stays commented out on purpose — this is a brand-new v1 tool,
+  # PR-gated and registered active=false. JB/BUILD turn the schedule on
+  # (uncomment below) after reviewing a few manual runs.
+  # schedule:
+  #   - cron: '0 13 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  registry-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Run AXON-ARCEUS registry check
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: node scripts/axon-arceus-registry-check.mjs
