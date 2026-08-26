@@ -209,7 +209,9 @@ const API_FILES = [
  * above stay untouched:
  *   components/axon-v0/*  → src/components/axon-v0/*        (imports unchanged)
  *   lib/axon-v0/*         → src/lib/axon/axon-v0/*          (the axon-* rewrite lands here)
- *   app/api/axon-v0/*     → src/app/api/axon-v0/*
+ *   app/api/axon-v0/*     → NOT synced (pruned) — see the V0_API_FILES loop below.
+ *     These routes call AXON's generateAxonReply(options-object) signature the portal
+ *     does not share; syncing them broke the portal build (a84af7b, 2026-08-25).
  * The v0 PAGES (app/(axon-v0)/…) are NOT synced yet — the portal gets its page shells
  * via the portal-integration overlay once JB approves the slice.
  */
@@ -476,10 +478,14 @@ function main() {
     }
     addWrite(join(niRoot, 'src/lib/axon/axon-v0', file), rewriteImports(readFileSync(src, 'utf8')), `v0 lib: ${file}`, 'lib');
   }
+  // AXON v0 API routes are NOT synced into the portal. They call AXON's own
+  // generateAxonReply(options-object) signature, which the portal's copy does not
+  // share — syncing them broke the portal production build (a84af7b, 2026-08-25;
+  // JB call to exclude). Prune any a prior sync left behind so the portal stays
+  // green. Re-enable syncing here only once the portal's generateAxonReply matches.
   for (const file of V0_API_FILES) {
-    const src = join(AXON_ROOT, 'app/api/axon-v0', file);
-    if (!existsSync(src)) continue;
-    addWrite(join(niRoot, 'src/app/api/axon-v0', file), rewriteImports(readFileSync(src, 'utf8')), `v0 api: ${file}`, 'api');
+    const dest = join(niRoot, 'src/app/api/axon-v0', file);
+    if (existsSync(dest)) plan.push({ dest, content: null, label: `prune v0 api (not synced): ${file}`, kind: 'delete' });
   }
 
   for (const entry of planPortalIntegration(niRoot)) plan.push(entry);
