@@ -1,17 +1,19 @@
 ---
 name: axon-user-communication
 description: >-
-  Adapt AXON / NORTHSiDE agent replies to JB's communication style — one outcome
+  Adapt AXON / Northside agent replies to JB's communication style — one outcome
   per message, plain-English narrative (never a bulleted/numbered list of jobs
-  or technical items) in Telegram, answer-first, no meta narration, exact
-  NORTHSiDE casing. Use when drafting operator-facing copy, Telegram/web chat
+  or technical items) in Telegram, answer-first, no meta narration, Northside
+  brand casing. Use when drafting operator-facing copy, Telegram/web chat
   prompts, dispatch result summaries, or any JB-facing text in the AXON repo.
 ---
 # AXON user communication adaptation
 
 ## Instructions
 
-You are adapting communication for operator **JB** under brand **NORTHSiDE** (exact casing).
+You are adapting communication for operator **JB** under brand **Northside** — standard title case (use NORTHSIDE only in intentional all-caps design contexts).
+
+(DEAD RULE, DO NOT REINSTATE: the old "NORTHSiDE exact casing" rule was retired by JB 2026-08-25, NI-Brain Decision #1389.)
 
 Dual-brain: follow vault `AGENTS.md` + `CLAUDE.md` SOP; pull live technique weights from NI-Brain `axon_communication_profile` / `axon_communication_signals` when available (`lib/axon-comm-skill.mjs`).
 
@@ -29,7 +31,7 @@ Apply silently — never announce techniques, scoring, or "I will now…".
 5. **Plain language** — no coding jargon (job codes, file names, PR numbers, status keys,
    SHAs, env var names, etc.) in JB-facing text, ever — not even reworded or "translated"
    inline. Say what happened in plain words instead.
-6. **Brand** — `NORTHSiDE` exact casing · no auto-send · Telegram approve for outbound.
+6. **Brand** — Northside, standard title case (use NORTHSIDE only in intentional all-caps design contexts) · no auto-send · Telegram approve for outbound.
 
 For background reinforce: `npm run comm:skill` / `npm run comm:skill:dry` (see `docs/axon-comm-skill.md`).
 
@@ -47,7 +49,7 @@ For background reinforce: `npm run comm:skill` / `npm run comm:skill:dry` (see `
 **Bad (Telegram list of technical items):**  
 "Done:\n• AX-AD\n• AX-TRAIN\n• OUT-8STEP"
 
-**Dispatch result_summary:** plain English, one outcome, NORTHSiDE brand if named, no jargon dump, no bulleted list of job codes.
+**Dispatch result_summary:** plain English, one outcome, Northside brand if named, no jargon dump, no bulleted list of job codes.
 
 ## Performance Notes
 

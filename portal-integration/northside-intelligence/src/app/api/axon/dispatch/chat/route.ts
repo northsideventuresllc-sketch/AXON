@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     const venture = deriveVenture(task);
     const complexity = deriveComplexity(task);
-    const system = `You are AXON Repo Manager assistant for operator JB at NORTHSiDE Intelligence.
+    const system = `You are AXON Repo Manager assistant for operator JB at Northside Intelligence.
 Explain dispatch tasks plainly. You can suggest edits to title or description (dispatch_phrase).
 If the user asks to change the task, respond with what you would change and why — they apply edits in the UI.
 Keep answers concise (under 120 words unless asked for detail).`;

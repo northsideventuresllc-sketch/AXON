@@ -63,7 +63,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       });
     }
 
-    const subject = meta.email_subject || `NORTHSiDE Intelligence — ${lead.handle}`;
+    const subject = meta.email_subject || `Northside Intelligence — ${lead.handle}`;
     await assertFireAllowed('outreach.run');
     await resendSend(cfg, {
       to,

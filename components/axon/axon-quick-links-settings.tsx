@@ -134,7 +134,7 @@ export function AxonQuickLinksSettings() {
                 value={link.label}
                 onChange={(e) => updateLink(index, { label: e.target.value })}
                 className="mt-1 w-full rounded-lg border border-axon-border bg-axon-surface px-3 py-2 text-sm text-axon-text outline-none transition focus:border-axon-blue-glow/50"
-                placeholder="NORTHSiDE Portal"
+                placeholder="Northside Portal"
               />
             </label>
             <label className="block">

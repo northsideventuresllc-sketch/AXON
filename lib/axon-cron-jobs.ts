@@ -85,7 +85,7 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
     cronUtc: null,
     workflowFile: 'axon-ni-outreach.yml',
     workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'NORTHSiDE',
+    venture: 'Northside',
     droidRole: 'Outreach',
     faceShape: 'triangle',
     axonTools: ['NI Outreach HQ'],

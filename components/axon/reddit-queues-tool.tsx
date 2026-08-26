@@ -102,7 +102,7 @@ function RedditQueue({
                     learnStepClient({
                       tool: 'reddit-queues',
                       step: 'post-attempt',
-                      venture: 'NORTHSiDE Intelligence',
+                      venture: 'Northside Intelligence',
                       meta: {
                         queue: title,
                         title: item.title,
@@ -122,7 +122,7 @@ function RedditQueue({
                     learnStepClient({
                       tool: 'reddit-queues',
                       step: 'preview',
-                      venture: 'NORTHSiDE Intelligence',
+                      venture: 'Northside Intelligence',
                       meta: { queue: title, title: item.title, subreddit: item.subreddit },
                     })
                   }

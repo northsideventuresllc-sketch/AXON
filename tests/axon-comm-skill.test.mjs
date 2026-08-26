@@ -28,7 +28,7 @@ assert.ok(merged.some((t) => t.technique_id === 'T4'));
 
 const block = buildCommSkillInstructions(merged, { channel: 'telegram' });
 assert.match(block, /apply silently/i);
-assert.match(block, /NORTHSiDE/);
+assert.match(block, /Northside/);
 assert.match(block, /One ask or outcome/);
 assert.doesNotMatch(block, /technique_id/);
 assert.match(block, /Telegram/);
@@ -81,7 +81,7 @@ assert.equal(dry.dryRun, true);
 assert.equal(dry.persisted, null);
 assert.equal(dry.appliedCount, 0);
 assert.match(dry.summary, /AX-COMM-SKILL/);
-assert.match(dry.promptPreview, /NORTHSiDE/);
+assert.match(dry.promptPreview, /Northside/);
 
 let patched = 0;
 const liveish = await runCommSkillAdapt({
@@ -113,7 +113,7 @@ assert.equal(liveish.appliedCount, patched);
 
 const checklist = commSkillChecklist();
 assert.ok(checklist.length >= 5);
-assert.ok(checklist.some((l) => /NORTHSiDE/.test(l)));
+assert.ok(checklist.some((l) => /Northside/.test(l)));
 assert.ok(checklist.some((l) => /dual-brain|AGENTS|axon_communication/.test(l)));
 
 console.log('axon-comm-skill.test.mjs OK');

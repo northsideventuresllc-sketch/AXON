@@ -48,7 +48,7 @@ export function deriveVenture(
 ): string {
   const blob = `${row.repo || ''} ${row.workflow_repo || ''} ${row.code || ''}`.toLowerCase();
   if (blob.includes('match-fit') || blob.includes('matchfit')) return 'Match Fit';
-  if (blob.includes('northside-intelligence') || blob.includes('ni-portal')) return 'NORTHSiDE Portal';
+  if (blob.includes('northside-intelligence') || blob.includes('ni-portal')) return 'Northside Portal';
   if (blob.includes('axon')) return 'AXON';
   if (blob.includes('nv-vault') || blob.includes('vault')) return 'nv-vault';
   if (blob.includes('replyflow')) return 'ReplyFlow';

@@ -1,0 +1,317 @@
+/* SKILLS & MCP slice — prefixed `sk-`. No globals.css edits. */
+
+.sk-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+@media (min-width: 640px) {
+  .sk-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.sk-card {
+  padding: 1rem;
+  animation: sk-rise 0.4s ease both;
+}
+@keyframes sk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sk-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sk-name {
+  font-size: 0.9rem;
+  color: #e6f6ff;
+  line-height: 1.3;
+}
+
+.sk-desc {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.sk-meta {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+/* Enabled / disabled state dot. */
+.sk-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.85);
+}
+.sk-state-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: #475569;
+  box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+}
+.sk-state-on .sk-state-dot {
+  background: #00d4ff;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.7), 0 0 0 3px rgba(0, 212, 255, 0.12);
+}
+
+/* Golden marker. */
+.sk-gold {
+  color: #ffd76a;
+  border-color: rgba(255, 215, 106, 0.4) !important;
+}
+
+.sk-section-label {
+  margin-top: 1.75rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(0, 212, 255, 0.7);
+}
+
+.sk-count {
+  color: rgba(148, 163, 184, 0.6);
+  margin-left: 0.4rem;
+}
+
+.sk-empty {
+  padding: 1.5rem;
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+/* --- Controls row: toggle + search + create --- */
+.sk-controls {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Segmented toggle [ ALL | SKILLS | MCP ] */
+.sk-seg {
+  display: inline-flex;
+  padding: 0.2rem;
+  gap: 0.2rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 212, 255, 0.18);
+  background: rgba(7, 8, 12, 0.6);
+}
+.sk-seg-btn {
+  border: 0;
+  cursor: pointer;
+  padding: 0.32rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.85);
+  background: transparent;
+  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.sk-seg-btn:hover {
+  color: #cbeeff;
+}
+.sk-seg-btn-on {
+  color: #07080c;
+  background: #00d4ff;
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.45);
+}
+
+.sk-search {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+  color: #e6f6ff;
+  outline: none;
+}
+.sk-search::placeholder {
+  color: rgba(148, 163, 184, 0.55);
+}
+.sk-search:focus {
+  border-color: rgba(0, 212, 255, 0.6);
+}
+
+.sk-create-row {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+.sk-create-btn {
+  cursor: pointer;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.08);
+  color: #bdeeff;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.sk-create-btn:hover {
+  background: rgba(0, 212, 255, 0.18);
+}
+
+/* --- Collapsible card --- */
+.sk-card-toggle {
+  width: 100%;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0;
+  color: inherit;
+}
+.sk-head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.sk-caret {
+  color: rgba(0, 212, 255, 0.7);
+  font-size: 0.9rem;
+  line-height: 1;
+  transition: transform 0.18s ease;
+}
+.sk-caret-open {
+  transform: rotate(90deg);
+}
+.sk-card-body {
+  animation: sk-rise 0.25s ease both;
+}
+
+/* --- Marketplace --- */
+.sk-market-note {
+  margin-top: -0.2rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.72rem;
+  color: rgba(148, 163, 184, 0.7);
+}
+.sk-market-btn {
+  cursor: pointer;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  background: rgba(0, 212, 255, 0.07);
+  color: #bdeeff;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  transition: background 0.15s ease;
+}
+.sk-market-btn:hover {
+  background: rgba(0, 212, 255, 0.16);
+}
+.sk-market-btn-on {
+  border-color: rgba(52, 211, 153, 0.5);
+  background: rgba(52, 211, 153, 0.12);
+  color: #b8f7dc;
+}
+.sk-market-hint {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.6);
+}
+
+/* --- Creator modal (sk- twin of the toolkit modal) --- */
+.sk-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(3, 5, 10, 0.72);
+  backdrop-filter: blur(6px);
+  animation: sk-fade 0.18s ease both;
+}
+@keyframes sk-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.sk-modal {
+  width: 100%;
+  max-width: 34rem;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  animation: sk-rise 0.28s ease both;
+}
+.sk-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.08);
+  color: #7fe6ff;
+  font-size: 1.1rem;
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.25);
+}
+.sk-chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 12rem;
+  max-height: 46vh;
+}
+.sk-msg {
+  display: block;
+}
+.sk-typing-dot {
+  display: inline-block;
+  width: 0.35rem;
+  height: 0.35rem;
+  margin: 0 0.1rem;
+  border-radius: 9999px;
+  background: rgba(0, 212, 255, 0.7);
+  animation: sk-blink 1.2s infinite ease-in-out both;
+}
+.sk-typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.sk-typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes sk-blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}

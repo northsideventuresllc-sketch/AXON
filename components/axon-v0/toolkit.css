@@ -1,0 +1,210 @@
+/* AXON Toolkit — cinematic layer. Prefix: tk-  (own file, no globals edits) */
+
+@keyframes tk-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tk-scan {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+@keyframes tk-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 212, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+  }
+}
+
+@keyframes tk-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tk-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tk-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* staggered card entrance */
+.tk-card {
+  position: relative;
+  overflow: hidden;
+  animation: tk-rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.tk-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(0, 212, 255, 0.45);
+  box-shadow: 0 10px 40px -12px rgba(0, 212, 255, 0.35);
+}
+
+/* sweeping scan-line across a card on hover */
+.tk-card::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(0, 212, 255, 0.1),
+    transparent
+  );
+  transform: translateX(-120%);
+  pointer-events: none;
+  opacity: 0;
+}
+.tk-card:hover::after {
+  opacity: 1;
+  animation: tk-scan 1.1s ease forwards;
+}
+
+.tk-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  background: rgba(10, 22, 40, 0.6);
+  font-size: 1.15rem;
+  flex: none;
+}
+
+.tk-source-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.tk-src-outreach_engine {
+  background: #38f2a8;
+  box-shadow: 0 0 8px #38f2a8;
+}
+.tk-src-it_clone {
+  background: #8ab4ff;
+  box-shadow: 0 0 8px #8ab4ff;
+}
+.tk-src-custom {
+  background: #00d4ff;
+  box-shadow: 0 0 8px #00d4ff;
+}
+
+/* modal */
+.tk-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(3, 5, 10, 0.72);
+  backdrop-filter: blur(6px);
+  animation: tk-backdrop-in 0.2s ease both;
+}
+.tk-modal {
+  width: 100%;
+  max-width: 34rem;
+  max-height: 88vh;
+  overflow-y: auto;
+  animation: tk-modal-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* chat */
+.tk-chat-scroll {
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.tk-msg {
+  animation: tk-rise-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.tk-typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 1px;
+  border-radius: 999px;
+  background: rgba(0, 212, 255, 0.8);
+  animation: tk-blink 1s infinite;
+}
+.tk-typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.tk-typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.tk-live-ring {
+  animation: tk-pulse-ring 2.4s ease-out infinite;
+}
+
+/* reduced motion + mobile safety */
+@media (prefers-reduced-motion: reduce) {
+  .tk-card,
+  .tk-msg,
+  .tk-modal,
+  .tk-backdrop {
+    animation: none !important;
+  }
+  .tk-card:hover {
+    transform: none;
+  }
+  .tk-card::after {
+    display: none;
+  }
+  .tk-typing-dot,
+  .tk-live-ring {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .tk-modal {
+    max-width: 100%;
+    max-height: 92vh;
+  }
+  .tk-chat-scroll {
+    max-height: 40vh;
+  }
+}

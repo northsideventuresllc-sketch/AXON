@@ -20,12 +20,12 @@ export interface LucielleNode {
 /** NVG → NI / NFI / NCC → sectors / NSSS hierarchy. */
 export const LUCIELLE_HIERARCHY: LucielleNode = {
   id: 'nvg',
-  label: 'NORTHSiDE Ventures Group (NVG)',
+  label: 'Northside Ventures Group (NVG)',
   kind: 'group',
   children: [
     {
       id: 'ni',
-      label: 'NORTHSiDE Intelligence (NI)',
+      label: 'Northside Intelligence (NI)',
       kind: 'company',
       children: [
         { id: 'ni-services', label: 'NI Services', kind: 'sector' },
@@ -35,7 +35,7 @@ export const LUCIELLE_HIERARCHY: LucielleNode = {
     },
     {
       id: 'nfi',
-      label: 'NORTHSiDE Financial (NFI)',
+      label: 'Northside Financial (NFI)',
       kind: 'company',
       children: [
         { id: 'nfi-capital', label: 'Capital', kind: 'sector' },
@@ -44,7 +44,7 @@ export const LUCIELLE_HIERARCHY: LucielleNode = {
     },
     {
       id: 'ncc',
-      label: 'NORTHSiDE Creative Co (NCC)',
+      label: 'Northside Creative Co (NCC)',
       kind: 'company',
       children: [
         { id: 'ncc-media', label: 'Media', kind: 'sector' },

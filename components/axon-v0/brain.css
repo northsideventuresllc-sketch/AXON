@@ -1,0 +1,213 @@
+/* AXON Brain workstream — Jarvis-grade 3D knowledge graph.
+   All classes/keyframes prefixed bn- to stay clear of shared globals.css. */
+
+/* ---------- stage / scene shell ---------- */
+.bn-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(0, 212, 255, 0.05), transparent 55%),
+    #07080c;
+}
+.bn-stage:active { cursor: grabbing; }
+.bn-stage canvas { display: block; touch-action: none; }
+
+/* scanline / vignette overlay for the cinematic astronomy feel */
+.bn-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 212, 255, 0.025) 0 1px, transparent 1px 3px);
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+/* ---------- hover tooltip ---------- */
+.bn-tooltip {
+  position: absolute;
+  z-index: 30;
+  max-width: 260px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  background: rgba(4, 8, 16, 0.92);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 24px rgba(0, 212, 255, 0.18);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 14px));
+  animation: bn-pop 0.14s ease both;
+}
+.bn-tooltip-kind {
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(0, 212, 255, 0.75);
+}
+.bn-tooltip-label {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #e6f6ff;
+}
+@keyframes bn-pop {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 6px)) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, calc(-100% - 14px)) scale(1); }
+}
+
+/* ---------- WebGL failure fallback ---------- */
+.bn-webgl-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 24px;
+  color: #7c8aa0;
+}
+.bn-webgl-fallback strong { color: #cfe9ff; font-weight: 500; }
+
+/* ---------- fullscreen shell ---------- */
+.bn-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #07080c;
+  animation: bn-fade 0.35s ease both;
+}
+@keyframes bn-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* EXIT control — low opacity until hovered so it never grabs attention */
+.bn-exit {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: rgba(4, 8, 16, 0.6);
+  color: #9fdcff;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  opacity: 0.14;
+  transition: opacity 0.35s ease, box-shadow 0.35s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+.bn-exit:hover,
+.bn-exit:focus-visible {
+  opacity: 1;
+  box-shadow: 0 0 22px rgba(0, 212, 255, 0.25);
+  outline: none;
+}
+
+/* ---------- legend + explainer popovers ---------- */
+.bn-legend { position: relative; display: inline-flex; }
+.bn-legend-dot { font-size: 11px; }
+.bn-legend-pop {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: 220px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  background: rgba(4, 8, 16, 0.96);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(0, 212, 255, 0.12);
+  animation: bn-pop-up 0.16s ease both;
+}
+.bn-legend-pop-title {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(0, 212, 255, 0.8);
+}
+.bn-legend-pop-body {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #b9c6d8;
+}
+@keyframes bn-pop-up {
+  from { opacity: 0; transform: translate(-50%, 6px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---------- search results ---------- */
+.bn-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: rgba(0, 0, 0, 0.25);
+  color: #cbd5e1;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.bn-result:hover,
+.bn-result:focus-visible {
+  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.08);
+  color: #e6f6ff;
+  outline: none;
+}
+
+/* ---------- CLI console ---------- */
+.bn-cli {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.bn-cli-out {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.bn-cli-prompt { color: #00d4ff; }
+.bn-cli-dim { color: #5b6b80; }
+.bn-cli-in {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e6f6ff;
+  font-family: inherit;
+  font-size: 11.5px;
+  caret-color: #00d4ff;
+}
+.bn-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  background: #00d4ff;
+  animation: bn-blink 1.05s steps(2, start) infinite;
+  vertical-align: text-bottom;
+}
+@keyframes bn-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+
+/* row hover in table / file list */
+.bn-row {
+  transition: background-color 0.14s ease, border-color 0.14s ease;
+}
+.bn-row:hover { background: rgba(0, 212, 255, 0.06); border-color: rgba(0, 212, 255, 0.25); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bn-tooltip, .bn-fullscreen, .bn-legend-pop, .bn-cursor { animation: none; }
+  .bn-stage::after { opacity: 0.35; }
+}

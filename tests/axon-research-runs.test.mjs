@@ -32,7 +32,7 @@ assert.equal(completed.briefing_items_added, 2);
 assert.equal(completed.status, 'completed');
 assert.match(completed.summary, /ai_models/);
 assert.match(completed.summary, /3 finding/);
-assert.equal(completed.meta.brand, 'NORTHSiDE');
+assert.equal(completed.meta.brand, 'Northside');
 assert.equal(completed.meta.operator, 'JB');
 assert.equal(completed.meta.job_code, 'AX-RESEARCH-RUNS');
 assert.equal(completed.meta.source_count, 5);

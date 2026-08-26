@@ -10,7 +10,7 @@ import { learnStep } from '@/lib/axon-step-learn';
 
 export const dynamic = 'force-dynamic';
 
-const CONTENT_VENTURE = 'NORTHSiDE Intelligence';
+const CONTENT_VENTURE = 'Northside Intelligence';
 
 export async function GET() {
   try {

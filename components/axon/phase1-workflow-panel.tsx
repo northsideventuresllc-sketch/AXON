@@ -112,7 +112,7 @@ export function Phase1WorkflowPanel({
     {
       id: 'approve',
       label: 'Approve',
-      hint: 'JB approves via web or Telegram. NORTHSiDE never auto-sends.',
+      hint: 'JB approves via web or Telegram. Northside never auto-sends.',
       href: tabHref(basePath, 'queue'),
       count: stats.pending,
       cta: 'Review drafts',
@@ -153,7 +153,7 @@ export function Phase1WorkflowPanel({
           <h2 className="mt-1 text-lg font-medium text-axon-text">Interactive outreach loop</h2>
           <p className="mt-1 max-w-2xl text-sm text-axon-muted">
             Find → score → draft → approve → send → follow-up → close — all inside AXON so daily
-            work does not leak into extra paid tools. Brand: NORTHSiDE.
+            work does not leak into extra paid tools. Brand: Northside.
           </p>
         </div>
         <div className="rounded-lg border border-axon-border/70 bg-axon-elevated/50 px-3 py-2 text-xs">

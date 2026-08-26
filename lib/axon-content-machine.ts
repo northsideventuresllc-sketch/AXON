@@ -1,7 +1,7 @@
 /**
  * NI Content Machine — dashboard data layer.
  *
- * Product-first NORTHSiDE Intelligence content: 3/2/2 mix, one post per platform
+ * Product-first Northside Intelligence content: 3/2/2 mix, one post per platform
  * per day across LinkedIn, Instagram, Facebook and Threads (Reddit is separate).
  * Reads real `content_machine_posts` from NI-Brain when the service key is present
  * and the rows are readable; otherwise serves representative fixtures so the UI is
@@ -59,7 +59,7 @@ const FIXTURE_POSTS: ContentPost[] = [
     pillar: 'product',
     postType: 'Post',
     caption:
-      'Most teams don\u2019t have a data problem — they have a decision problem. Here\u2019s how NORTHSiDE Intelligence turns scattered signal into one operator view. \u2192',
+      'Most teams don\u2019t have a data problem — they have a decision problem. Here\u2019s how Northside Intelligence turns scattered signal into one operator view. \u2192',
     status: 'pending_approval',
     dayIndex: 0,
     themeName: 'Product spotlight',
