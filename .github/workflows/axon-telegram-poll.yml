@@ -1,9 +1,16 @@
 name: AXON Telegram Poll
 
+# RETIRED 2026-08-26 (housekeeping PR): this job's automatic 15-min schedule
+# is removed. axon_cron_jobs id "axon-telegram-poll" has been enabled=false
+# since 2026-08-10 (real, verified: 619 historical runs, last 3 all ok before
+# retirement), so the script already no-op'd via lib/axon-cron-guard.mjs on
+# every one of those scheduled fires — this just stops burning CI minutes on
+# a fire that was already a no-op. workflow_dispatch / repository_dispatch
+# stay live so it can still be fired on demand (e.g. if the webhook ever
+# needs a manual fallback poll again).
 on:
-  schedule:
-    # Fallback poll when webhook is not registered (GitHub cron is best-effort, not every 2 min)
-    - cron: '*/15 * * * *'
+  # schedule:
+  #   - cron: '*/15 * * * *'  # retired 2026-08-26 — see comment above
   workflow_dispatch:
   repository_dispatch:
     types: [axon-telegram-poll]
