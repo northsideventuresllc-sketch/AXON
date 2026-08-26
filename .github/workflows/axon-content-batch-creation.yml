@@ -1,0 +1,47 @@
+name: AXON Content Batch Creation
+
+# Built 2026-08-26 (JB direct order). Rebuilt from AXON Content Batch Notify
+# (which only notifies). Manual trigger only until JB/EXEC review this PR —
+# do not add a schedule: trigger here without that review.
+on:
+  workflow_dispatch:
+    inputs:
+      allow_match_fit:
+        description: 'Also draft Match Fit posts (default off)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: axon-content-batch-creation
+  cancel-in-progress: false
+
+jobs:
+  create:
+    name: AXON — Content batch creation (internal data only, MF gated)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create draft content batch
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CONTENT_MACHINE_ALLOW_MATCH_FIT: ${{ inputs.allow_match_fit == 'true' && '1' || '0' }}
+        run: node scripts/axon-content-batch-creation.mjs
+
+      - name: Report failure
+        if: failure()
+        run: echo "AXON content batch creation failed — check Actions logs"

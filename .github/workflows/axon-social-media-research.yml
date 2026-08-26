@@ -1,0 +1,37 @@
+name: AXON Social Media Research
+
+# NEW job, scaffolding only. Built 2026-08-26 (JB direct order).
+# Zero external API calls this pass — real platform credentials aren't
+# wired in yet. Manual trigger only until JB/EXEC review this PR.
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: axon-social-media-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    name: AXON — Social media research (scaffold, NEEDS_CREDENTIALS by design)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run per-venture research dispatch
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node scripts/axon-social-media-research.mjs
+
+      - name: Report failure
+        if: failure()
+        run: echo "AXON social media research failed — check Actions logs"
