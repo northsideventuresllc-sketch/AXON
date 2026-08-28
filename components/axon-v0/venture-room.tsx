@@ -44,6 +44,13 @@ interface CatalogTool {
   icon: string;
 }
 
+interface ThreadSummary {
+  thread: string;
+  title: string;
+  last_message_at: string;
+  last_sender: string;
+}
+
 const ROLE_GLYPH: Record<string, string> = {
   exec_assistant: '◈',
   build_manager: '⬢',
@@ -69,6 +76,9 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
   const [error, setError] = useState('');
   const [lastReplyAgent, setLastReplyAgent] = useState<string | null>(null);
   const [decisionTick, setDecisionTick] = useState(0);
+  const [activeThread, setActiveThread] = useState('group');
+  const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [loggedOut, setLoggedOut] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadVenture = useCallback(() => {
@@ -82,21 +92,64 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
       .catch(() => setError('Could not reach the venture grid.'));
   }, [ventureId]);
 
+  // Saved-chats sidebar. A 401 here means the session cookie expired mid-visit
+  // (the page itself already passed middleware auth to render) — show the sign-in
+  // invitation instead of an empty/broken list, per JB's explicit requirement.
+  const loadThreads = useCallback(() => {
+    fetch(apiUrl(`/api/axon-v0/threads?ventureId=${ventureId}`))
+      .then((r) => {
+        if (r.status === 401) {
+          setLoggedOut(true);
+          return null;
+        }
+        return r.json();
+      })
+      .then((d) => {
+        if (!d) return;
+        setLoggedOut(false);
+        setThreads(d.threads || []);
+      })
+      .catch(() => {});
+  }, [ventureId]);
+
+  const loadMessages = useCallback(
+    (thread: string) => {
+      fetch(apiUrl(`/api/axon-v0/agent-chat?ventureId=${ventureId}&thread=${encodeURIComponent(thread)}`))
+        .then((r) => r.json())
+        .then((d) => setMessages(d.messages || []))
+        .catch(() => {});
+    },
+    [ventureId]
+  );
+
   useEffect(() => {
     loadVenture();
-    fetch(apiUrl(`/api/axon-v0/agent-chat?ventureId=${ventureId}&thread=group`))
-      .then((r) => r.json())
-      .then((d) => setMessages(d.messages || []))
-      .catch(() => {});
+    loadThreads();
     fetch(apiUrl(`/api/axon-v0/venture-tools?ventureId=${ventureId}`))
       .then((r) => r.json())
       .then((d) => setCatalog(d.catalog || []))
       .catch(() => {});
-  }, [ventureId, loadVenture]);
+  }, [ventureId, loadVenture, loadThreads]);
+
+  useEffect(() => {
+    loadMessages(activeThread);
+  }, [activeThread, loadMessages]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
+
+  function openThread(thread: string) {
+    setActiveThread(thread);
+    setError('');
+  }
+
+  function startNewChat() {
+    const id = `sub:${(globalThis.crypto ?? crypto).randomUUID()}`;
+    setMessages([]);
+    setActiveThread(id);
+    setError('');
+  }
 
   async function send() {
     const text = input.trim();
@@ -112,7 +165,7 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
           ventureId,
           agentId: targetAgent,
           message: text,
-          thread: 'group',
+          thread: activeThread,
         }),
       });
       const d = await res.json();
@@ -123,6 +176,7 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
         setDecisionTick((t) => t + 1);
       }
       if (autoVoice && d.agentMsg?.content) speak(d.agentMsg.content);
+      loadThreads();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The room did not answer.');
     } finally {
@@ -245,8 +299,53 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
         })}
       </div>
 
-      {/* Group chat */}
-      <div className="v0-panel mt-6 flex flex-col p-4">
+      {/* Saved chats + group chat */}
+      <div className="mt-6 flex flex-col gap-4 lg:flex-row">
+        {/* Saved-chats sidebar */}
+        <div className="v0-panel flex w-full flex-col p-4 lg:w-56 lg:flex-none">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">Saved chats</p>
+          {loggedOut ? (
+            <div className="mt-3">
+              <p className="text-xs text-slate-400">Sign in to see and save your chats.</p>
+              <Link href="/login" className="v0-chip mt-2 inline-block bg-cyan-400/15 text-cyan-100">
+                Log In
+              </Link>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={startNewChat}
+                className="v0-chip mt-3 w-full bg-cyan-400/15 text-cyan-100"
+              >
+                ＋ New Chat
+              </button>
+              <div className="mt-3 flex flex-col gap-1.5 overflow-y-auto lg:max-h-96">
+                {threads.length === 0 && (
+                  <p className="text-xs text-slate-500">No saved chats yet.</p>
+                )}
+                {threads.map((t) => (
+                  <button
+                    key={t.thread}
+                    onClick={() => openThread(t.thread)}
+                    className={`rounded-lg border px-2.5 py-2 text-left text-xs transition ${
+                      activeThread === t.thread
+                        ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-100'
+                        : 'border-white/10 bg-black/30 text-slate-300 hover:border-cyan-400/30'
+                    }`}
+                  >
+                    <p className="truncate">{t.title}</p>
+                    <p className="mt-0.5 text-[9px] uppercase tracking-widest text-slate-500">
+                      {new Date(t.last_message_at).toLocaleDateString()}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Group chat */}
+        <div className="v0-panel flex flex-1 flex-col p-4">
         <div className="flex items-center justify-between">
           <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">
             Venture room — everything connected
@@ -361,6 +460,7 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
             </span>
           ))}
         </p>
+        </div>
       </div>
     </div>
   );
