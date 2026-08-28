@@ -12,7 +12,17 @@ import {
   VentureTool,
 } from './types';
 
-const ACCOUNT_ID = '00000000-0000-0000-0000-000000000001'; // JB; multi-tenant callers pass their own later
+// Last-resort fallback only. This id matches NO row in axon_accounts and never did.
+// Every account-scoped query must go through accountId() below — filtering on this
+// constant against live tables returns ZERO rows, which is worse than the in-memory
+// fallback it replaced. Found by an independent verifier 2026-08-28 after the first
+// pass fixed only 3 of the 10 account-scoped functions.
+const ACCOUNT_ID_FALLBACK = '00000000-0000-0000-0000-000000000001';
+
+/** The real account id, resolved by operator email. Falls back only if no row exists. */
+async function accountId(): Promise<string> {
+  return (await getAccount())?.id ?? ACCOUNT_ID_FALLBACK;
+}
 
 function sb() {
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -90,7 +100,7 @@ async function tableLive(table: string): Promise<boolean> {
 // ---------- ventures ----------
 export async function listVentures(): Promise<Venture[]> {
   if (await tableLive('axon_ventures')) {
-    return sb().sbSelect('axon_ventures', `account_id=eq.${ACCOUNT_ID}&order=sort_order.asc`);
+    return sb().sbSelect('axon_ventures', `account_id=eq.${await accountId()}&order=sort_order.asc`);
   }
   seedMem();
   return mem().ventures;
@@ -100,7 +110,7 @@ export async function createVenture(name: string, tagline?: string, accent?: str
   const existing = await listVentures();
   if (await tableLive('axon_ventures')) {
     const v = await sb().sbInsert('axon_ventures', {
-      account_id: ACCOUNT_ID,
+      account_id: await accountId(),
       name,
       tagline: tagline || null,
       accent: accent || '#00D4FF',
@@ -108,7 +118,7 @@ export async function createVenture(name: string, tagline?: string, accent?: str
     });
     for (const a of DEFAULT_AGENTS) {
       await sb().sbInsert('axon_venture_agents', {
-        account_id: ACCOUNT_ID,
+        account_id: await accountId(),
         venture_id: v.id,
         role: a.role,
         name: a.name,
@@ -145,7 +155,7 @@ export async function createVenture(name: string, tagline?: string, accent?: str
 export async function listAgents(ventureId?: string): Promise<VentureAgent[]> {
   if (await tableLive('axon_venture_agents')) {
     const f = ventureId ? `&venture_id=eq.${ventureId}` : '';
-    return sb().sbSelect('axon_venture_agents', `account_id=eq.${ACCOUNT_ID}${f}&order=created_at.asc`);
+    return sb().sbSelect('axon_venture_agents', `account_id=eq.${await accountId()}${f}&order=created_at.asc`);
   }
   seedMem();
   return mem().agents.filter((a) => !ventureId || a.venture_id === ventureId);
@@ -156,7 +166,7 @@ export async function listMessages(ventureId: string, thread = 'group', limit = 
   if (await tableLive('axon_agent_messages')) {
     return sb().sbSelect(
       'axon_agent_messages',
-      `account_id=eq.${ACCOUNT_ID}&venture_id=eq.${ventureId}&thread=eq.${thread}&order=created_at.asc&limit=${limit}`
+      `account_id=eq.${await accountId()}&venture_id=eq.${ventureId}&thread=eq.${thread}&order=created_at.asc&limit=${limit}`
     );
   }
   seedMem();
@@ -169,7 +179,7 @@ export async function addMessage(
   msg: Omit<AgentMessage, 'id' | 'created_at'>
 ): Promise<AgentMessage> {
   if (await tableLive('axon_agent_messages')) {
-    return sb().sbInsert('axon_agent_messages', { account_id: ACCOUNT_ID, ...msg });
+    return sb().sbInsert('axon_agent_messages', { account_id: await accountId(), ...msg });
   }
   seedMem();
   const full: AgentMessage = { id: uid(), created_at: new Date().toISOString(), ...msg };
@@ -338,7 +348,7 @@ export async function setAssignment(a: AgentModelAssignment): Promise<void> {
       });
     } else {
       await sb().sbInsert('axon_agent_model_assignments', {
-        account_id: account?.id ?? ACCOUNT_ID,
+        account_id: await accountId(),
         agent_id: a.agent_id,
         mode: a.mode,
         lane_id: a.lane_id ?? null,
@@ -353,7 +363,7 @@ export async function setAssignment(a: AgentModelAssignment): Promise<void> {
 // ---------- per-venture tools ----------
 export async function listVentureTools(ventureId: string): Promise<VentureTool[]> {
   if (await tableLive('axon_venture_tools')) {
-    return sb().sbSelect('axon_venture_tools', `account_id=eq.${ACCOUNT_ID}&venture_id=eq.${ventureId}`);
+    return sb().sbSelect('axon_venture_tools', `account_id=eq.${await accountId()}&venture_id=eq.${ventureId}`);
   }
   seedMem();
   return mem().ventureTools.filter((t) => t.venture_id === ventureId);
@@ -366,7 +376,7 @@ export async function assignVentureTool(input: {
   notes?: string;
 }): Promise<VentureTool> {
   if (await tableLive('axon_venture_tools')) {
-    return sb().sbInsert('axon_venture_tools', { account_id: ACCOUNT_ID, config: {}, ...input });
+    return sb().sbInsert('axon_venture_tools', { account_id: await accountId(), config: {}, ...input });
   }
   seedMem();
   const t: VentureTool = {

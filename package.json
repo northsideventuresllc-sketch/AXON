@@ -34,7 +34,8 @@
     "registry:check": "node scripts/axon-arceus-registry-check.mjs",
     "registry:check:dry": "AXON_DRY_RUN=1 node scripts/axon-arceus-registry-check.mjs",
     "lint:portal-parity": "eslint --config .eslintrc.portal-parity.json --ext .ts,.tsx components/axon",
-    "test:router": "node tests/router-scoring.test.mjs"
+    "test:router": "node tests/router-scoring.test.mjs",
+    "test:store": "node tests/store-account-scope.test.mjs"
   },
   "engines": {
     "node": ">=20"
