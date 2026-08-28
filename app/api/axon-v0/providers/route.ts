@@ -15,17 +15,20 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    // Assignment update: { assign: { agentId, mode, providerId } }
+    // Assignment update: { assign: { agentId, mode, laneId } }
+    // laneId is a router_models row (a route x model pair). providerId is accepted as a
+    // legacy alias so an older client build keeps working through the rename.
     if (body.assign) {
-      const { agentId, mode, providerId } = body.assign;
+      const { agentId, mode, laneId, providerId } = body.assign;
       if (!agentId || !['auto', 'fixed'].includes(mode)) {
         return NextResponse.json({ error: 'agentId and valid mode required' }, { status: 400 });
       }
-      await setAssignment({ agent_id: agentId, mode, provider_id: providerId || null });
+      await setAssignment({ agent_id: agentId, mode, lane_id: laneId || providerId || null });
       return NextResponse.json({ ok: true });
     }
-    // New provider: { label, kind, base_url?, model, api_key? }
-    const { label, kind, base_url, model, api_key } = body;
+    // New custom lane: { label, kind, base_url?, model, secret_key? }
+    // secret_key is the NAME of a key in ni_platform_secrets — never the value itself.
+    const { label, kind, base_url, model, secret_key } = body;
     if (!label?.trim() || !model?.trim()) {
       return NextResponse.json({ error: 'label and model required' }, { status: 400 });
     }
@@ -34,7 +37,7 @@ export async function POST(req: Request) {
       kind: kind || 'openai-compatible',
       base_url: base_url?.trim() || undefined,
       model: model.trim(),
-      api_key: api_key?.trim() || undefined,
+      secret_key: secret_key?.trim() || undefined,
     });
     return NextResponse.json({ provider });
   } catch (err) {

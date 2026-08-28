@@ -190,33 +190,118 @@ export async function crossVentureContext(excludeVentureId: string, limit = 12):
   return lines.slice(-limit).join('\n');
 }
 
-// ---------- model providers / assignments ----------
+// ---------- account ----------
+/** Service-role key, for callers that hand it to the router core directly. */
+export function supabaseKey(): string {
+  return process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+}
+
+let accountCache: { id: string; has_mini_access: boolean } | null = null;
+
+/**
+ * The real account row. ACCOUNT_ID above was a placeholder that never matched a live row —
+ * resolving by the operator email is what actually finds it.
+ */
+export async function getAccount(): Promise<{ id: string; has_mini_access: boolean } | null> {
+  if (accountCache) return accountCache;
+  if (!(await tableLive('axon_accounts'))) return null;
+  const email = process.env.AXON_OPERATOR_EMAIL || 'northside.ventures.llc@gmail.com';
+  const rows = await sb().sbSelect('axon_accounts', `ni_email=eq.${encodeURIComponent(email)}&limit=1`);
+  const row = rows[0];
+  if (!row) return null;
+  accountCache = { id: row.id, has_mini_access: !!row.has_mini_access };
+  return accountCache;
+}
+
+// ---------- connectors / lanes / assignments ----------
+// Providers live in router_routes x router_models (the "lanes"), joined to this account's
+// axon_account_connectors. The old axon_model_providers table was dropped before it was ever
+// created — it duplicated router_routes and stored a raw api_key where router_routes stores
+// a secret_key NAME pointing at ni_platform_secrets.
+
+/** Every lane this account can use, newest catalog state, in the operator's own order. */
 export async function listProviders(): Promise<ModelProvider[]> {
-  if (await tableLive('axon_model_providers')) {
-    const rows = await sb().sbSelect('axon_model_providers', `account_id=eq.${ACCOUNT_ID}&order=created_at.asc`);
-    return rows.map((r) => ({
-      id: r.id,
-      label: r.label,
-      kind: r.kind,
-      base_url: r.base_url,
-      model: r.model,
-      has_key: Boolean(r.api_key),
-    }));
+  if (await tableLive('router_models')) {
+    const account = await getAccount();
+    const [routes, models, connectors] = await Promise.all([
+      sb().sbSelect('router_routes', 'select=*'),
+      sb().sbSelect('router_models', 'select=*&order=cost_tier.asc,priority.asc'),
+      account
+        ? sb().sbSelect('axon_account_connectors', `account_id=eq.${account.id}`)
+        : Promise.resolve([] as any[]),
+    ]);
+    const routeById = new Map(routes.map((r: any) => [r.id, r]));
+    const connByRoute = new Map(connectors.map((c: any) => [c.route_id, c]));
+    return models
+      .map((m: any) => {
+        const route: any = routeById.get(m.route_id);
+        if (!route) return null;
+        const conn: any = connByRoute.get(route.id);
+        return {
+          id: m.id,
+          label: `${route.name} · ${m.model}`,
+          kind: route.connector_kind || route.kind,
+          base_url: route.base_url,
+          model: m.model,
+          // A subscription lane's "key" is a signed-in CLI, not a secret.
+          has_key: route.connector_kind === 'subscription'
+            ? conn?.status === 'connected'
+            : Boolean(route.secret_key),
+        } as ModelProvider;
+      })
+      .filter(Boolean) as ModelProvider[];
   }
   seedMem();
   return mem().providers.map(({ api_key, ...p }) => ({ ...p, has_key: Boolean(api_key) }));
 }
 
+/**
+ * Add a custom lane (a self-hosted Ollama, or any OpenAI-compatible endpoint). Scoped to
+ * this account so it never pollutes the global catalog. Keys are stored by NAME only.
+ */
 export async function addProvider(input: {
   label: string;
   kind: ModelProvider['kind'];
   base_url?: string;
   model: string;
-  api_key?: string;
+  secret_key?: string;
 }): Promise<ModelProvider> {
-  if (await tableLive('axon_model_providers')) {
-    const r = await sb().sbInsert('axon_model_providers', { account_id: ACCOUNT_ID, ...input });
-    return { id: r.id, label: r.label, kind: r.kind, base_url: r.base_url, model: r.model, has_key: Boolean(r.api_key) };
+  if (await tableLive('router_models')) {
+    const account = await getAccount();
+    const route = await sb().sbInsert('router_routes', {
+      name: `${input.label}-${Date.now()}`,
+      kind: input.kind === 'ollama' ? 'local' : 'api',
+      connector_kind: input.kind === 'ollama' ? 'local' : 'api',
+      base_url: input.base_url || null,
+      secret_key: input.secret_key || null,
+      account_id: account?.id ?? null,
+      enabled: true,
+    });
+    const lane = await sb().sbInsert('router_models', {
+      route_id: route.id,
+      model: input.model,
+      tier_rank: 3,
+      priority: 50,
+      enabled: true,
+      cost_tier: input.kind === 'ollama' ? 0 : 2,
+    });
+    if (account) {
+      await sb().sbInsert('axon_account_connectors', {
+        account_id: account.id,
+        route_id: route.id,
+        connector_kind: route.connector_kind,
+        status: 'connected',
+        secret_key: input.secret_key || null,
+      });
+    }
+    return {
+      id: lane.id,
+      label: input.label,
+      kind: input.kind,
+      base_url: input.base_url || null,
+      model: input.model,
+      has_key: Boolean(input.secret_key),
+    };
   }
   seedMem();
   const p = {
@@ -225,22 +310,12 @@ export async function addProvider(input: {
     kind: input.kind,
     base_url: input.base_url || null,
     model: input.model,
-    api_key: input.api_key || null,
-    has_key: Boolean(input.api_key),
+    api_key: input.secret_key || null,
+    has_key: Boolean(input.secret_key),
   };
   mem().providers.push(p);
   const { api_key, ...pub } = p;
   return pub;
-}
-
-export async function getProviderWithKey(
-  providerId: string
-): Promise<{ kind: string; base_url: string | null; model: string; api_key: string | null } | null> {
-  if (await tableLive('axon_model_providers')) {
-    const rows = await sb().sbSelect('axon_model_providers', `id=eq.${providerId}&limit=1`);
-    return rows[0] || null;
-  }
-  return mem().providers.find((p) => p.id === providerId) || null;
 }
 
 export async function getAssignment(agentId: string): Promise<AgentModelAssignment | null> {
@@ -253,15 +328,21 @@ export async function getAssignment(agentId: string): Promise<AgentModelAssignme
 
 export async function setAssignment(a: AgentModelAssignment): Promise<void> {
   if (await tableLive('axon_agent_model_assignments')) {
+    const account = await getAccount();
     const existing = await getAssignment(a.agent_id);
     if (existing) {
       await sb().sbPatch('axon_agent_model_assignments', `agent_id=eq.${a.agent_id}`, {
         mode: a.mode,
-        provider_id: a.provider_id,
+        lane_id: a.lane_id ?? null,
         updated_at: new Date().toISOString(),
       });
     } else {
-      await sb().sbInsert('axon_agent_model_assignments', { account_id: ACCOUNT_ID, ...a });
+      await sb().sbInsert('axon_agent_model_assignments', {
+        account_id: account?.id ?? ACCOUNT_ID,
+        agent_id: a.agent_id,
+        mode: a.mode,
+        lane_id: a.lane_id ?? null,
+      });
     }
     return;
   }

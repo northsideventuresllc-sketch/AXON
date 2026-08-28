@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
-import { generateAxonReply } from '@/lib/axon-web-chat';
-import { routeFixedIfAssigned } from '@/lib/axon-v0/omni-router';
+import { routeChat } from '@/lib/axon-router';
 import {
   addMessage,
   crossVentureContext,
+  getAccount,
+  getAssignment,
   listAgents,
   listMessages,
   listVentures,
   listVentureTools,
+  supabaseKey,
 } from '@/lib/axon-v0/store';
 
 export async function GET(req: Request) {
@@ -77,36 +79,46 @@ export async function POST(req: Request) {
       .filter(Boolean)
       .join('\n\n');
 
-    // Omni-Router: fixed provider if assigned, else the canonical AXON tier chain.
-    let reply: string;
-    let route: string;
-    const fixed = await routeFixedIfAssigned(agent.id, [
-      { role: 'system', content: contextPrompt },
-      { role: 'user', content: message.trim() },
-    ]);
-    if (fixed) {
-      reply = fixed.reply;
-      route = fixed.route;
-    } else {
-      const result = await generateAxonReply(message.trim(), 'chat', [], undefined, {
-        title: `${agent.name} — ${venture.name}`,
-        source: 'axon-v0-venture',
-        prompt: contextPrompt,
-      });
-      reply = result.reply;
-      route = 'AXON auto (tier chain)';
-    }
+    // Omni Router — one entry point. 'fixed' honours the operator's pin, 'auto' scores every
+    // connected lane on capability fit x cost x live health and records WHY it picked one.
+    const assignment = await getAssignment(agent.id);
+    const account = await getAccount();
+    const routed = await routeChat(supabaseKey(), {
+      messages: [
+        { role: 'system', content: contextPrompt },
+        { role: 'user', content: message.trim() },
+      ],
+      mode: assignment?.mode === 'fixed' ? 'fixed' : 'auto',
+      laneOverride: (assignment as { lane_id?: string } | null)?.lane_id ?? null,
+      fixedOrder: (assignment as { fixed_order?: string[] } | null)?.fixed_order ?? null,
+      accountId: account?.id ?? null,
+      agentId: agent.id,
+      agentRole: agent.role,
+      hasMini: !!account?.has_mini_access,
+      venture: venture.name,
+      requestId: userMsg?.id ?? null,
+    });
 
     const agentMsg = await addMessage({
       venture_id: ventureId,
       agent_id: agent.id,
       thread,
       sender: agent.name,
-      content: reply,
-      meta: { route },
+      content: routed.reply,
+      meta: {
+        route: routed.route,
+        capability: routed.capabilityClass,
+        decision_id: routed.decisionId,
+      },
     } as any);
 
-    return NextResponse.json({ userMsg, agentMsg, route });
+    return NextResponse.json({
+      userMsg,
+      agentMsg,
+      route: routed.route,
+      capability: routed.capabilityClass,
+      decisionId: routed.decisionId,
+    });
   } catch (err) {
     const raw = err instanceof Error ? err.message : 'Agent chat failed';
     // Keep infrastructure jargon off the operator's screen.
