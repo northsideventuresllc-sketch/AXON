@@ -32,7 +32,8 @@
     "test:wisdom": "node tests/wisdom-absorb-loop.test.mjs",
     "test:runpod-tier": "node tests/runpod-tier.test.mjs",
     "registry:check": "node scripts/axon-arceus-registry-check.mjs",
-    "registry:check:dry": "AXON_DRY_RUN=1 node scripts/axon-arceus-registry-check.mjs"
+    "registry:check:dry": "AXON_DRY_RUN=1 node scripts/axon-arceus-registry-check.mjs",
+    "lint:portal-parity": "eslint --config .eslintrc.portal-parity.json --ext .ts,.tsx components/axon"
   },
   "engines": {
     "node": ">=20"
@@ -53,6 +54,8 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@types/three": "^0.185.4",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.28",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3"
   }

@@ -18,6 +18,18 @@ name: Sync AXON UI to NI Portal
 #
 # Verified on a real run 2026-08-04: with fetchChatHistory removed from AXON's
 # axon-profile.ts the script exited 1 and `git status` in the portal clone was empty.
+#
+# ── HEALTH-AXON-LINT-PARITY ─────────────────────────────────────────────────────────
+# On 2026-07-29 AXON PR #103 shipped components/axon/match-fit-venture-hub.tsx with a
+# raw apostrophe. AXON had no ESLint config, so AXON's own Vercel build went READY;
+# this workflow then synced the file into northside-intelligence and the PORTAL
+# production build failed on react/no-unescaped-entities. Third time this exact file
+# broke portal prod. The "Enforce NI-Portal ESLint rules" step below runs the portal's
+# own ESLint config (next/core-web-vitals, same eslint/eslint-config-next versions as
+# northside-intelligence/package.json — see .eslintrc.portal-parity.json) against
+# components/axon/** BEFORE the clone/sync/push steps, so a violation here refuses the
+# whole sync and nothing reaches the portal repo. The PR-time equivalent of this check
+# lives in .github/workflows/axon-lint-portal-parity.yml.
 
 on:
   push:
@@ -88,6 +100,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Enforce NI-Portal ESLint rules on components/axon/**
+        run: npm run lint:portal-parity
 
       - name: Clone NI portal repo
         env:
@@ -149,4 +168,9 @@ jobs:
           echo "file and drop an export the portal still imports. Port the symbol back into"
           echo "the AXON copy, or drop that file from LIB_FILES / add it to PORTAL_ONLY_FILES"
           echo "in scripts/sync-portal-ui.mjs. Do not delete the portal callers."
+          echo ""
+          echo "If the failed step is 'Enforce NI-Portal ESLint rules on components/axon/**',"
+          echo "a file under components/axon/** breaks a rule the portal's own build enforces"
+          echo "(e.g. react/no-unescaped-entities on a raw apostrophe/quote in JSX text). Run"
+          echo "'npm run lint:portal-parity' locally, fix every reported error, and re-push."
 

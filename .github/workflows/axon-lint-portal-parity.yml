@@ -1,0 +1,61 @@
+name: AXON Lint — Portal Parity (components/axon/**)
+
+# HEALTH-AXON-LINT-PARITY
+#
+# Enforces the exact ESLint rules northside-intelligence's production build enforces
+# (northside-intelligence/.eslintrc.json: "next/core-web-vitals", eslint ^8.57.1 +
+# eslint-config-next ^14.2.28 — same versions AXON now installs in
+# .eslintrc.portal-parity.json / package.json) against components/axon/**, the exact
+# tree scripts/sync-portal-ui.mjs copies into the portal on every push to main.
+#
+# PROVEN 2026-07-29: AXON PR #103 shipped components/axon/match-fit-venture-hub.tsx
+# with a raw apostrophe. AXON had no ESLint config at all, so nothing in AXON's own
+# build ever ran react/no-unescaped-entities — AXON's own Vercel build went READY.
+# sync-ni-portal then copied the file into northside-intelligence and the portal
+# production build FAILED on react/no-unescaped-entities. Third time this same file
+# broke portal prod.
+#
+# This workflow is the PR gate: it must be added as a required status check in this
+# repo's branch protection for main so a violation blocks merge, not just push.
+# .github/workflows/sync-ni-portal.yml also runs the same check directly in the push
+# path as defense-in-depth, since that is the workflow that actually writes into the
+# portal repo.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'components/axon/**'
+      - '.eslintrc.portal-parity.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/axon-lint-portal-parity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'components/axon/**'
+      - '.eslintrc.portal-parity.json'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: eslint (NI-Portal rules) — components/axon/**
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout AXON
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint components/axon/** with the portal's ESLint rules
+        run: npm run lint:portal-parity
