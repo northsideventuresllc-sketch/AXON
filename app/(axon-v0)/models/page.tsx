@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { apiUrl } from '@/lib/api-base';
 import { loadPrefs, patchPrefs, type WindowMode } from '@/lib/axon-v0/view-prefs';
+import { ConnectorCatalog } from '@/components/axon-v0/connector-catalog';
 import '@/components/axon-v0/settings-sections.css';
 
 interface Provider {
@@ -27,12 +28,29 @@ interface Venture {
   agents: Agent[];
 }
 
-const TIER_CHAIN = [
-  'AXON local (Mac mini)',
-  'RunPod AXON v1',
-  'Gemini primary',
-  'Gemini backup',
-  'Claude (last resort)',
+interface ChainEntry {
+  position: number;
+  laneId: string;
+  route: string;
+  model: string;
+  connectorKind: string;
+  costTier: 0 | 1 | 2 | 3;
+  free: boolean;
+  isSafetyNet: boolean;
+  requiresMini: boolean;
+  health: string;
+  score: number;
+  reasons: string[];
+}
+
+const CAPABILITY_OPTIONS: { value: string; label: string }[] = [
+  { value: 'cheap_chat', label: 'Quick chat' },
+  { value: 'long_context', label: 'Long context' },
+  { value: 'code_build', label: 'Code & build' },
+  { value: 'reasoning_planning', label: 'Reasoning & planning' },
+  { value: 'vision', label: 'Vision' },
+  { value: 'tool_use_agentic', label: 'Tool use' },
+  { value: 'computer_use', label: 'Computer use' },
 ];
 
 // localStorage keys owned by this Settings page (view-prefs.ts untouched).
@@ -111,12 +129,15 @@ const SECTIONS = [
 ];
 
 export default function SettingsPage() {
-  // --- Omni-Router state (preserved from the original models page) ---
+  // --- Router state ---
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [assignments, setAssignments] = useState<Record<string, { mode: string; laneId: string | null }>>({});
   const [ventures, setVentures] = useState<Venture[]>([]);
-  const [form, setForm] = useState({ label: '', kind: 'openai-compatible', base_url: '', model: '', api_key: '' });
-  const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
+  const [chainCapability, setChainCapability] = useState('cheap_chat');
+  const [chain, setChain] = useState<ChainEntry[]>([]);
+  const [chainLoading, setChainLoading] = useState(true);
+  const [chainError, setChainError] = useState('');
 
   // --- Settings state ---
   const [welcomeTemplate, setWelcomeTemplate] = useState('Welcome');
@@ -136,7 +157,10 @@ export default function SettingsPage() {
   const load = useCallback(() => {
     fetch(apiUrl('/api/axon-v0/providers'))
       .then((r) => r.json())
-      .then((d) => setProviders(d.providers || []))
+      .then((d) => {
+        setProviders(d.providers || []);
+        setAssignments(d.assignments || {});
+      })
       .catch(() => {});
     fetch(apiUrl('/api/axon-v0/ventures'))
       .then((r) => r.json())
@@ -145,6 +169,21 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(load, [load]);
+
+  const loadChain = useCallback((capability: string) => {
+    setChainLoading(true);
+    setChainError('');
+    fetch(apiUrl(`/api/axon-v0/router/chain?capability=${capability}`))
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) throw new Error(d.error);
+        setChain(d.chain || []);
+      })
+      .catch(() => setChainError('Could not load the routing order.'))
+      .finally(() => setChainLoading(false));
+  }, []);
+
+  useEffect(() => loadChain(chainCapability), [chainCapability, loadChain]);
 
   // Hydrate settings from prefs / localStorage on mount (client only).
   useEffect(() => {
@@ -162,35 +201,12 @@ export default function SettingsPage() {
     window.setTimeout(() => setFlash((f) => ({ ...f, [id]: '' })), 1800);
   }
 
-  // --- Omni-Router handlers (preserved) ---
-  async function addProvider(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.label.trim() || !form.model.trim()) return;
-    setSaving(true);
-    setStatus('');
-    try {
-      const res = await fetch(apiUrl('/api/axon-v0/providers'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'Could not save the model.');
-      setForm({ label: '', kind: 'openai-compatible', base_url: '', model: '', api_key: '' });
-      setStatus('Model saved. The key never leaves the server.');
-      load();
-    } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Could not save the model.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function assign(agentId: string, value: string) {
     const body =
       value === 'auto'
-        ? { assign: { agentId, mode: 'auto', providerId: null } }
-        : { assign: { agentId, mode: 'fixed', providerId: value } };
+        ? { assign: { agentId, mode: 'auto', laneId: null } }
+        : { assign: { agentId, mode: 'fixed', laneId: value } };
+    setAssignments((a) => ({ ...a, [agentId]: { mode: value === 'auto' ? 'auto' : 'fixed', laneId: value === 'auto' ? null : value } }));
     await fetch(apiUrl('/api/axon-v0/providers'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -435,110 +451,81 @@ export default function SettingsPage() {
               <span>
                 <span className="st-section-title">Models &amp; routing</span>
                 <span className="st-section-sub">
-                  Plug in any model. Every agent runs on AXON auto unless you pin it.
+                  Connect any provider. Every agent runs on AXON auto unless you pin it.
                 </span>
               </span>
               <span className={`st-caret ${open.models ? 'st-caret-open' : ''}`}>▶</span>
             </button>
             {open.models && (
-              <div className="st-section-body">
-                <div className="grid gap-6 lg:grid-cols-2">
-                  {/* Tier chain + BYO models */}
-                  <div className="space-y-6">
-                    <div className="rounded-lg border border-cyan-400/10 bg-black/20 p-4">
-                      <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">
-                        AXON auto — the tier chain
-                      </p>
-                      <ol className="mt-3 space-y-1.5 font-mono text-xs text-slate-300">
-                        {TIER_CHAIN.map((t, i) => (
-                          <li key={t}>
-                            <span className="text-cyan-300/70">{i + 1}.</span> {t}
-                          </li>
-                        ))}
-                      </ol>
-                      <p className="mt-3 text-[11px] text-slate-500">
-                        Tries each tier in order and falls through automatically when one is down.
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg border border-cyan-400/10 bg-black/20 p-4">
-                      <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">Your models</p>
-                      <div className="mt-2 space-y-2">
-                        {providers.length === 0 && <p className="text-xs text-slate-500">None added yet.</p>}
-                        {providers.map((p) => (
-                          <div key={p.id} className="rounded-lg border border-cyan-400/10 bg-black/30 px-3 py-2">
-                            <p className="text-sm text-slate-200">{p.label}</p>
-                            <p className="mt-0.5 font-mono text-[11px] text-slate-500">
-                              {p.kind} · {p.model} {p.has_key ? '· 🔑 key stored' : '· no key'}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-
-                      <form onSubmit={addProvider} className="mt-4 space-y-2">
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Add a model</p>
-                        <input
-                          value={form.label}
-                          onChange={(e) => setForm({ ...form, label: e.target.value })}
-                          placeholder="Name (e.g. My GPT key)"
-                          className="w-full rounded-lg border border-cyan-400/20 bg-black/50 px-3 py-2 text-sm outline-none focus:border-cyan-400/60"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <select
-                            value={form.kind}
-                            onChange={(e) => setForm({ ...form, kind: e.target.value })}
-                            className="rounded-lg border border-cyan-400/20 bg-black/50 px-3 py-2 text-sm outline-none focus:border-cyan-400/60"
-                          >
-                            <option value="openai-compatible">OpenAI-compatible</option>
-                            <option value="anthropic">Anthropic</option>
-                            <option value="gemini">Gemini</option>
-                            <option value="ollama">Ollama (local)</option>
-                          </select>
-                          <input
-                            value={form.model}
-                            onChange={(e) => setForm({ ...form, model: e.target.value })}
-                            placeholder="Model id"
-                            className="rounded-lg border border-cyan-400/20 bg-black/50 px-3 py-2 text-sm outline-none focus:border-cyan-400/60"
-                          />
-                        </div>
-                        <input
-                          value={form.base_url}
-                          onChange={(e) => setForm({ ...form, base_url: e.target.value })}
-                          placeholder="Base URL (optional)"
-                          className="w-full rounded-lg border border-cyan-400/20 bg-black/50 px-3 py-2 text-sm outline-none focus:border-cyan-400/60"
-                        />
-                        <input
-                          type="password"
-                          value={form.api_key}
-                          onChange={(e) => setForm({ ...form, api_key: e.target.value })}
-                          placeholder="API key (stored server-side only)"
-                          className="w-full rounded-lg border border-cyan-400/20 bg-black/50 px-3 py-2 text-sm outline-none focus:border-cyan-400/60"
-                        />
-                        <button
-                          type="submit"
-                          disabled={saving}
-                          className="w-full rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-100 hover:bg-cyan-400/20 disabled:opacity-50"
-                        >
-                          {saving ? 'Saving…' : 'Save model'}
-                        </button>
-                      </form>
-                      {status && <p className="mt-2 text-[11px] text-cyan-200/80">{status}</p>}
-                    </div>
+              <div className="st-section-body space-y-6">
+                {/* Live auto-mode order, inspectable per capability */}
+                <div className="rounded-lg border border-cyan-400/10 bg-black/20 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">
+                      AXON auto — the live routing order
+                    </p>
+                    <select
+                      value={chainCapability}
+                      onChange={(e) => setChainCapability(e.target.value)}
+                      className="rounded-md border border-cyan-400/20 bg-black/50 px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-cyan-400/60"
+                    >
+                      {CAPABILITY_OPTIONS.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
+                  {chainError && <p className="mt-2 text-[11px] text-rose-300">{chainError}</p>}
+                  {chainLoading ? (
+                    <p className="mt-3 text-xs text-slate-500">Loading…</p>
+                  ) : (
+                    <ol className="mt-3 space-y-1.5 font-mono text-xs text-slate-300">
+                      {chain.map((c) => (
+                        <li key={c.laneId} className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="text-cyan-300/70">{c.position}.</span>
+                          <span>
+                            {c.route} · {c.model}
+                          </span>
+                          {c.free && <span className="text-[10px] text-cyan-300/70">free</span>}
+                          {c.isSafetyNet && <span className="text-[10px] text-amber-300/80">last-resort floor</span>}
+                          <span className="text-[10px] text-slate-500">{c.reasons.join(', ')}</span>
+                        </li>
+                      ))}
+                      {chain.length === 0 && <p className="text-xs text-slate-500">No lanes can serve this kind of work yet.</p>}
+                    </ol>
+                  )}
+                  <p className="mt-3 text-[11px] text-slate-500">
+                    Tries each lane in this order and falls through automatically when one is down. Reorder
+                    connectors below to change how ties get broken.
+                  </p>
+                </div>
 
-                  {/* Per-agent routing */}
-                  <div className="rounded-lg border border-cyan-400/10 bg-black/20 p-4">
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">Who runs on what</p>
-                    <div className="mt-3 space-y-4">
-                      {ventures.map((v) => (
-                        <div key={v.id}>
-                          <p className="text-xs font-medium text-slate-300">{v.name}</p>
-                          <div className="mt-1.5 space-y-1.5">
-                            {v.agents.map((a) => (
+                {/* Connector catalog */}
+                <div className="rounded-lg border border-cyan-400/10 bg-black/20 p-4">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">Connectors</p>
+                  <div className="mt-3">
+                    <ConnectorCatalog onChanged={load} />
+                  </div>
+                  {status && <p className="mt-2 text-[11px] text-cyan-200/80">{status}</p>}
+                </div>
+
+                {/* Per-agent routing */}
+                <div className="rounded-lg border border-cyan-400/10 bg-black/20 p-4">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">Who runs on what</p>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    {ventures.map((v) => (
+                      <div key={v.id}>
+                        <p className="text-xs font-medium text-slate-300">{v.name}</p>
+                        <div className="mt-1.5 space-y-1.5">
+                          {v.agents.map((a) => {
+                            const current = assignments[a.id];
+                            const value = current?.mode === 'fixed' && current.laneId ? current.laneId : 'auto';
+                            return (
                               <div key={a.id} className="flex items-center justify-between gap-2">
                                 <span className="truncate text-[11px] text-slate-400">{a.name}</span>
                                 <select
-                                  defaultValue="auto"
+                                  value={value}
                                   onChange={(e) => assign(a.id, e.target.value)}
                                   className="rounded-md border border-cyan-400/20 bg-black/50 px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-cyan-400/60"
                                 >
@@ -550,12 +537,12 @@ export default function SettingsPage() {
                                   ))}
                                 </select>
                               </div>
-                            ))}
-                          </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                      {ventures.length === 0 && <p className="text-xs text-slate-500">No ventures yet.</p>}
-                    </div>
+                      </div>
+                    ))}
+                    {ventures.length === 0 && <p className="text-xs text-slate-500">No ventures yet.</p>}
                   </div>
                 </div>
               </div>

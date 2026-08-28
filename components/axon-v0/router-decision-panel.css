@@ -1,0 +1,106 @@
+/* Router decision strip — collapsible "what AXON is doing, and why".
+   All classes prefixed rdp- to stay clear of shared globals.css / st-* / cc-*. */
+
+.rdp-strip {
+  border-top: 1px solid rgba(0, 212, 255, 0.12);
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.rdp-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.rdp-head-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.rdp-class {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(0, 212, 255, 0.75);
+  white-space: nowrap;
+}
+
+.rdp-reason {
+  font-size: 11px;
+  color: rgb(148, 163, 184);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rdp-caret {
+  font-size: 9px;
+  color: rgb(100, 116, 139);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.rdp-caret-open {
+  transform: rotate(90deg);
+}
+
+.rdp-body {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rdp-candidate {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rdp-candidate-chosen {
+  background: rgba(56, 242, 168, 0.08);
+  border: 1px solid rgba(56, 242, 168, 0.25);
+}
+
+.rdp-candidate-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.rdp-candidate-name {
+  font-size: 11px;
+  color: rgb(226, 232, 240);
+}
+
+.rdp-candidate-why {
+  font-size: 10px;
+  color: rgb(100, 116, 139);
+}
+
+.rdp-candidate-score {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: rgb(148, 163, 184);
+  white-space: nowrap;
+}
+
+.rdp-empty {
+  font-size: 11px;
+  color: rgb(100, 116, 139);
+}

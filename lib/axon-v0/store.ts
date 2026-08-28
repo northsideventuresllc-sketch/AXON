@@ -336,6 +336,14 @@ export async function getAssignment(agentId: string): Promise<AgentModelAssignme
   return mem().assignments.find((a) => a.agent_id === agentId) || null;
 }
 
+/** Every agent's current assignment, for a single hydrating fetch instead of one call per agent. */
+export async function listAssignments(): Promise<AgentModelAssignment[]> {
+  if (await tableLive('axon_agent_model_assignments')) {
+    return sb().sbSelect('axon_agent_model_assignments', 'select=*');
+  }
+  return mem().assignments;
+}
+
 export async function setAssignment(a: AgentModelAssignment): Promise<void> {
   if (await tableLive('axon_agent_model_assignments')) {
     const account = await getAccount();

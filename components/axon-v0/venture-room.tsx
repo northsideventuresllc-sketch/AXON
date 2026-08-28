@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { apiUrl } from '@/lib/api-base';
 import { speak } from '@/components/axon-v0/voice';
+import { RouterDecisionPanel } from '@/components/axon-v0/router-decision-panel';
 
 interface Agent {
   id: string;
@@ -66,6 +67,8 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
   const [showTools, setShowTools] = useState(false);
   const [catalog, setCatalog] = useState<CatalogTool[]>([]);
   const [error, setError] = useState('');
+  const [lastReplyAgent, setLastReplyAgent] = useState<string | null>(null);
+  const [decisionTick, setDecisionTick] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadVenture = useCallback(() => {
@@ -115,6 +118,10 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'The room did not answer.');
       setMessages((prev) => [...prev, d.userMsg, d.agentMsg]);
+      if (d.agentMsg?.agent_id) {
+        setLastReplyAgent(d.agentMsg.agent_id);
+        setDecisionTick((t) => t + 1);
+      }
       if (autoVoice && d.agentMsg?.content) speak(d.agentMsg.content);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The room did not answer.');
@@ -303,6 +310,8 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
             <p className="v0-dot font-mono text-[11px] text-cyan-300/70">▸ routing through the harness…</p>
           )}
         </div>
+
+        <RouterDecisionPanel agentId={lastReplyAgent || targetAgent || exec?.id || null} refreshKey={decisionTick} />
 
         {error && <p className="mt-2 text-xs text-rose-300">{error}</p>}
 

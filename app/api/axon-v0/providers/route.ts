@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
-import { addProvider, listProviders, setAssignment } from '@/lib/axon-v0/store';
+import { addProvider, listAssignments, listProviders, setAssignment } from '@/lib/axon-v0/store';
 
 export async function GET() {
   try {
-    return NextResponse.json({ providers: await listProviders() });
+    const [providers, assignments] = await Promise.all([listProviders(), listAssignments()]);
+    return NextResponse.json({
+      providers,
+      // Keyed by agent id so the "who runs on what" panel can preselect what is actually pinned.
+      assignments: Object.fromEntries(assignments.map((a) => [a.agent_id, { mode: a.mode, laneId: a.lane_id }])),
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Failed to load providers' },
