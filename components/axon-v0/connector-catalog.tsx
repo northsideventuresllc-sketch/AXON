@@ -4,6 +4,45 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiUrl } from '@/lib/api-base';
 import './connector-catalog.css';
 
+/** The four lane kinds the router core understands. */
+type CustomLaneKind = 'openai-compatible' | 'anthropic' | 'gemini' | 'ollama';
+
+const KIND_OPTIONS: { value: CustomLaneKind; label: string; needsEndpoint: boolean }[] = [
+  { value: 'openai-compatible', label: 'OpenAI-compatible', needsEndpoint: true },
+  { value: 'anthropic', label: 'Anthropic', needsEndpoint: false },
+  { value: 'gemini', label: 'Gemini', needsEndpoint: false },
+  { value: 'ollama', label: 'Ollama (runs locally)', needsEndpoint: true },
+];
+
+const SECRET_VALUE_PREFIXES = [
+  'sk-',
+  'sk_',
+  'pk_live',
+  'pk_test',
+  'ghp_',
+  'gho_',
+  'github_pat_',
+  'AIza',
+  'xox',
+  'eyJ',
+  'Bearer ',
+];
+
+/** A key NAME reads like OPENAI_API_KEY_PERSONAL — short, upper-case words joined by _ or -. */
+function looksLikeAKeyName(v: string): boolean {
+  return /^[A-Z][A-Z0-9]*(?:[_-][A-Z0-9]+)*$/.test(v) && v.length <= 60;
+}
+
+/** Best-effort guard against someone pasting the actual secret instead of its name. */
+function looksLikeSecretValue(raw: string): boolean {
+  const v = raw.trim();
+  if (!v) return false;
+  if (looksLikeAKeyName(v)) return false;
+  if (SECRET_VALUE_PREFIXES.some((p) => v.startsWith(p))) return true;
+  if (v.length > 40) return true;
+  return false;
+}
+
 interface CatalogModel {
   laneId: string;
   model: string;
@@ -47,7 +86,7 @@ function connectLabel(kind: CatalogConnector['connectorKind']): string {
   return 'Connect';
 }
 
-export function ConnectorCatalog() {
+export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {}) {
   const [connectors, setConnectors] = useState<CatalogConnector[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
@@ -55,6 +94,16 @@ export function ConnectorCatalog() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+
+  // Add Your Own — a lane outside the fixed catalog above.
+  const [addOpen, setAddOpen] = useState(false);
+  const [addLabel, setAddLabel] = useState('');
+  const [addKind, setAddKind] = useState<CustomLaneKind>('openai-compatible');
+  const [addEndpoint, setAddEndpoint] = useState('');
+  const [addModel, setAddModel] = useState('');
+  const [addSecretName, setAddSecretName] = useState('');
+  const [addBusy, setAddBusy] = useState(false);
+  const [addError, setAddError] = useState('');
 
   const load = useCallback(() => {
     fetch(apiUrl('/api/axon-v0/router/catalog'))
@@ -130,6 +179,7 @@ export function ConnectorCatalog() {
       if (!res.ok) throw new Error(d.error || 'Could not connect that provider.');
       setNote(`${c.name} connected.`);
       load();
+      onChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not connect that provider.');
     } finally {
@@ -153,10 +203,75 @@ export function ConnectorCatalog() {
       if (!res.ok) throw new Error(d.error || 'Could not disconnect that provider.');
       setNote(`${c.name} disconnected.`);
       load();
+      onChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not disconnect that provider.');
     } finally {
       setBusy(null);
+    }
+  }
+
+  const addKindMeta = KIND_OPTIONS.find((k) => k.value === addKind) || KIND_OPTIONS[0];
+
+  function resetAddForm() {
+    setAddLabel('');
+    setAddKind('openai-compatible');
+    setAddEndpoint('');
+    setAddModel('');
+    setAddSecretName('');
+    setAddError('');
+  }
+
+  async function submitCustomLane() {
+    setAddError('');
+    const label = addLabel.trim();
+    const model = addModel.trim();
+    const endpoint = addEndpoint.trim();
+    const secretName = addSecretName.trim();
+
+    if (!label) {
+      setAddError('Give this lane a name.');
+      return;
+    }
+    if (!model) {
+      setAddError('Enter the model id.');
+      return;
+    }
+    if (addKindMeta.needsEndpoint && !endpoint) {
+      setAddError('This kind needs an endpoint URL.');
+      return;
+    }
+    if (secretName && looksLikeSecretValue(secretName)) {
+      setAddError(
+        'That looks like the secret itself, not its name. Enter the NAME of the key as it is saved in your secrets — never paste the key.',
+      );
+      return;
+    }
+
+    setAddBusy(true);
+    try {
+      const res = await fetch(apiUrl('/api/axon-v0/providers'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label,
+          kind: addKind,
+          base_url: endpoint || undefined,
+          model,
+          secret_key: secretName || undefined,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Could not add that lane.');
+      setNote(`${label} added to the catalog.`);
+      resetAddForm();
+      setAddOpen(false);
+      load();
+      onChanged?.();
+    } catch (e) {
+      setAddError(e instanceof Error ? e.message : 'Could not add that lane.');
+    } finally {
+      setAddBusy(false);
     }
   }
 
@@ -270,6 +385,119 @@ export function ConnectorCatalog() {
       ))}
 
       {connectors.length === 0 && <p className="cc-hint">No connectors in the catalog yet.</p>}
+
+      <div className="cc-add-own">
+        {!addOpen ? (
+          <button type="button" className="cc-btn cc-btn-add" onClick={() => setAddOpen(true)}>
+            + Add Your Own
+          </button>
+        ) : (
+          <div className="cc-add-form">
+            <div className="cc-add-header">
+              <p className="cc-add-title">Add Your Own</p>
+              <button
+                type="button"
+                className="cc-add-close"
+                onClick={() => {
+                  setAddOpen(false);
+                  resetAddForm();
+                }}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="cc-hint">
+              Register a lane outside the catalog above. It joins the Omni router and can be picked for any
+              agent once saved.
+            </p>
+
+            <label className="cc-add-label" htmlFor="cc-add-name">
+              Name
+            </label>
+            <input
+              id="cc-add-name"
+              className="cc-add-input"
+              value={addLabel}
+              onChange={(e) => setAddLabel(e.target.value)}
+              placeholder="e.g. My Home Server"
+            />
+
+            <label className="cc-add-label" htmlFor="cc-add-kind">
+              Kind
+            </label>
+            <select
+              id="cc-add-kind"
+              className="cc-add-input"
+              value={addKind}
+              onChange={(e) => setAddKind(e.target.value as CustomLaneKind)}
+            >
+              {KIND_OPTIONS.map((k) => (
+                <option key={k.value} value={k.value}>
+                  {k.label}
+                </option>
+              ))}
+            </select>
+
+            <label className="cc-add-label" htmlFor="cc-add-endpoint">
+              Endpoint URL{addKindMeta.needsEndpoint ? '' : ' (optional)'}
+            </label>
+            <input
+              id="cc-add-endpoint"
+              className="cc-add-input"
+              value={addEndpoint}
+              onChange={(e) => setAddEndpoint(e.target.value)}
+              placeholder="https://…"
+            />
+
+            <label className="cc-add-label" htmlFor="cc-add-model">
+              Model id
+            </label>
+            <input
+              id="cc-add-model"
+              className="cc-add-input"
+              value={addModel}
+              onChange={(e) => setAddModel(e.target.value)}
+              placeholder="e.g. llama3.1:8b"
+            />
+
+            <label className="cc-add-label" htmlFor="cc-add-secret">
+              Name of the secret key (optional)
+            </label>
+            <input
+              id="cc-add-secret"
+              className="cc-add-input"
+              value={addSecretName}
+              onChange={(e) => setAddSecretName(e.target.value)}
+              placeholder="e.g. MY_SERVER_API_KEY"
+              autoComplete="off"
+            />
+            <p className="cc-hint">
+              This is the NAME of a key already saved in your secrets — never the key itself. AXON looks it
+              up by name when it needs to connect.
+            </p>
+
+            {addError && <p className="cc-add-error">{addError}</p>}
+
+            <div className="cc-actions">
+              <button type="button" className="cc-btn" disabled={addBusy} onClick={submitCustomLane}>
+                {addBusy ? '…' : 'Add Lane'}
+              </button>
+              <button
+                type="button"
+                className="cc-btn cc-btn-disconnect"
+                disabled={addBusy}
+                onClick={() => {
+                  setAddOpen(false);
+                  resetAddForm();
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

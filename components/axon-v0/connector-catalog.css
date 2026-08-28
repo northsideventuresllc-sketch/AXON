@@ -202,3 +202,76 @@
   font-size: 10px;
   color: rgb(103, 232, 249);
 }
+
+.cc-add-own {
+  border-top: 1px dashed rgba(0, 212, 255, 0.15);
+  padding-top: 0.9rem;
+}
+
+.cc-btn-add {
+  flex: none;
+  background: transparent;
+  border-style: dashed;
+}
+
+.cc-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(0, 212, 255, 0.16);
+  background: rgba(7, 8, 12, 0.6);
+  padding: 0.9rem;
+  max-width: 26rem;
+}
+
+.cc-add-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cc-add-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(226, 232, 240);
+}
+
+.cc-add-close {
+  background: transparent;
+  border: none;
+  color: rgb(148, 163, 184);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0.1rem 0.3rem;
+}
+
+.cc-add-close:hover {
+  color: rgb(226, 232, 240);
+}
+
+.cc-add-label {
+  font-size: 11px;
+  color: rgb(148, 163, 184);
+  margin-top: 0.15rem;
+}
+
+.cc-add-input {
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  background: rgba(0, 0, 0, 0.5);
+  color: rgb(226, 232, 240);
+  font-size: 12px;
+  padding: 0.4rem 0.55rem;
+  outline: none;
+}
+
+.cc-add-input:focus {
+  border-color: rgba(0, 212, 255, 0.6);
+}
+
+.cc-add-error {
+  font-size: 11px;
+  color: rgb(252, 165, 165);
+  line-height: 1.4;
+}

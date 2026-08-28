@@ -505,7 +505,7 @@ export default function SettingsPage() {
                 <div className="rounded-lg border border-cyan-400/10 bg-black/20 p-4">
                   <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">Connectors</p>
                   <div className="mt-3">
-                    <ConnectorCatalog />
+                    <ConnectorCatalog onChanged={load} />
                   </div>
                   {status && <p className="mt-2 text-[11px] text-cyan-200/80">{status}</p>}
                 </div>
