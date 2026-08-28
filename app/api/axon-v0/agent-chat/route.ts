@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { generateAxonReply } from '@/lib/axon-web-chat';
 import { routeFixedIfAssigned } from '@/lib/axon-v0/omni-router';
+import { shouldUseComputerUse } from '@/lib/axon-computer-use-router';
+import { runComputerUseTask } from '@/lib/axon-computer-use.mjs';
 import {
   addMessage,
   crossVentureContext,
@@ -28,7 +30,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { ventureId, agentId, message, thread = 'group' } = await req.json();
+    const { ventureId, agentId, message, thread = 'group', forceComputerUse } = await req.json();
     if (!ventureId || !message?.trim()) {
       return NextResponse.json({ error: 'ventureId and message required' }, { status: 400 });
     }
@@ -77,24 +79,38 @@ export async function POST(req: Request) {
       .filter(Boolean)
       .join('\n\n');
 
-    // Omni-Router: fixed provider if assigned, else the canonical AXON tier chain.
+    // Router: computer_use (task needs clicking/navigating an app with no API) checked
+    // first — same failover posture as model selection, just picking a capability
+    // instead of a provider. `forceComputerUse` lets a scripted/manual trigger (e.g. the
+    // first-test task) skip the classifier and go straight there. Otherwise fall to the
+    // existing Omni-Router: fixed provider if assigned, else the canonical AXON tier chain.
     let reply: string;
     let route: string;
-    const fixed = await routeFixedIfAssigned(agent.id, [
-      { role: 'system', content: contextPrompt },
-      { role: 'user', content: message.trim() },
-    ]);
-    if (fixed) {
-      reply = fixed.reply;
-      route = fixed.route;
-    } else {
-      const result = await generateAxonReply(message.trim(), 'chat', [], undefined, {
-        title: `${agent.name} — ${venture.name}`,
-        source: 'axon-v0-venture',
-        prompt: contextPrompt,
+    const useComputerUse = forceComputerUse === true || (await shouldUseComputerUse(message.trim()));
+    if (useComputerUse) {
+      const cu = await runComputerUseTask({
+        taskDescription: message.trim(),
+        systemNote: contextPrompt,
       });
-      reply = result.reply;
-      route = 'AXON auto (tier chain)';
+      reply = cu.finalText || `Computer-use task ${cu.outcome} after ${cu.steps} step(s).`;
+      route = `computer_use (${cu.outcome})`;
+    } else {
+      const fixed = await routeFixedIfAssigned(agent.id, [
+        { role: 'system', content: contextPrompt },
+        { role: 'user', content: message.trim() },
+      ]);
+      if (fixed) {
+        reply = fixed.reply;
+        route = fixed.route;
+      } else {
+        const result = await generateAxonReply(message.trim(), 'chat', [], undefined, {
+          title: `${agent.name} — ${venture.name}`,
+          source: 'axon-v0-venture',
+          prompt: contextPrompt,
+        });
+        reply = result.reply;
+        route = 'AXON auto (tier chain)';
+      }
     }
 
     const agentMsg = await addMessage({

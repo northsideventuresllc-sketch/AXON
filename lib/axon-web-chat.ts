@@ -90,11 +90,70 @@ async function callGeminiOnce(
  * is a documented no-op (returns null) until RunPod is deployed, so this is a no-op change
  * until then.
  */
+/**
+ * Narrow view of what lib/axon-router returns. The walker is untyped .mjs and
+ * infers a wide union across its success and failure branches, so this names
+ * only the fields this call site reads. Success is identified by `ok`.
+ */
+type RoutedReply = {
+  ok?: boolean;
+  status?: string;
+  text?: string;
+  route?: string;
+  model?: string;
+  servedTier?: string | null;
+  requestedTier?: string | null;
+  degraded?: boolean;
+};
+
 async function callChatModel(
   keys: { anthropicKey: string; geminiKey?: string; geminiBackup?: string; supabaseKey?: string },
   system: string,
   messages: { role: string; content: string }[],
 ): Promise<string> {
+  // AXON-ROUTER (2026-08-28): the multi-route router replaces the hardcoded tier
+  // chain below. It walks (route, model) pairs from NI-Brain ordered by capability
+  // tier then priority, classifies each failure as transient or terminal, writes
+  // health/backoff, and falls to the local floor as a last resort. See
+  // docs/axon-router-spec.md and manage routes at /tools/router.
+  //
+  // Rollback: set AXON_ROUTER_DISABLED=1 and restart — the original chain below
+  // runs verbatim. It is deliberately left intact rather than deleted, and also
+  // acts as a backstop if the router itself throws (bad import, DB unreachable).
+  if (process.env.AXON_ROUTER_DISABLED !== '1') {
+    try {
+      const { walk } = await import('./axon-router/index.mjs');
+      // Adapters take a single rendered prompt (spec §1), so flatten the turns.
+      const prompt = messages
+        .map((m) => `${m.role === 'assistant' ? 'Assistant' : 'User'}: ${m.content}`)
+        .join('\n\n');
+      // No requiredTier: resolves to `capable`, which keeps the step-7 last
+      // resort available. Passing a tier explicitly would disable it.
+      const routed = (await walk({
+        payload: { prompt, systemPrompt: system, maxTokens: 2000 },
+      })) as RoutedReply;
+      if (routed?.ok && routed.text) {
+        if (routed.degraded) {
+          console.warn(
+            `[axon-router] degraded reply: served ${routed.servedTier} ` +
+              `(wanted ${routed.requestedTier}) via ${routed.route}/${routed.model}`,
+          );
+        }
+        return routed.text;
+      }
+      console.warn(
+        `[axon-router] no route answered (${routed?.status ?? 'unknown'}) — ` +
+          'falling back to the legacy tier chain',
+      );
+    } catch (err) {
+      console.warn(
+        '[axon-router] router threw, falling back to legacy chain:',
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  // ---- legacy tier chain (rollback path / backstop) ----
   const local = await callAxonLocal(keys.supabaseKey ?? '', system, messages).catch(() => null);
   if (local) return local;
 

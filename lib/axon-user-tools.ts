@@ -83,6 +83,13 @@ export const AXON_USER_TOOLS: AxonUserTool[] = [
     sourceType: 'custom',
   },
   {
+    slug: 'router',
+    defaultDisplayName: 'Model Router',
+    href: '/tools/router',
+    icon: '🔀',
+    sourceType: 'custom',
+  },
+  {
     slug: 'test-mode',
     defaultDisplayName: 'Test Mode',
     href: '/tools/test-mode',
