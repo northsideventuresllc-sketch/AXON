@@ -14,6 +14,8 @@ export interface Venture {
   accent: string;
   sort_order: number;
   settings: Record<string, unknown>;
+  /** Parent venture, or null for a top-level one. The database caps nesting at one level. */
+  parent_id: string | null;
 }
 
 export interface VentureAgent {

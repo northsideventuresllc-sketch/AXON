@@ -36,6 +36,9 @@ export function VentureCarousel() {
   const [ventures, setVentures] = useState<VentureCard[]>([]);
   const [error, setError] = useState('');
 
+  /** A sub-venture shows whose it is, so it never reads as an independent company. */
+  const parentName = (parentId: string) => ventures.find((v) => v.id === parentId)?.name;
+
   // per-viewer prefs (localStorage only — never the DB)
   const [order, setOrder] = useState<string[]>([]);
   const [hidden, setHidden] = useState<string[]>([]);
@@ -230,7 +233,9 @@ export function VentureCarousel() {
                 >
                   <div className="vc-icon">
                     <span className="vc-glyph">{monogram(v.name)}</span>
-                    <span className="vc-glyph-sub">Venture</span>
+                    <span className="vc-glyph-sub">
+                      {v.parent_id ? 'Part of ' + (parentName(v.parent_id) ?? 'a venture') : 'Venture'}
+                    </span>
                   </div>
                 </div>
               );
@@ -241,6 +246,9 @@ export function VentureCarousel() {
           {centered && (
             <div className="vc-caption" aria-hidden={!hovering}>
               <div className="vc-title">{centered.name.toUpperCase()}</div>
+              {centered.parent_id && (
+                <div className="vc-parent">Part of {parentName(centered.parent_id) ?? 'a venture'}</div>
+              )}
               {centered.tagline && <div className="vc-subtitle">{toTitleCase(centered.tagline)}</div>}
               <div className="vc-counts">
                 <span>{centered.agents.length} agents</span>
