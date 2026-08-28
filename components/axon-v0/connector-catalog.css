@@ -1,0 +1,204 @@
+/* AXON connector catalog — vendor groups, drag-to-reorder cards.
+   All classes prefixed cc- to stay clear of shared globals.css / st-*. */
+
+.cc-hint {
+  font-size: 11px;
+  color: rgb(148, 163, 184);
+  line-height: 1.5;
+}
+
+.cc-vendor-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cc-vendor-name {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: rgba(0, 212, 255, 0.7);
+}
+
+.cc-vendor-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.75rem;
+}
+
+.cc-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(0, 212, 255, 0.16);
+  background: rgba(7, 8, 12, 0.6);
+  padding: 0.85rem;
+  cursor: grab;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cc-card:active {
+  cursor: grabbing;
+}
+
+.cc-card.cc-connected {
+  border-color: rgba(56, 242, 168, 0.4);
+  box-shadow: 0 0 0 1px rgba(56, 242, 168, 0.08);
+}
+
+.cc-card.cc-dragging {
+  opacity: 0.45;
+}
+
+.cc-card.cc-drop-target {
+  border-color: rgba(0, 212, 255, 0.7);
+  transform: translateY(-2px);
+}
+
+.cc-card.cc-unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.cc-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cc-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.cc-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(226, 232, 240);
+}
+
+.cc-card-kind {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgb(100, 116, 139);
+}
+
+.cc-drag-handle {
+  font-size: 12px;
+  color: rgb(71, 85, 105);
+  padding: 0.1rem 0.3rem;
+  user-select: none;
+}
+
+.cc-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.cc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  border: 1px solid transparent;
+}
+
+.cc-badge-connected {
+  color: rgb(110, 231, 183);
+  background: rgba(56, 242, 168, 0.1);
+  border-color: rgba(56, 242, 168, 0.3);
+}
+
+.cc-badge-disconnected {
+  color: rgb(148, 163, 184);
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.cc-badge-free {
+  color: rgb(103, 232, 249);
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+.cc-badge-safetynet {
+  color: rgb(250, 204, 21);
+  background: rgba(250, 204, 21, 0.1);
+  border-color: rgba(250, 204, 21, 0.3);
+}
+
+.cc-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.cc-model-chip {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: rgb(148, 163, 184);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.35rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.cc-reason {
+  font-size: 11px;
+  color: rgb(100, 116, 139);
+  line-height: 1.4;
+}
+
+.cc-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: auto;
+}
+
+.cc-btn {
+  flex: 1;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: rgba(0, 212, 255, 0.08);
+  color: rgb(165, 243, 252);
+  font-size: 11px;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.cc-btn:hover {
+  background: rgba(0, 212, 255, 0.16);
+}
+
+.cc-btn-disconnect {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: transparent;
+  color: rgb(148, 163, 184);
+}
+
+.cc-btn-disconnect:hover {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.cc-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cc-save-note {
+  font-size: 10px;
+  color: rgb(103, 232, 249);
+}
