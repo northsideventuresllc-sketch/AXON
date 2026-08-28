@@ -72,7 +72,7 @@ function seedMem() {
     ['North-Stars Foundation', 'Nonprofit', '#F2C14E'],
   ];
   seedVentures.forEach(([name, tagline, accent], i) => {
-    const v: Venture = { id: uid(), name, tagline, accent, sort_order: i, settings: {} };
+    const v: Venture = { id: uid(), name, tagline, accent, sort_order: i, settings: {}, parent_id: null };
     m.ventures.push(v);
     for (const a of DEFAULT_AGENTS) {
       m.agents.push({
@@ -100,13 +100,39 @@ async function tableLive(table: string): Promise<boolean> {
 // ---------- ventures ----------
 export async function listVentures(): Promise<Venture[]> {
   if (await tableLive('axon_ventures')) {
-    return sb().sbSelect('axon_ventures', `account_id=eq.${await accountId()}&order=sort_order.asc`);
+    const rows: Venture[] = await sb().sbSelect(
+      'axon_ventures',
+      `account_id=eq.${await accountId()}&order=sort_order.asc`
+    );
+    return orderByHierarchy(rows);
   }
   seedMem();
   return mem().ventures;
 }
 
-export async function createVenture(name: string, tagline?: string, accent?: string): Promise<Venture> {
+/**
+ * Flat list, but each sub-venture sits immediately after its parent.
+ *
+ * Without this a sub-venture sorts by its own sort_order and lands anywhere — the swim
+ * school appeared as a seventh top-level room rather than under the Foundation. Callers
+ * that understand nesting should use `parent_id`; this ordering keeps the ones that don't
+ * from showing something misleading.
+ */
+export function orderByHierarchy(rows: Venture[]): Venture[] {
+  const tops = rows.filter((v) => !v.parent_id).sort((a, b) => a.sort_order - b.sort_order);
+  const childrenOf = (id: string) =>
+    rows.filter((v) => v.parent_id === id).sort((a, b) => a.sort_order - b.sort_order);
+  const out: Venture[] = [];
+  for (const top of tops) {
+    out.push(top);
+    out.push(...childrenOf(top.id));
+  }
+  // Any child whose parent is missing or filtered out still has to appear somewhere.
+  for (const row of rows) if (!out.includes(row)) out.push(row);
+  return out;
+}
+
+export async function createVenture(name: string, tagline?: string, accent?: string, parentId?: string | null): Promise<Venture> {
   const existing = await listVentures();
   if (await tableLive('axon_ventures')) {
     const v = await sb().sbInsert('axon_ventures', {
@@ -115,6 +141,7 @@ export async function createVenture(name: string, tagline?: string, accent?: str
       tagline: tagline || null,
       accent: accent || '#00D4FF',
       sort_order: existing.length,
+      parent_id: parentId || null,
     });
     for (const a of DEFAULT_AGENTS) {
       await sb().sbInsert('axon_venture_agents', {
@@ -135,6 +162,7 @@ export async function createVenture(name: string, tagline?: string, accent?: str
     accent: accent || '#00D4FF',
     sort_order: existing.length,
     settings: {},
+    parent_id: parentId || null,
   };
   mem().ventures.push(v);
   for (const a of DEFAULT_AGENTS) {

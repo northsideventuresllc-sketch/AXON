@@ -201,6 +201,13 @@
   text-transform: uppercase;
   color: #f1fbff;
 }
+.vc-parent {
+  margin-top: 3px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--vc-accent, #00d4ff) 70%, transparent);
+}
 .vc-subtitle {
   margin-top: 4px;
   font-size: 12px;
