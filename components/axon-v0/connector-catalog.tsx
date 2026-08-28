@@ -57,6 +57,7 @@ interface CatalogConnector {
   vendor: string;
   connectorKind: 'api' | 'subscription' | 'local';
   cliCommand: string | null;
+  loginHint: string | null;
   authScope: string | null;
   status: 'connected' | 'disconnected';
   sortOrder: number;
@@ -384,7 +385,8 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
                           {copied === c.routeId ? 'Copied' : 'Copy'}
                         </button>
                       </div>
-                      <p className="cc-cli-hint">Then come back and mark it signed in.</p>
+                      {c.loginHint && <p className="cc-cli-hint">{c.loginHint}</p>}
+                      <p className="cc-cli-hint">Once it says you are signed in, come back and mark it connected here.</p>
                     </div>
                   )}
                   {c.available && c.connectorKind === 'subscription' && c.authScope && (
