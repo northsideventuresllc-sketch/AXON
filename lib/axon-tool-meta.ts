@@ -67,6 +67,12 @@ export const AXON_TOOL_META: Record<string, AxonToolMeta> = {
     builderPrompt:
       'Help JB adjust Fire / Hold Control — what the gate covers and how firing works.',
   },
+  router: {
+    setupDescription:
+      'Every model AXON can reach, and how it picks one. Shows each provider route, its capability tier, and live health — working, cooling off after a rate limit, or dead and needing a key fixed. Toggle routes and models on or off, change which one is tried first, and clear a dead status to bring a route back without touching the database.',
+    builderPrompt:
+      'Help JB adjust the Model Router — which providers and models AXON uses, what order they are tried in, and how failover behaves.',
+  },
 };
 
 export function getAxonToolMeta(tool: AxonUserTool): AxonToolMeta {
