@@ -9,6 +9,7 @@ create table if not exists axon_accounts (
   display_name text not null default 'Operator',
   access_code_hash text,               -- mirrors axon_access; one AXON account per NI account
   boot_voice_line text not null default 'Welcome.',
+  has_mini_access boolean not null default false,   -- gates subscription-CLI lanes (002)
   created_at timestamptz not null default now()
 );
 
@@ -51,25 +52,19 @@ create table if not exists axon_agent_messages (
 );
 create index if not exists axon_agent_messages_room on axon_agent_messages (account_id, venture_id, thread, created_at);
 
--- BYO model providers. Keys are server-only; never returned to the client.
-create table if not exists axon_model_providers (
-  id uuid primary key default gen_random_uuid(),
-  account_id uuid not null references axon_accounts(id),
-  label text not null,
-  kind text not null default 'openai-compatible',   -- openai-compatible | anthropic | gemini | ollama
-  base_url text,
-  model text not null,
-  api_key text,                                     -- service-role read only
-  created_at timestamptz not null default now()
-);
+-- Model providers live in router_routes / router_models (see 002_router_core.sql).
+-- The old axon_model_providers table was removed from this migration before it was ever
+-- applied: it duplicated router_routes and stored a raw api_key column, where router_routes
+-- stores a secret_key NAME pointing at ni_platform_secrets. One provider table, one place
+-- for secrets. Nothing to migrate — this table never existed.
 
 create table if not exists axon_agent_model_assignments (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references axon_accounts(id),
   agent_id uuid not null references axon_venture_agents(id) unique,
-  mode text not null default 'auto',                -- auto (AXON tier chain) | fixed
-  provider_id uuid references axon_model_providers(id),
-  fixed_order jsonb,                                -- optional custom provider order
+  mode text not null default 'auto',                -- auto (scored routing) | fixed
+  lane_id uuid references router_models(id),        -- a route x model pair; see 002
+  fixed_order jsonb,                                -- optional custom lane order
   updated_at timestamptz not null default now()
 );
 
@@ -91,6 +86,5 @@ alter table axon_accounts enable row level security;
 alter table axon_ventures enable row level security;
 alter table axon_venture_agents enable row level security;
 alter table axon_agent_messages enable row level security;
-alter table axon_model_providers enable row level security;
 alter table axon_agent_model_assignments enable row level security;
 alter table axon_venture_tools enable row level security;

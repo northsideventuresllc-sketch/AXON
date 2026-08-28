@@ -1,4 +1,11 @@
-export type AgentRole = 'exec_assistant' | 'build_manager' | 'pulse' | 'council' | 'creator' | 'custom';
+export type AgentRole =
+  | 'exec_assistant'
+  | 'build_manager'
+  | 'pulse'
+  | 'council'
+  | 'creator'
+  | 'sensei'
+  | 'custom';
 
 export interface Venture {
   id: string;
@@ -41,7 +48,10 @@ export interface ModelProvider {
 export interface AgentModelAssignment {
   agent_id: string;
   mode: 'auto' | 'fixed';
-  provider_id: string | null;
+  /** A router_models row — a route x model pair. Null means auto. */
+  lane_id: string | null;
+  /** Optional custom lane order for this agent, overriding the scored order. */
+  fixed_order?: string[] | null;
 }
 
 export interface VentureTool {
@@ -83,5 +93,11 @@ export const DEFAULT_AGENTS: Array<{ role: AgentRole; name: string; description:
     name: 'Agent / Skill / Workflow Creator',
     description:
       'Creates, updates and manages new agents, skills and workflows. Never spawns sub-agents itself — the agents it creates do that via graph engineering.',
+  },
+  {
+    role: 'sensei',
+    name: 'Sensei',
+    description:
+      'Grades this venture’s own agents and owns their improvement loop. Reads what the venture actually shipped against what it said it would, and writes the fix back into the agent instructions.',
   },
 ];
