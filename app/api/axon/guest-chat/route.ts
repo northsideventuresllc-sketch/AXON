@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
-import { generateAxonReply } from '@/lib/axon-web-chat';
+import { routeChat } from '@/lib/axon-router';
 
-// Public "continue as guest" demo chat. Limited on purpose: cheapest/local tier
-// first (the tier chain already tries AXON-local before paid models), a short
-// per-IP rate limit, a message cap, and a system prompt that walls off all
-// private operator data. No history, no ventures, no brain.
+// Public "continue as guest" demo chat. Limited on purpose: no operator profile,
+// no memories, no ventures, no brain — just the Omni Router with accountId: null
+// (falls open to the global lane catalog) and hasMini: false (never routes to the
+// Mac mini's local model). This is the SAME router agent-chat uses, so a lane-order
+// fix in router_models (e.g. OpenRouter free models ranked above the local 7B)
+// reaches guests too. Previously this called generateAxonReply, whose callChatModel
+// is a separate hardcoded chain (AXON-local -> RunPod stub -> Gemini -> paid Haiku)
+// that never touches router_routes/router_models — guests always got axon-ornith
+// (or paid Anthropic) regardless of any lane-order change. Fixed 2026-08-28.
 
 const GUEST_SYSTEM = [
   'You are AXON in public DEMO mode.',
@@ -54,12 +59,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await generateAxonReply(text, 'chat', [], undefined, {
-      title: 'AXON guest demo',
-      source: 'axon-guest',
-      prompt: GUEST_SYSTEM,
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const routed = await routeChat(supabaseKey, {
+      messages: [
+        { role: 'system', content: GUEST_SYSTEM },
+        { role: 'user', content: text },
+      ],
+      mode: 'auto',
+      accountId: null,
+      agentRole: 'guest',
+      hasMini: false,
     });
-    return NextResponse.json({ reply: result.reply });
+    return NextResponse.json({ reply: routed.reply });
   } catch {
     // Never leak infra detail to a public endpoint.
     return NextResponse.json(
