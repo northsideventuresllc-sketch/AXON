@@ -215,6 +215,57 @@ export async function addMessage(
   return full;
 }
 
+export interface ThreadSummary {
+  thread: string;
+  title: string;
+  last_message_at: string;
+  last_sender: string;
+}
+
+/**
+ * One row per distinct `thread` value in this venture, newest activity first. Title is the
+ * first user message on that thread (truncated) so a saved chat reads as what it was about,
+ * not a raw thread id. PostgREST has no cheap "distinct" here, so this pulls every message
+ * for the venture (already capped by venture scope + account scope) and groups it in memory —
+ * fine at v0 volume, matches the in-memory fallback's own no-index approach.
+ */
+export async function listThreads(ventureId: string): Promise<ThreadSummary[]> {
+  const TITLE_MAX = 60;
+  const titleFrom = (content: string) =>
+    content.length > TITLE_MAX ? `${content.slice(0, TITLE_MAX).trimEnd()}…` : content;
+
+  let rows: AgentMessage[];
+  if (await tableLive('axon_agent_messages')) {
+    rows = await sb().sbSelect(
+      'axon_agent_messages',
+      `account_id=eq.${await accountId()}&venture_id=eq.${ventureId}&order=created_at.asc&select=id,thread,sender,content,created_at`
+    );
+  } else {
+    seedMem();
+    rows = mem().messages.filter((msg) => msg.venture_id === ventureId);
+  }
+
+  const byThread = new Map<string, { title: string | null; last_message_at: string; last_sender: string }>();
+  for (const row of rows) {
+    const entry = byThread.get(row.thread);
+    const title = entry?.title ?? (row.sender === 'user' ? titleFrom(row.content.trim()) : null);
+    byThread.set(row.thread, {
+      title,
+      last_message_at: row.created_at,
+      last_sender: row.sender,
+    });
+  }
+
+  return Array.from(byThread.entries())
+    .map(([thread, v]) => ({
+      thread,
+      title: v.title || (thread === 'group' ? 'Venture room' : 'New chat'),
+      last_message_at: v.last_message_at,
+      last_sender: v.last_sender,
+    }))
+    .sort((a, b) => (a.last_message_at < b.last_message_at ? 1 : -1));
+}
+
 // Cross-venture context: recent group-chat lines from other ventures, so any
 // agent can reference what's happening account-wide ("everything connected").
 export async function crossVentureContext(excludeVentureId: string, limit = 12): Promise<string> {

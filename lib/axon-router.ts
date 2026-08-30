@@ -58,4 +58,6 @@ export interface RouteResult {
   route: string;
   capabilityClass: CapabilityClass;
   decisionId: string | null;
+  /** Result of parsing/validating/executing a tool-call block in `reply`, if any. */
+  tool: { tool: string; valid: boolean; reason?: string; result?: unknown; message?: string } | null;
 }
