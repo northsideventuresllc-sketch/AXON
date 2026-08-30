@@ -57,6 +57,7 @@ interface CatalogConnector {
   vendor: string;
   connectorKind: 'api' | 'subscription' | 'local';
   cliCommand: string | null;
+  loginHint: string | null;
   authScope: string | null;
   status: 'connected' | 'disconnected';
   sortOrder: number;
@@ -94,6 +95,7 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [copied, setCopied] = useState<string | null>(null);
 
   // Add Your Own — a lane outside the fixed catalog above.
   const [addOpen, setAddOpen] = useState(false);
@@ -222,6 +224,16 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
     setAddError('');
   }
 
+  async function copyToClipboard(text: string, id: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(id);
+      window.setTimeout(() => setCopied(null), 1200);
+    } catch {
+      /* copy failed, silent */
+    }
+  }
+
   async function submitCustomLane() {
     setAddError('');
     const label = addLabel.trim();
@@ -282,8 +294,8 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
   return (
     <div className="space-y-5">
       <p className="cc-hint">
-        Drag a card to change how AXON prefers it in auto mode. A vendor&apos;s subscription and API
-        connectors can both be on at once — they run as two separate lanes.
+        <strong>Drag cards to change the order</strong> — AXON tries each lane from top to bottom in auto mode. When a vendor has both subscription and API
+        connectors on, they run as two separate lanes in the order you set here.
       </p>
       {error && <p className="text-xs text-rose-300">{error}</p>}
       {note && <p className="cc-save-note">{note}</p>}
@@ -331,7 +343,11 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
                       <span className="cc-card-name">{c.name.replace(/-/g, ' ')}</span>
                       <span className="cc-card-kind">{KIND_LABEL[c.connectorKind]}</span>
                     </div>
-                    {c.available && <span className="cc-drag-handle" aria-hidden>⠿</span>}
+                    {c.available && (
+                      <div className="cc-drag-hint" title="Drag to reorder">
+                        <span className="cc-drag-handle" aria-hidden>⋮⋮</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="cc-status-row">
@@ -355,6 +371,24 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
                   )}
 
                   {!c.available && c.unavailableReason && <p className="cc-reason">{c.unavailableReason}</p>}
+                  {c.available && c.connectorKind === 'subscription' && c.cliCommand && (
+                    <div className="cc-cli-block">
+                      <p className="cc-cli-label">Run this on the Mac mini:</p>
+                      <div className="cc-cli-code-wrapper">
+                        <code className="cc-cli-code">{c.cliCommand}</code>
+                        <button
+                          type="button"
+                          className="cc-cli-copy"
+                          onClick={() => copyToClipboard(c.cliCommand || '', c.routeId)}
+                          title="Copy command"
+                        >
+                          {copied === c.routeId ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      {c.loginHint && <p className="cc-cli-hint">{c.loginHint}</p>}
+                      <p className="cc-cli-hint">Once it says you are signed in, come back and mark it connected here.</p>
+                    </div>
+                  )}
                   {c.available && c.connectorKind === 'subscription' && c.authScope && (
                     <p className="cc-reason">{c.authScope}</p>
                   )}
@@ -371,7 +405,12 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
                           {isBusy ? '…' : 'Disconnect'}
                         </button>
                       ) : (
-                        <button type="button" className="cc-btn" disabled={isBusy} onClick={() => connect(c)}>
+                        <button
+                          type="button"
+                          className={`cc-btn ${c.connectorKind === 'subscription' ? 'cc-btn-secondary' : ''}`}
+                          disabled={isBusy}
+                          onClick={() => connect(c)}
+                        >
                           {isBusy ? '…' : connectLabel(c.connectorKind)}
                         </button>
                       )}
@@ -388,9 +427,15 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
 
       <div className="cc-add-own">
         {!addOpen ? (
-          <button type="button" className="cc-btn cc-btn-add" onClick={() => setAddOpen(true)}>
-            + Add Your Own
-          </button>
+          <div className="cc-add-banner">
+            <div>
+              <p className="cc-add-banner-title">Need a custom lane?</p>
+              <p className="cc-add-banner-desc">Register a model server or API that is not in the catalog above.</p>
+            </div>
+            <button type="button" className="cc-btn cc-btn-add" onClick={() => setAddOpen(true)}>
+              + Add Your Own
+            </button>
+          </div>
         ) : (
           <div className="cc-add-form">
             <div className="cc-add-header">

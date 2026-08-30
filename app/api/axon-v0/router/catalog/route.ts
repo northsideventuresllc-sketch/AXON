@@ -45,6 +45,7 @@ export async function GET() {
           vendor: r.name.split('-')[0],
           connectorKind: r.connector_kind || r.kind,
           cliCommand: r.cli_command,
+          loginHint: r.login_hint,
           authScope: r.auth_scope,
           status: conn?.status || 'disconnected',
           sortOrder: conn?.sort_order ?? 999,
