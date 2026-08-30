@@ -410,7 +410,7 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
           )}
         </div>
 
-        <RouterDecisionPanel agentId={lastReplyAgent || targetAgent || exec?.id || null} refreshKey={decisionTick} />
+        <RouterDecisionPanel agentId={lastReplyAgent || targetAgent || exec?.id || null} refreshKey={decisionTick} sending={sending} />
 
         {error && <p className="mt-2 text-xs text-rose-300">{error}</p>}
 
