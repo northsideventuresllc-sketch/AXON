@@ -14,6 +14,7 @@ interface Skill {
   category?: string;
   source?: string;
   enabled?: boolean;
+  isGolden?: boolean;
 }
 
 type Filter = 'all' | 'skills' | 'mcp';
@@ -39,17 +40,48 @@ function isMcp(s: Skill): boolean {
   return /\bmcp\b|mcp[-_ ]|server/.test(hay);
 }
 
-function SkillCard({ s, open, onToggle }: { s: Skill; open: boolean; onToggle: () => void }) {
-  const golden = (s.source || '').toLowerCase() === 'golden';
+// The one skill nothing on screen is ever allowed to switch off — kept in sync
+// with HARD_LOCKED_GOLDEN_SKILLS in lib/axon-v0/skill-guard.mjs. The server is
+// the real enforcement; this is just so the button never invites the click.
+const HARD_LOCKED = new Set(['obsidian-vault-write']);
+
+type ToggleState = 'idle' | 'busy' | { blocked: string; requiresConfirm: boolean };
+
+function SkillCard({
+  s,
+  open,
+  onToggle,
+  toggleState,
+  onSetEnabled,
+}: {
+  s: Skill;
+  open: boolean;
+  onToggle: () => void;
+  toggleState: ToggleState;
+  onSetEnabled: (enabled: boolean, confirmGolden?: boolean) => void;
+}) {
+  const golden = (s.source || '').toLowerCase() === 'golden' || !!s.isGolden;
+  const hardLocked = HARD_LOCKED.has(String(s.name || '').toLowerCase());
+  const busy = toggleState === 'busy';
+  const blockedMsg = typeof toggleState === 'object' ? toggleState.blocked : undefined;
+  const requiresConfirm = typeof toggleState === 'object' ? toggleState.requiresConfirm : false;
+
   return (
-    <div className="sk-card v0-panel">
+    <div className={`sk-card v0-panel ${golden ? 'sk-card-golden' : ''}`}>
       <button
         type="button"
         className="sk-card-head sk-card-toggle"
         onClick={onToggle}
         aria-expanded={open}
       >
-        <span className="sk-name">{titleCase(s.name)}</span>
+        <span className="sk-name">
+          {golden && (
+            <span className="sk-lock" title="Golden skill — loads on every agent boot" aria-hidden="true">
+              🔒
+            </span>
+          )}
+          {titleCase(s.name)}
+        </span>
         <span className="sk-head-right">
           <span className={`sk-state ${s.enabled ? 'sk-state-on' : ''}`}>
             <span className="sk-state-dot" />
@@ -64,10 +96,44 @@ function SkillCard({ s, open, onToggle }: { s: Skill; open: boolean; onToggle: (
         <div className="sk-card-body">
           {s.description && <p className="sk-desc">{sentenceCase(s.description)}</p>}
           <div className="sk-meta">
-            {s.category && <span className="v0-chip">{s.category}</span>}
+            {s.category && <span className="v0-chip">{titleCase(s.category)}</span>}
             {golden && <span className="v0-chip sk-gold">Golden</span>}
             {s.source && !golden && <span className="v0-chip">{s.source}</span>}
           </div>
+
+          <div className="sk-toggle-row">
+            <button
+              type="button"
+              className={`sk-toggle-btn ${s.enabled ? 'sk-toggle-btn-on' : ''}`}
+              disabled={busy || (hardLocked && s.enabled !== false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSetEnabled(!s.enabled);
+              }}
+              aria-pressed={!!s.enabled}
+            >
+              {busy ? 'Working…' : s.enabled ? 'Turn off' : 'Turn on'}
+            </button>
+            {hardLocked && <span className="sk-lock-hint">Can never be turned off</span>}
+          </div>
+
+          {blockedMsg && (
+            <div className="sk-toggle-blocked">
+              <p>{blockedMsg}</p>
+              {requiresConfirm && (
+                <button
+                  type="button"
+                  className="sk-toggle-confirm-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSetEnabled(false, true);
+                  }}
+                >
+                  Yes, turn off this golden skill
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -81,8 +147,9 @@ export default function SkillsPage() {
   const [query, setQuery] = useState('');
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   const [creator, setCreator] = useState<'skill' | 'mcp' | null>(null);
+  const [toggleStates, setToggleStates] = useState<Record<string, ToggleState>>({});
 
-  useEffect(() => {
+  const loadSkills = () => {
     let live = true;
     fetch(apiUrl('/api/axon-v0/skills'))
       .then((r) => r.json())
@@ -98,9 +165,44 @@ export default function SkillsPage() {
     return () => {
       live = false;
     };
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    return loadSkills();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleOpen = (id: string) => setOpenMap((m) => ({ ...m, [id]: !m[id] }));
+
+  const setEnabled = async (skill: Skill, enabled: boolean, confirmGolden = false) => {
+    setToggleStates((m) => ({ ...m, [skill.id]: 'busy' }));
+    try {
+      const res = await fetch(apiUrl('/api/axon-v0/skills'), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: skill.name, enabled, confirmGolden }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (d && d.ok) {
+        setSkills((list) => list.map((s) => (s.id === skill.id ? { ...s, enabled } : s)));
+        setToggleStates((m) => ({ ...m, [skill.id]: 'idle' }));
+      } else {
+        setToggleStates((m) => ({
+          ...m,
+          [skill.id]: {
+            blocked: (d && d.reason) || 'That change was not made.',
+            requiresConfirm: !!(d && d.requiresConfirm),
+          },
+        }));
+      }
+    } catch {
+      setToggleStates((m) => ({
+        ...m,
+        [skill.id]: { blocked: 'Could not reach the skill registry — nothing was changed.', requiresConfirm: false },
+      }));
+    }
+  };
 
   const q = query.trim().toLowerCase();
   const matchesSearch = (s: Skill) => !q || titleCase(s.name).toLowerCase().includes(q);
@@ -183,7 +285,14 @@ export default function SkillsPage() {
               ) : (
                 <div className="sk-grid">
                   {plainSkills.map((s) => (
-                    <SkillCard key={s.id} s={s} open={!!openMap[s.id]} onToggle={() => toggleOpen(s.id)} />
+                    <SkillCard
+                      key={s.id}
+                      s={s}
+                      open={!!openMap[s.id]}
+                      onToggle={() => toggleOpen(s.id)}
+                      toggleState={toggleStates[s.id] || 'idle'}
+                      onSetEnabled={(enabled, confirmGolden) => setEnabled(s, enabled, confirmGolden)}
+                    />
                   ))}
                 </div>
               )}
@@ -202,7 +311,14 @@ export default function SkillsPage() {
               ) : (
                 <div className="sk-grid">
                   {mcp.map((s) => (
-                    <SkillCard key={s.id} s={s} open={!!openMap[s.id]} onToggle={() => toggleOpen(s.id)} />
+                    <SkillCard
+                      key={s.id}
+                      s={s}
+                      open={!!openMap[s.id]}
+                      onToggle={() => toggleOpen(s.id)}
+                      toggleState={toggleStates[s.id] || 'idle'}
+                      onSetEnabled={(enabled, confirmGolden) => setEnabled(s, enabled, confirmGolden)}
+                    />
                   ))}
                 </div>
               )}
@@ -215,9 +331,25 @@ export default function SkillsPage() {
         </>
       )}
 
-      {showMcp && <McpMarketplace />}
+      {showMcp && (
+        <McpMarketplace
+          onConnected={() => {
+            setLoading(true);
+            loadSkills();
+          }}
+        />
+      )}
 
-      {creator && <SkillMcpCreator kind={creator} onClose={() => setCreator(null)} />}
+      {creator && (
+        <SkillMcpCreator
+          kind={creator}
+          onClose={() => setCreator(null)}
+          onCreated={() => {
+            setLoading(true);
+            loadSkills();
+          }}
+        />
+      )}
     </div>
   );
 }

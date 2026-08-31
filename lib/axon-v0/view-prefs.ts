@@ -49,13 +49,23 @@ export interface PuzzleTemplate {
   builtin?: boolean;
 }
 
-/** A user-described widget drafted in the custom-widget maker (spec only, not yet provisioned). */
+/**
+ * A user-described widget drafted in the custom-widget maker. `buildStatus` tracks what
+ * happened when it was handed to the venture's Build Manager (item #10,
+ * lib/axon-toolkit-build.mjs) — 'draft' means the hand-off never ran (offline, or the
+ * request failed before the gate check), 'held' means FIRE/HOLD blocked it, 'dispatched'
+ * means the Build Manager has it and is working it, 'completed' means its turn already
+ * replied. This is still not runtime provisioning of a live widget — see that module's
+ * SCOPE note.
+ */
 export interface CustomWidgetSpec {
   id: string;
   name: string;
   summary: string;
   icon?: string;
   createdAt: string;
+  buildStatus?: 'draft' | 'held' | 'dispatched' | 'completed';
+  buildNote?: string;
 }
 
 export interface Shortcut {

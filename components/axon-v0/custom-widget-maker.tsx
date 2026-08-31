@@ -1,13 +1,21 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { apiUrl } from '@/lib/api-base';
 import type { CustomWidgetSpec } from '@/lib/axon-v0/view-prefs';
+import { plainToolkitBuildStatus } from '@/lib/axon-v0/plain-labels';
 import './widgets-3d.css';
 
 /**
- * Describe-to-chat custom widget maker — modeled on tool-maker.tsx, but the
- * draft is composed locally (no API route exists for widget provisioning yet).
- * The UI is explicit that this saves a spec; real provisioning is the next step.
+ * Describe-to-chat custom widget maker — modeled on tool-maker.tsx. The draft itself is
+ * still composed locally (a cheap heuristic, same as before). What changed for item #10:
+ * Create no longer just saves the spec to localStorage and stops — it also hands the
+ * spec to the venture's Build Manager via /api/axon-v0/toolkit-build (gated by
+ * FIRE/HOLD, dispatched through the one real fireAgent() path). That hand-off is
+ * best-effort: a network failure or a HOLD gate never blocks saving the draft, it just
+ * means buildStatus stays 'draft'/'held' instead of 'dispatched'. Real runtime
+ * provisioning of a live widget component is still a later build — see
+ * lib/axon-toolkit-build.mjs's SCOPE note.
  */
 
 interface DraftSpec {
@@ -68,11 +76,12 @@ export function CustomWidgetMaker({
     {
       id: nextId(),
       role: 'axon',
-      text: 'Describe the widget you want on your home space and I will draft its spec. When it looks right, hit Create — it saves locally as a draft. (Live provisioning comes next.)',
+      text: 'Describe the widget you want on your home space and I will draft its spec. When it looks right, hit Create — it saves locally and gets handed to your Build Manager to work on. (Live provisioning of the widget itself still comes next.)',
     },
   ]);
   const [input, setInput] = useState('');
   const [draft, setDraft] = useState<DraftSpec | null>(null);
+  const [creating, setCreating] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -105,16 +114,51 @@ export function CustomWidgetMaker({
     ]);
   }
 
-  function create() {
-    if (!draft) return;
+  async function create() {
+    if (!draft || creating) return;
+    setCreating(true);
     const spec: CustomWidgetSpec = {
       id: `cw_${Date.now().toString(36)}`,
       name: draft.name,
       summary: draft.summary,
       icon: draft.icon,
       createdAt: new Date().toISOString(),
+      buildStatus: 'draft',
     };
-    onCreated(spec);
+    try {
+      const res = await fetch(apiUrl('/api/axon-v0/toolkit-build'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spec: { name: draft.name, summary: draft.summary, icon: draft.icon, fields: draft.fields } }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        spec.buildStatus = d.state === 'completed' ? 'completed' : 'dispatched';
+        spec.buildNote = d.agentName ? `Handed to ${d.agentName}${d.ventureName ? ` (${d.ventureName})` : ''}.` : undefined;
+      } else if (d.held) {
+        spec.buildStatus = 'held';
+        spec.buildNote = 'AXON is on HOLD, so this stays queued until JB fires the gate.';
+      }
+      // any other d.ok === false case leaves buildStatus at 'draft' — best-effort, non-fatal
+      setMessages((m) => [
+        ...m,
+        {
+          id: nextId(),
+          role: 'axon',
+          text: `✓ "${spec.name}" saved. ${plainToolkitBuildStatus(spec.buildStatus)}${spec.buildNote ? ` — ${spec.buildNote}` : '.'}`,
+        },
+      ]);
+    } catch {
+      // Network/parse failure — the draft still saves locally, just without a build hand-off.
+      setMessages((m) => [
+        ...m,
+        { id: nextId(), role: 'axon', text: `✓ "${spec.name}" saved as a draft. Could not reach the Build Manager — try again later.` },
+      ]);
+    } finally {
+      setDraft(null);
+      setCreating(false);
+      onCreated(spec);
+    }
   }
 
   return (
@@ -186,8 +230,8 @@ export function CustomWidgetMaker({
             </button>
           </div>
           {draft && (
-            <button onClick={create} className="w3-primary mt-2 w-full">
-              ＋ Create "{draft.name}"
+            <button onClick={create} disabled={creating} className="w3-primary mt-2 w-full disabled:opacity-40">
+              {creating ? 'Handing off…' : `＋ Create "${draft.name}"`}
             </button>
           )}
         </div>
