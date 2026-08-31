@@ -79,6 +79,22 @@ export function routineAgentStatus(
   return BLOCKED_HEALTH.has(key) ? 'blocked' : 'active';
 }
 
+const DISPATCH_STATE_LABELS: Record<string, string> = {
+  dispatched: 'Sent',
+  running: 'Working on it',
+  completed: 'Done',
+  timeout: 'Ran out of time',
+  failed: 'Could not finish',
+};
+
+/** Plain label for a cross-venture dispatch's `body.progress.state` (agent_bus row) —
+ *  never the raw dispatched/running/completed/timeout/failed enum on screen. */
+export function plainDispatchState(state: string | null | undefined): string {
+  if (!state) return 'Sent';
+  const key = state.toLowerCase().trim();
+  return DISPATCH_STATE_LABELS[key] || deJargon(key);
+}
+
 /** Relative "last seen" line — never a raw ISO timestamp dump. */
 export function plainRelativeTime(iso: string | null | undefined): string | undefined {
   if (!iso) return undefined;

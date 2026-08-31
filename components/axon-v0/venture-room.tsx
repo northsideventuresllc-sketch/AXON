@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { apiUrl } from '@/lib/api-base';
 import { speak } from '@/components/axon-v0/voice';
 import { RouterDecisionPanel } from '@/components/axon-v0/router-decision-panel';
+import { ChatWindowDock, type ChatWindowSpec } from '@/components/axon-v0/chat-window';
+import { closeWindow, openWindow } from '@/lib/axon-v0/chat-windows.mjs';
 
 interface Agent {
   id: string;
@@ -79,6 +81,15 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
   const [activeThread, setActiveThread] = useState('group');
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [loggedOut, setLoggedOut] = useState(false);
+  // Item #6: multi-window agent chats — windows popped out of the sidebar float in a
+  // dock alongside this room, and cross-venture dispatch runs live there too.
+  const [windows, setWindows] = useState<ChatWindowSpec[]>([]);
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [dispatchVentureId, setDispatchVentureId] = useState('');
+  const [dispatchAgentId, setDispatchAgentId] = useState('');
+  const [dispatchTask, setDispatchTask] = useState('');
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchError, setDispatchError] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadVenture = useCallback(() => {
@@ -151,6 +162,65 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
     setError('');
   }
 
+  // Item #6: pop a saved chat out into its own floating window without leaving the room
+  // — this is the actual "multi-window" behavior (several threads visible and live at
+  // once), separate from openThread() which just switches the single main pane.
+  function popOutThread(t: ThreadSummary) {
+    setWindows((w) =>
+      openWindow(w, { kind: 'thread', ventureId, ventureName: venture?.name || null, thread: t.thread, title: t.title })
+    );
+  }
+
+  function closeChatWindow(key: string) {
+    setWindows((w) => closeWindow(w, key));
+  }
+
+  // Item #6: cross-venture dispatch — hands the task to an agent in a DIFFERENT venture
+  // through the same fireAgent() path (/api/axon-v0/dispatch -> lib/axon-agent-bus.mjs),
+  // never a second implementation of the loop guards or the FIRE/HOLD gate. The call is
+  // synchronous (fireAgent already ran the target's turn before responding), so the
+  // window opens already carrying its final state.
+  async function sendDispatch() {
+    const task = dispatchTask.trim();
+    const fromAgentId = targetAgent || exec?.id;
+    if (!task || !fromAgentId || !dispatchAgentId || dispatching) return;
+    setDispatching(true);
+    setDispatchError('');
+    try {
+      const res = await fetch(apiUrl('/api/axon-v0/dispatch'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromAgentId, toAgentId: dispatchAgentId, task }),
+      });
+      const d = await res.json();
+      if (!res.ok && !d.busId) {
+        setDispatchError(d.reason || 'The dispatch did not go through.');
+        return;
+      }
+      const targetVenture = others.find((v) => v.id === dispatchVentureId);
+      setWindows((w) =>
+        openWindow(w, {
+          kind: 'dispatch',
+          ventureId: dispatchVentureId,
+          ventureName: targetVenture?.name || d.toVentureName || null,
+          dispatchId: d.busId || `${Date.now()}`,
+          title: task.slice(0, 40),
+          toAgentName: d.toAgentName || null,
+          state: d.resolved ? 'completed' : d.ok ? 'running' : /budget|timed out/i.test(d.reason || '') ? 'timeout' : 'failed',
+          reply: d.reply || null,
+          reason: d.reason || null,
+          route: d.route || null,
+        })
+      );
+      setDispatchOpen(false);
+      setDispatchTask('');
+    } catch {
+      setDispatchError('Could not reach the agent bus.');
+    } finally {
+      setDispatching(false);
+    }
+  }
+
   async function send() {
     const text = input.trim();
     if (!text || sending || !venture) return;
@@ -217,10 +287,77 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
           <h1 className="v0-neon mt-1 text-3xl">{venture.name}</h1>
           {venture.tagline && <p className="mt-1 text-sm text-slate-400">{venture.tagline}</p>}
         </div>
-        <button onClick={() => setShowTools((s) => !s)} className="v0-chip text-cyan-200">
-          🧰 Tools ({venture.tools.length})
-        </button>
+        <div className="flex items-center gap-2">
+          {others.length > 0 && (
+            <button
+              onClick={() => {
+                setDispatchOpen((s) => !s);
+                setDispatchError('');
+                if (!dispatchVentureId) setDispatchVentureId(others[0]?.id || '');
+              }}
+              className="v0-chip text-cyan-200"
+            >
+              ⇄ Dispatch elsewhere
+            </button>
+          )}
+          <button onClick={() => setShowTools((s) => !s)} className="v0-chip text-cyan-200">
+            🧰 Tools ({venture.tools.length})
+          </button>
+        </div>
       </div>
+
+      {/* Item #6: cross-venture dispatch — send this task to an agent in another venture,
+          run synchronously through fireAgent()'s existing guards + FIRE/HOLD gate. */}
+      {dispatchOpen && (
+        <div className="v0-panel v0-rise mt-4 p-4">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">
+            Send a task to another venture
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <select
+              value={dispatchVentureId}
+              onChange={(e) => {
+                setDispatchVentureId(e.target.value);
+                setDispatchAgentId('');
+              }}
+              className="v0-chip bg-black/40 text-slate-200"
+            >
+              {others.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={dispatchAgentId}
+              onChange={(e) => setDispatchAgentId(e.target.value)}
+              className="v0-chip bg-black/40 text-slate-200"
+            >
+              <option value="">Pick an agent…</option>
+              {(others.find((o) => o.id === dispatchVentureId)?.agents || []).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <textarea
+            value={dispatchTask}
+            onChange={(e) => setDispatchTask(e.target.value)}
+            rows={2}
+            placeholder="What should they do?"
+            className="mt-2 w-full resize-none rounded-lg border border-cyan-400/20 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+          />
+          {dispatchError && <p className="mt-1 text-xs text-rose-300">{dispatchError}</p>}
+          <button
+            onClick={sendDispatch}
+            disabled={dispatching || !dispatchTask.trim() || !dispatchAgentId}
+            className="v0-chip mt-2 bg-cyan-400/15 text-cyan-100 disabled:opacity-40"
+          >
+            {dispatching ? 'Sending…' : 'Send ➤'}
+          </button>
+        </div>
+      )}
 
       {/* Per-venture tools drawer */}
       {showTools && (
@@ -324,20 +461,31 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
                   <p className="text-xs text-slate-500">No saved chats yet.</p>
                 )}
                 {threads.map((t) => (
-                  <button
-                    key={t.thread}
-                    onClick={() => openThread(t.thread)}
-                    className={`rounded-lg border px-2.5 py-2 text-left text-xs transition ${
-                      activeThread === t.thread
-                        ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-100'
-                        : 'border-white/10 bg-black/30 text-slate-300 hover:border-cyan-400/30'
-                    }`}
-                  >
-                    <p className="truncate">{t.title}</p>
-                    <p className="mt-0.5 text-[9px] uppercase tracking-widest text-slate-500">
-                      {new Date(t.last_message_at).toLocaleDateString()}
-                    </p>
-                  </button>
+                  <div key={t.thread} className="group relative">
+                    <button
+                      onClick={() => openThread(t.thread)}
+                      className={`w-full rounded-lg border px-2.5 py-2 pr-7 text-left text-xs transition ${
+                        activeThread === t.thread
+                          ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-100'
+                          : 'border-white/10 bg-black/30 text-slate-300 hover:border-cyan-400/30'
+                      }`}
+                    >
+                      <p className="truncate">{t.title}</p>
+                      <p className="mt-0.5 text-[9px] uppercase tracking-widest text-slate-500">
+                        {new Date(t.last_message_at).toLocaleDateString()}
+                      </p>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        popOutThread(t);
+                      }}
+                      title="Open in its own window"
+                      className="absolute right-1.5 top-1.5 text-[10px] text-slate-500 hover:text-cyan-200"
+                    >
+                      ⊞
+                    </button>
+                  </div>
                 ))}
               </div>
             </>
@@ -462,6 +610,8 @@ export function VentureRoom({ ventureId }: { ventureId: string }) {
         </p>
         </div>
       </div>
+
+      <ChatWindowDock windows={windows} onClose={closeChatWindow} />
     </div>
   );
 }
