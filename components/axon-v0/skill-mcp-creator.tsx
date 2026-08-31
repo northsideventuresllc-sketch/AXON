@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { apiUrl } from '@/lib/api-base';
 
 type Kind = 'skill' | 'mcp';
 
@@ -74,11 +75,26 @@ function draftSpec(kind: Kind, prompt: string): DraftSpec {
     name,
     summary,
     triggers,
-    notes: 'Draft only — provisioning is not wired up in this build.',
+    // Skills now provision for real (see below); MCP build-out is problem #9,
+    // separate work — that draft genuinely still goes nowhere yet.
+    notes:
+      kind === 'skill'
+        ? 'Create it to add a real, Off-by-default row to your registry.'
+        : 'Draft only — MCP provisioning is not wired up in this build.',
   };
 }
 
-export function SkillMcpCreator({ kind, onClose }: { kind: Kind; onClose: () => void }) {
+export function SkillMcpCreator({
+  kind,
+  onClose,
+  onCreated,
+}: {
+  kind: Kind;
+  onClose: () => void;
+  /** Called after a skill is actually created (kind === 'skill' only), so the
+   *  Skills page can refetch and show the new row. */
+  onCreated?: () => void;
+}) {
   const copy = KIND_COPY[kind];
   const [messages, setMessages] = useState<ChatMsg[]>([
     { id: nextId(), role: 'axon', text: copy.opener },
@@ -86,6 +102,9 @@ export function SkillMcpCreator({ kind, onClose }: { kind: Kind; onClose: () => 
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<DraftSpec | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -106,21 +125,60 @@ export function SkillMcpCreator({ kind, onClose }: { kind: Kind; onClose: () => 
     setInput('');
     setMessages((m) => [...m, { id: nextId(), role: 'you', text: prompt }]);
     setBusy(true);
+    setCreated(false);
+    setCreateError(null);
     // Local draft — simulate a beat so it reads like a chat, no network call.
     window.setTimeout(() => {
       const spec = draftSpec(kind, prompt);
       setDraft(spec);
+      const nextStep =
+        kind === 'skill'
+          ? 'Refine it by describing changes, or create it — it lands Off, ready to turn on from the Skills page.'
+          : 'Refine it by describing changes, or copy the spec — MCP building comes next.';
       setMessages((m) => [
         ...m,
         {
           id: nextId(),
           role: 'axon',
-          text: `Here's a draft ${copy.label} spec for "${spec.name}". Refine it by describing changes, or copy the spec — building it comes next.`,
+          text: `Here's a draft ${copy.label} spec for "${spec.name}". ${nextStep}`,
           draft: spec,
         },
       ]);
       setBusy(false);
     }, 450);
+  }
+
+  // Skills only — MCP creation stays a draft (problem #9's territory, not this one).
+  async function createSkill() {
+    if (!draft || kind !== 'skill' || creating) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const res = await fetch(apiUrl('/api/axon-v0/skills'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: draft.slug, description: draft.summary }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (d && d.ok) {
+        setCreated(true);
+        setMessages((m) => [
+          ...m,
+          {
+            id: nextId(),
+            role: 'axon',
+            text: `Added "${draft.name}" to your registry — it's Off. Turn it on from the Skills page whenever you're ready.`,
+          },
+        ]);
+        onCreated?.();
+      } else {
+        setCreateError((d && d.reason) || 'Could not create that skill right now.');
+      }
+    } catch {
+      setCreateError('Could not reach the skill registry — nothing was created.');
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -216,12 +274,26 @@ export function SkillMcpCreator({ kind, onClose }: { kind: Kind; onClose: () => 
             </button>
           </div>
           <p className="mt-2 text-[11px] text-slate-500">
-            Drafts a spec — building it comes next. Nothing is provisioned or sent from here.
+            {kind === 'skill'
+              ? 'Drafts a spec first. Nothing is created until you press Create Skill below.'
+              : 'Drafts a spec — MCP provisioning comes next. Nothing is created from here.'}
           </p>
-          {draft && (
+
+          {draft && kind === 'skill' && !created && (
+            <button
+              onClick={createSkill}
+              disabled={busy || creating}
+              className="mt-2 w-full rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-100 hover:bg-cyan-400/20 disabled:opacity-40"
+            >
+              {creating ? 'Creating…' : `Create Skill — "${draft.name}"`}
+            </button>
+          )}
+          {createError && <p className="mt-2 text-[11px] text-rose-300">{createError}</p>}
+
+          {draft && (kind !== 'skill' || created) && (
             <button
               onClick={onClose}
-              disabled={busy}
+              disabled={busy || creating}
               className="mt-2 w-full rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-100 hover:bg-emerald-400/20 disabled:opacity-40"
             >
               Done — close

@@ -81,6 +81,80 @@
   border-color: rgba(255, 215, 106, 0.4) !important;
 }
 
+/* Golden card — visibly harder to mistake for an ordinary one. */
+.sk-card-golden {
+  border-color: rgba(255, 215, 106, 0.35) !important;
+  box-shadow: 0 0 0 1px rgba(255, 215, 106, 0.12), 0 0 18px rgba(255, 215, 106, 0.06);
+}
+.sk-lock {
+  margin-right: 0.35rem;
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+/* --- Enable/disable toggle --- */
+.sk-toggle-row {
+  margin-top: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sk-toggle-btn {
+  cursor: pointer;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  background: rgba(0, 212, 255, 0.06);
+  color: #bdeeff;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.sk-toggle-btn:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.16);
+}
+.sk-toggle-btn-on {
+  border-color: rgba(52, 211, 153, 0.5);
+  background: rgba(52, 211, 153, 0.1);
+  color: #b8f7dc;
+}
+.sk-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.sk-lock-hint {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: rgba(255, 215, 106, 0.75);
+}
+
+.sk-toggle-blocked {
+  margin-top: 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.06);
+  padding: 0.55rem 0.7rem;
+}
+.sk-toggle-blocked p {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #fecaca;
+}
+.sk-toggle-confirm-btn {
+  cursor: pointer;
+  margin-top: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 215, 106, 0.45);
+  background: rgba(255, 215, 106, 0.1);
+  color: #ffe9ab;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.68rem;
+}
+.sk-toggle-confirm-btn:hover {
+  background: rgba(255, 215, 106, 0.2);
+}
+
 .sk-section-label {
   margin-top: 1.75rem;
   margin-bottom: 0.6rem;
