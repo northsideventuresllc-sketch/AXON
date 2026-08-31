@@ -331,7 +331,14 @@ export default function SkillsPage() {
         </>
       )}
 
-      {showMcp && <McpMarketplace />}
+      {showMcp && (
+        <McpMarketplace
+          onConnected={() => {
+            setLoading(true);
+            loadSkills();
+          }}
+        />
+      )}
 
       {creator && (
         <SkillMcpCreator

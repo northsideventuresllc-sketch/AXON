@@ -141,10 +141,21 @@ export async function PATCH(req: Request) {
   }
 }
 
-// Manually create a skill. Body: { name: string, description?: string }.
-// Always lands as scope='manual', status='proposed' (Off), is_golden=false —
-// a person turns it on from the Skills page once they're happy with it; it
-// never comes in already golden or already on.
+// Manually create a skill OR a draft MCP server row. Body:
+// { name: string, description?: string, kind?: 'skill' | 'mcp' }.
+//
+// kind==='skill' (default, back-compat): scope='manual'.
+// kind==='mcp': scope='mcp' — problem #9's general MCP build path. This is
+//   the generic "describe an MCP server, get a real registry row" case; it
+//   always lands inert (status='proposed', Off) because a hand-typed
+//   description gives no way to actually verify or reach the server. The
+//   one MCP kind wired to a *live* connection today is Supabase — see
+//   app/api/axon-v0/mcp/supabase/route.ts and the Skills & MCP page's
+//   marketplace card, which calls that route instead of this generic one.
+//
+// Either way: status='proposed' (Off), is_golden=false — a person turns it
+// on from the Skills page once they're happy with it; it never comes in
+// already golden or already on.
 export async function POST(req: Request) {
   try {
     const client = sbClient();
@@ -155,28 +166,35 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = (await req.json().catch(() => ({}))) as { name?: unknown; description?: unknown };
+    const body = (await req.json().catch(() => ({}))) as {
+      name?: unknown;
+      description?: unknown;
+      kind?: unknown;
+    };
     const rawName = str(body.name);
     const description = str(body.description);
+    const kind = body.kind === 'mcp' ? 'mcp' : 'skill';
+    const scope = kind === 'mcp' ? 'mcp' : 'manual';
+    const noun = kind === 'mcp' ? 'MCP server' : 'skill';
     if (!rawName) {
-      return NextResponse.json({ ok: false, reason: 'Give the skill a name first.' }, { status: 400 });
+      return NextResponse.json({ ok: false, reason: `Give the ${noun} a name first.` }, { status: 400 });
     }
 
-    const slug = slugify(rawName) || `manual-skill-${Date.now()}`;
+    const slug = slugify(rawName) || `manual-${kind}-${Date.now()}`;
 
     const existing = await client
       .sbSelect('nvg_skill_registry', `select=name&name=eq.${encodeURIComponent(slug)}`)
       .catch(() => []);
     if (Array.isArray(existing) && existing.length > 0) {
       return NextResponse.json(
-        { ok: false, reason: `A skill named "${slug}" already exists.` },
+        { ok: false, reason: `A ${noun} named "${slug}" already exists.` },
         { status: 200 }
       );
     }
 
     await client.sbInsert('nvg_skill_registry', {
       name: slug,
-      scope: 'manual',
+      scope,
       status: 'proposed',
       is_golden: false,
       version: 1,
@@ -184,7 +202,7 @@ export async function POST(req: Request) {
     });
 
     const skill = normalize(
-      { name: slug, scope: 'manual', status: 'proposed', is_golden: false, purpose: description ?? null },
+      { name: slug, scope, status: 'proposed', is_golden: false, purpose: description ?? null },
       0
     );
 

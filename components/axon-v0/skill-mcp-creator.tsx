@@ -75,12 +75,16 @@ function draftSpec(kind: Kind, prompt: string): DraftSpec {
     name,
     summary,
     triggers,
-    // Skills now provision for real (see below); MCP build-out is problem #9,
-    // separate work — that draft genuinely still goes nowhere yet.
+    // Both kinds now provision a real registry row (problem #9). A
+    // hand-typed MCP description has no way to actually verify or reach the
+    // server it describes, so it lands inert same as a skill — Off, ready
+    // to wire a real connection to later. Supabase is the one MCP kind with
+    // a live "Connect" flow today, and that lives on the marketplace card
+    // below the list, not through this free-text creator.
     notes:
       kind === 'skill'
         ? 'Create it to add a real, Off-by-default row to your registry.'
-        : 'Draft only — MCP provisioning is not wired up in this build.',
+        : 'Create it to add a real, Off-by-default row — wiring a live connection comes after.',
   };
 }
 
@@ -91,7 +95,7 @@ export function SkillMcpCreator({
 }: {
   kind: Kind;
   onClose: () => void;
-  /** Called after a skill is actually created (kind === 'skill' only), so the
+  /** Called after a skill or MCP row is actually created, so the
    *  Skills page can refetch and show the new row. */
   onCreated?: () => void;
 }) {
@@ -131,10 +135,7 @@ export function SkillMcpCreator({
     window.setTimeout(() => {
       const spec = draftSpec(kind, prompt);
       setDraft(spec);
-      const nextStep =
-        kind === 'skill'
-          ? 'Refine it by describing changes, or create it — it lands Off, ready to turn on from the Skills page.'
-          : 'Refine it by describing changes, or copy the spec — MCP building comes next.';
+      const nextStep = 'Refine it by describing changes, or create it — it lands Off, ready to turn on from the Skills page.';
       setMessages((m) => [
         ...m,
         {
@@ -148,16 +149,21 @@ export function SkillMcpCreator({
     }, 450);
   }
 
-  // Skills only — MCP creation stays a draft (problem #9's territory, not this one).
-  async function createSkill() {
-    if (!draft || kind !== 'skill' || creating) return;
+  // Both kinds provision a real registry row now (problem #9's general MCP
+  // path). It always lands inert (Off) — a free-text MCP description has no
+  // way to verify or reach the server it describes, same reasoning a skill
+  // description can't self-verify either. A live "Connect" flow (Supabase
+  // today) is a separate, narrower thing — see the marketplace card, not
+  // this free-text creator.
+  async function createDraft() {
+    if (!draft || creating) return;
     setCreating(true);
     setCreateError(null);
     try {
       const res = await fetch(apiUrl('/api/axon-v0/skills'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: draft.slug, description: draft.summary }),
+        body: JSON.stringify({ name: draft.slug, description: draft.summary, kind: draft.kind }),
       });
       const d = await res.json().catch(() => ({}));
       if (d && d.ok) {
@@ -172,10 +178,10 @@ export function SkillMcpCreator({
         ]);
         onCreated?.();
       } else {
-        setCreateError((d && d.reason) || 'Could not create that skill right now.');
+        setCreateError((d && d.reason) || `Could not create that ${copy.label.toLowerCase()} right now.`);
       }
     } catch {
-      setCreateError('Could not reach the skill registry — nothing was created.');
+      setCreateError('Could not reach the registry — nothing was created.');
     } finally {
       setCreating(false);
     }
@@ -274,23 +280,21 @@ export function SkillMcpCreator({
             </button>
           </div>
           <p className="mt-2 text-[11px] text-slate-500">
-            {kind === 'skill'
-              ? 'Drafts a spec first. Nothing is created until you press Create Skill below.'
-              : 'Drafts a spec — MCP provisioning comes next. Nothing is created from here.'}
+            Drafts a spec first. Nothing is created until you press {`Create ${copy.label}`} below.
           </p>
 
-          {draft && kind === 'skill' && !created && (
+          {draft && !created && (
             <button
-              onClick={createSkill}
+              onClick={createDraft}
               disabled={busy || creating}
               className="mt-2 w-full rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-100 hover:bg-cyan-400/20 disabled:opacity-40"
             >
-              {creating ? 'Creating…' : `Create Skill — "${draft.name}"`}
+              {creating ? 'Creating…' : `Create ${copy.label} — "${draft.name}"`}
             </button>
           )}
           {createError && <p className="mt-2 text-[11px] text-rose-300">{createError}</p>}
 
-          {draft && (kind !== 'skill' || created) && (
+          {draft && created && (
             <button
               onClick={onClose}
               disabled={busy || creating}
