@@ -37,7 +37,9 @@
     "test:router": "node tests/router-scoring.test.mjs",
     "test:agent-bus": "node tests/agent-bus-loop-guards.test.mjs",
     "test:agent-bus-fire": "node tests/agent-bus-fire-and-run.test.mjs",
-    "test:store": "node tests/store-account-scope.test.mjs"
+    "test:store": "node tests/store-account-scope.test.mjs",
+    "test:chat-windows": "node tests/chat-windows.test.mjs",
+    "test:cross-venture-dispatch": "node tests/cross-venture-dispatch.test.mjs"
   },
   "engines": {
     "node": ">=20"
