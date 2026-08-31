@@ -95,6 +95,21 @@ export function plainDispatchState(state: string | null | undefined): string {
   return DISPATCH_STATE_LABELS[key] || deJargon(key);
 }
 
+const TOOLKIT_BUILD_STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  held: 'Waiting on the FIRE gate',
+  dispatched: 'Build Manager is on it',
+  completed: 'Build Manager replied',
+};
+
+/** Plain label for a CustomWidgetSpec.buildStatus (item #10) — never the raw
+ *  draft/held/dispatched/completed value on screen. */
+export function plainToolkitBuildStatus(status: string | null | undefined): string {
+  if (!status) return 'Draft';
+  const key = status.toLowerCase().trim();
+  return TOOLKIT_BUILD_STATUS_LABELS[key] || deJargon(key);
+}
+
 /** Relative "last seen" line — never a raw ISO timestamp dump. */
 export function plainRelativeTime(iso: string | null | undefined): string | undefined {
   if (!iso) return undefined;
