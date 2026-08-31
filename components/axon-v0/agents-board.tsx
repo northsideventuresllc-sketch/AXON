@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiUrl } from '@/lib/api-base';
+import { plainPlatform } from '@/lib/axon-v0/plain-labels';
 import { DefaultAgentsPanel } from './default-agents-panel';
 import './agents.css';
 
@@ -38,12 +39,27 @@ interface Agent {
   tasksDone?: number;
   tasksTotal?: number;
   info?: string;
+  platform?: string;
 }
 
 interface Group {
   ventureId: string;
   ventureName: string;
   agents: Agent[];
+  platform?: string;
+}
+
+// Lane order: AXON's own agents first, then the fleet-wide roster (Claude Code
+// cloud, then Cowork local), then anything else alphabetically. A group with no
+// `platform` (an older cached response) is treated as AXON's own lane so nothing
+// disappears mid-rollout.
+const LANE_ORDER = ['axon', 'claude_code_cloud', 'cowork_ccr', 'cowork_local'];
+function laneKey(g: Group): string {
+  return (g.platform || 'axon').toLowerCase();
+}
+function laneRank(key: string): number {
+  const idx = LANE_ORDER.indexOf(key);
+  return idx === -1 ? LANE_ORDER.length : idx;
 }
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -164,38 +180,63 @@ export function AgentsBoard() {
     );
   }
 
+  const populated = groups.filter((g) => g.agents.length > 0);
+  const lanes = new Map<string, Group[]>();
+  for (const g of populated) {
+    const key = laneKey(g);
+    const list = lanes.get(key) ?? [];
+    list.push(g);
+    lanes.set(key, list);
+  }
+  const laneKeys = Array.from(lanes.keys()).sort((a, b) => laneRank(a) - laneRank(b) || a.localeCompare(b));
+
   return (
-    <div className="mt-6 space-y-8">
-      {groups
-        .filter((g) => g.agents.length > 0)
-        .map((g) => {
-          const isOpen = open[g.ventureId] !== false;
-          return (
-            <section key={g.ventureId} className="ag-group">
-              <button
-                type="button"
-                onClick={() => toggle(g.ventureId)}
-                aria-expanded={isOpen}
-                className="ag-venture-toggle flex w-full items-baseline gap-3 text-left"
-              >
-                <span className={`ag-caret ${isOpen ? 'ag-caret--open' : ''}`} aria-hidden>
-                  ▶
-                </span>
-                <h2 className="ag-venture-title text-lg">{g.ventureName.toUpperCase()}</h2>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-slate-600">
-                  {g.agents.length} agent{g.agents.length === 1 ? '' : 's'}
-                </span>
-              </button>
-              {isOpen && (
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {g.agents.map((a) => (
-                    <AgentCard key={a.id} agent={a} ventureName={g.ventureName} />
-                  ))}
-                </div>
-              )}
-            </section>
-          );
-        })}
+    <div className="mt-6 space-y-10">
+      {laneKeys.map((key) => {
+        const laneGroups = lanes.get(key)!;
+        const laneAgentCount = laneGroups.reduce((n, g) => n + g.agents.length, 0);
+        return (
+          <div key={key} className="ag-lane">
+            <div className="ag-lane-head">
+              <span className={`ag-lane-dot ag-lane-dot--${key === 'axon' ? 'axon' : 'other'}`} aria-hidden />
+              <h2 className="ag-lane-title">{plainPlatform(key)}</h2>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-slate-600">
+                {laneAgentCount} agent{laneAgentCount === 1 ? '' : 's'}
+              </span>
+            </div>
+            <div className="ag-lane-body space-y-8">
+              {laneGroups.map((g) => {
+                const isOpen = open[g.ventureId] !== false;
+                return (
+                  <section key={g.ventureId} className="ag-group">
+                    <button
+                      type="button"
+                      onClick={() => toggle(g.ventureId)}
+                      aria-expanded={isOpen}
+                      className="ag-venture-toggle flex w-full items-baseline gap-3 text-left"
+                    >
+                      <span className={`ag-caret ${isOpen ? 'ag-caret--open' : ''}`} aria-hidden>
+                        ▶
+                      </span>
+                      <h3 className="ag-venture-title text-lg">{g.ventureName.toUpperCase()}</h3>
+                      <span className="text-[10px] uppercase tracking-[0.2em] text-slate-600">
+                        {g.agents.length} agent{g.agents.length === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {g.agents.map((a) => (
+                          <AgentCard key={a.id} agent={a} ventureName={g.ventureName} />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
       <DefaultAgentsPanel />
     </div>
   );

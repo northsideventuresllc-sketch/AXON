@@ -16,6 +16,44 @@
   animation: ag-in 0.4s ease both;
 }
 
+/* --- platform lanes: keep AXON's own agents visibly distinct from the
+   fleet-wide roster (Claude Code cloud, Cowork local, etc.) --- */
+.ag-lane {
+  border-left: 2px solid rgba(0, 212, 255, 0.12);
+  padding-left: 1rem;
+}
+.ag-lane-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+.ag-lane-title {
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: #6fd8ff;
+}
+.ag-lane-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.ag-lane-dot--axon {
+  background: #00d4ff;
+  box-shadow: 0 0 6px 1px rgba(0, 212, 255, 0.6);
+}
+.ag-lane-dot--other {
+  background: #8ab4ff;
+  box-shadow: 0 0 6px 1px rgba(138, 180, 255, 0.6);
+}
+.ag-lane-body {
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  padding-top: 0.25rem;
+}
+
 .ag-venture-title {
   font-family: var(--font-mono, monospace);
   letter-spacing: 0.28em;
