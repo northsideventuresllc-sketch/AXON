@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiUrl } from '@/lib/api-base';
 import type { CustomWidgetSpec } from '@/lib/axon-v0/view-prefs';
+import { plainToolkitBuildStatus } from '@/lib/axon-v0/plain-labels';
 import './widgets.css';
 import './widgets-3d.css';
 
@@ -222,7 +223,12 @@ export function VentureStatsWidget() {
   );
 }
 
-/** Rendered body for a user-drafted custom widget (spec only — not yet provisioned). */
+/**
+ * Rendered body for a user-drafted custom widget. The spec itself still isn't live
+ * runtime code (item #10's honest scope — see lib/axon-toolkit-build.mjs), but it no
+ * longer dead-ends here: `buildStatus` reflects what actually happened when it was
+ * handed to the venture's Build Manager (dispatched via fireAgent, gated by FIRE/HOLD).
+ */
 export function CustomWidgetCard({ spec }: { spec: CustomWidgetSpec }) {
   return (
     <div className="space-y-2 px-1 pb-1">
@@ -230,10 +236,10 @@ export function CustomWidgetCard({ spec }: { spec: CustomWidgetSpec }) {
         <span className="text-[13px] text-slate-200">
           {spec.icon || '✦'} {spec.name}
         </span>
-        <span className="w3-placeholder">Draft</span>
+        <span className="w3-placeholder">{plainToolkitBuildStatus(spec.buildStatus)}</span>
       </div>
       <p className="wg-sub leading-relaxed">{spec.summary}</p>
-      <p className="wg-sub">Spec saved locally. Live provisioning comes next.</p>
+      <p className="wg-sub">{spec.buildNote || 'Spec saved. Live provisioning of the widget itself comes next.'}</p>
     </div>
   );
 }
@@ -379,7 +385,7 @@ export function WidgetCatalog({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="w3-cat-name">{c.name}</span>
-                        <span className="w3-tag">DRAFT</span>
+                        <span className="w3-tag">{plainToolkitBuildStatus(c.buildStatus).toUpperCase()}</span>
                       </div>
                       <p className="w3-cat-desc truncate">{c.summary}</p>
                     </div>
