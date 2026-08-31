@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { apiUrl } from '@/lib/api-base';
 
 interface CatalogEntry {
   id: string;
@@ -21,7 +22,75 @@ const CATALOG: CatalogEntry[] = [
   { id: 'playwright', name: 'Playwright', description: 'Drive a real browser for tests and scraping.', category: 'Automation' },
 ];
 
-export function McpMarketplace() {
+// Problem #9 (MCP build system) starts with Supabase — the one catalog entry
+// below with a real "Connect" flow (app/api/axon-v0/mcp/supabase/route.ts)
+// instead of the local-only "Request" flag every other entry still uses.
+const WIRED_ID = 'supabase';
+
+type SupabaseState = {
+  connected: boolean;
+  label: string;
+  detail: string;
+} | null;
+
+function SupabaseCard({ c, onConnected }: { c: CatalogEntry; onConnected?: () => void }) {
+  const [state, setState] = useState<SupabaseState>(null);
+  const [checking, setChecking] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+
+  const refresh = () => {
+    setChecking(true);
+    fetch(apiUrl('/api/axon-v0/mcp/supabase'))
+      .then((r) => r.json())
+      .then((d) => setState(d && typeof d.label === 'string' ? d : null))
+      .catch(() => setState(null))
+      .finally(() => setChecking(false));
+  };
+
+  useEffect(refresh, []);
+
+  const connect = async () => {
+    setConnecting(true);
+    try {
+      const res = await fetch(apiUrl('/api/axon-v0/mcp/supabase'), { method: 'POST' });
+      const d = await res.json().catch(() => ({}));
+      setState(d && typeof d.label === 'string' ? d : null);
+      if (d && d.connected) onConnected?.();
+    } catch {
+      setState({ connected: false, label: 'Could not connect right now', detail: 'Nothing was saved.' });
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  return (
+    <div className="sk-card v0-panel">
+      <div className="sk-card-head">
+        <span className="sk-name">{c.name}</span>
+        <span className="v0-chip">{c.category}</span>
+      </div>
+      <p className="sk-desc">{c.description}</p>
+      <div className="sk-meta">
+        <span className={`sk-state ${state?.connected ? 'sk-state-on' : ''}`}>
+          <span className="sk-state-dot" />
+          {checking ? 'Checking…' : state?.label || 'Status unknown'}
+        </span>
+      </div>
+      {state && !checking && <p className="sk-market-hint">{state.detail}</p>}
+      <div className="sk-meta">
+        <button
+          onClick={connect}
+          disabled={checking || connecting}
+          className={`sk-market-btn ${state?.connected ? 'sk-market-btn-on' : ''}`}
+        >
+          {connecting ? 'Connecting…' : state?.connected ? '✓ Connected' : 'Connect'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function McpMarketplace({ onConnected }: { onConnected?: () => void }) {
   const [requested, setRequested] = useState<Record<string, boolean>>({});
 
   const toggle = (id: string) =>
@@ -33,10 +102,13 @@ export function McpMarketplace() {
         MCP Marketplace<span className="sk-count">{CATALOG.length}</span>
       </div>
       <p className="sk-market-note">
-        Curated MCP servers. Request one to flag it — install and credentials come later.
+        Curated MCP servers. Supabase connects live below — everything else, request one to flag it; install and credentials come later.
       </p>
       <div className="sk-grid">
         {CATALOG.map((c) => {
+          if (c.id === WIRED_ID) {
+            return <SupabaseCard key={c.id} c={c} onConnected={onConnected} />;
+          }
           const isReq = !!requested[c.id];
           return (
             <div key={c.id} className="sk-card v0-panel">
