@@ -77,6 +77,10 @@ export async function POST() {
 
     const row = supabaseMcpRegistryRow(state);
     const existing = await client
+      // EXEMPT from assertSkillToggleAllowed on purpose: the name written here is
+      // always the hardcoded SUPABASE_MCP_NAME constant, never caller-supplied, so no
+      // golden skill can be reached. If this route is EVER parameterized by name, it
+      // must call the guard first or it becomes a bypass.
       .sbSelect('nvg_skill_registry', `select=name&name=eq.${SUPABASE_MCP_NAME}`)
       .catch(() => []);
 
