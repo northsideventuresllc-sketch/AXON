@@ -21,6 +21,8 @@ import {
 import { loadJspacePromptBlock } from './axon-j-space';
 import { loadWisdomPromptBlock } from './axon-wisdom';
 import type { ChatMessage, TonePreset } from './axon-types';
+import { POWER_LEVEL_TO_COST_TIER_FLOOR } from './axon-types';
+import { getPreferences } from './axon-preferences';
 import { routeChat } from './axon-router';
 import { createSupabaseClient } from './supabase.mjs';
 
@@ -100,10 +102,15 @@ async function callChatModel(
   // Telegram or voice and they fell through to PAID Anthropic instead of the free
   // OpenRouter lanes sitting right there. Found 2026-08-28.
   try {
+    // Same operator power-bar lock as app/api/axon-v0/agent-chat/route.ts — Telegram/voice
+    // share the one operator, so their live routing respects the same manual lock.
+    const powerMode = (await getPreferences()).powerMode;
+    const costTierFloor = powerMode.autoSwitchEnabled ? null : POWER_LEVEL_TO_COST_TIER_FLOOR[powerMode.level];
     const routed = await routeChat(keys.supabaseKey ?? '', {
       messages: [{ role: 'system', content: system }, ...messages],
       mode: 'auto',
       hasMini: true, // these surfaces run where the mini relay is reachable
+      costTierFloor,
     });
     if (routed?.reply) return routed.reply;
   } catch {

@@ -260,6 +260,16 @@
   border-color: rgba(0, 212, 255, 0.55);
 }
 
+.st-seg-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.st-seg-btn:disabled:hover {
+  color: rgb(148, 163, 184);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
 /* --- notification toggle rows --- */
 .st-toggle-row {
   display: flex;
