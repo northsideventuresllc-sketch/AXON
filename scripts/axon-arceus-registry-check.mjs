@@ -106,7 +106,7 @@ async function main() {
       needsAnswer: report.newCount > 0,
     });
 
-    const slackResult = await postSlack(report.text);
+    const slackResult = await postSlack(report.headline, report.text);
     if (!slackResult.ok) {
       console.error(`[axon-arceus] Slack post failed: HTTP ${slackResult.status}`);
     }

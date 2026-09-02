@@ -253,8 +253,8 @@ async function main() {
   if (!effectiveDry) saveRunState(state);
 
   // --- Slack + agent_bus outbound — the human/agent-facing wrap for this run ---
+  const slackHeadline = `nightly run ${today}`;
   const plainSummary =
-    `AXON Executive Agent — nightly run ${today}\n` +
     `• Wisdom: ${summaryLine}\n` +
     `• Durable signals: ${durable.durableDecisions.length} decisions, ${durable.durableLearnings.length} learnings\n` +
     `• Git history: ${commitsResult.commits?.length ? `${commitsResult.commits.length - commitRepoFailures.length}/${commitsResult.commits.length} repos ok` : 'skipped'}\n` +
@@ -263,7 +263,7 @@ async function main() {
     (budget.overBudget ? `\n⏳ Hit its time-box this run — resuming within ~12h, not waiting for the full 24h.` : '');
 
   if (!effectiveDry) {
-    const slackResult = await postSlack(plainSummary);
+    const slackResult = await postSlack(slackHeadline, plainSummary);
     loopNotes.push(`Slack post: ${slackResult.ok ? 'ok' : `FAILED (${slackResult.error || slackResult.status})`}`);
 
     await postToAgentBus(sbInsert, {

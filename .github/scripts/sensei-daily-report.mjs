@@ -19,13 +19,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
+import { postAgentOps } from '../../lib/slack-post.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
 const RUNPOD_ENDPOINT_ID = process.env.RUNPOD_ENDPOINT_ID;
-const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
-const SLACK_CHANNEL = process.env.SLACK_AGENT_OPS_CHANNEL || 'C0BQMTYMNRH';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — cannot run.');
@@ -138,8 +137,9 @@ async function cronHealthCheck() {
 
 /**
  * PART 3 — deliver the report.
- * Posts to Slack #agent-ops via the same chat.postMessage REST call every other AXON
- * script in this repo uses for Slack delivery.
+ * Posts to Slack #agent-ops via the shared lib/slack-post.mjs helper (the
+ * slack-post Supabase edge function) — same mechanism every other AXON
+ * script in this repo now uses for Slack delivery.
  */
 async function deliverReport(runpod, cron) {
   const overallStatus =
@@ -150,41 +150,21 @@ async function deliverReport(runpod, cron) {
         : 'ok';
 
   const today = new Date().toISOString().slice(0, 10);
-  const lines = [
-    `*AXON Sensei Daily Report — ${today}*`,
-    '',
+  const headline = `Daily Report ${today} — ${overallStatus.toUpperCase()}`;
+  const body = [
     `*1. RunPod endpoint health:* ${runpod.status.toUpperCase()}`,
     `  ${runpod.detail}`,
     '',
     `*2. AXON cron health:* ${cron.status.toUpperCase()}`,
     `  ${cron.detail}`,
-    '',
-    `*Overall:* ${overallStatus.toUpperCase()}`,
-  ];
-  const text = lines.join('\n');
+  ].join('\n');
 
-  if (SLACK_BOT_TOKEN) {
-    try {
-      const res = await fetch('https://slack.com/api/chat.postMessage', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
-        },
-        body: JSON.stringify({ channel: SLACK_CHANNEL, text }),
-      });
-      const json = await res.json();
-      if (!json.ok) {
-        console.error(`Slack post failed: ${json.error}`);
-      }
-    } catch (err) {
-      console.error(`Slack post threw: ${err.message}`);
-    }
-  } else {
-    console.warn('SLACK_BOT_TOKEN not set — skipping Slack delivery, report printed to logs only.');
+  const result = await postAgentOps({ agentName: 'AXON Sensei', headline, body });
+  if (!result.ok) {
+    console.error(`Slack post failed: ${result.error || result.status}`);
   }
 
-  console.log(text);
+  console.log(`*AXON Sensei — ${headline}*\n${body}`);
 
   return overallStatus;
 }

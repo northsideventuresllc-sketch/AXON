@@ -29,13 +29,25 @@ async function saveOffset(sbUpsertSecret, offset) {
   await sbUpsertSecret(OFFSET_KEY, String(offset));
 }
 
+// --agent <KEY> / env AXON_TELEGRAM_AGENT selects a per-agent bot (falls back
+// to the shared default bot when that agent has no dedicated bot provisioned
+// — see TELEGRAM-PER-AGENT-BOT-0827 in lib/config.mjs).
+function resolveAgentKey() {
+  const flagIdx = process.argv.indexOf('--agent');
+  if (flagIdx !== -1 && process.argv[flagIdx + 1]) return process.argv[flagIdx + 1];
+  const eqArg = process.argv.find((a) => a.startsWith('--agent='));
+  if (eqArg) return eqArg.split('=')[1];
+  return process.env.AXON_TELEGRAM_AGENT || undefined;
+}
+
 async function main() {
   console.log(`AXON Telegram poll — ${new Date().toISOString()}`);
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const sb = createSupabaseClient(key);
 
   if (await cronGuardShouldSkip('axon-telegram-poll', sb.sbSelect)) return;
-  const cfg = await loadConfig(sb.sbSelect);
+  const agentKey = resolveAgentKey();
+  const cfg = await loadConfig(sb.sbSelect, agentKey);
 
   if (!cfg.telegramToken || !cfg.telegramChatId) {
     console.log('Telegram not configured — exiting');

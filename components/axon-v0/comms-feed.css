@@ -1,0 +1,107 @@
+/* Agent comms feed + fleet status strip — holographic styling.
+   All classes prefixed cf- to stay clear of shared globals.css and the ag- board. */
+
+.cf-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  padding: 0.15rem 0.55rem;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #6fd8ff;
+}
+.cf-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #00d4ff;
+  box-shadow: 0 0 6px 1px rgba(0, 212, 255, 0.6);
+}
+.cf-live-pill--stale {
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+}
+.cf-live-pill--stale .cf-live-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 6px 1px rgba(251, 191, 36, 0.6);
+}
+
+.cf-row {
+  border: 1px solid rgba(0, 212, 255, 0.1);
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 0.6rem;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.cf-row:hover {
+  border-color: rgba(0, 212, 255, 0.3);
+  background: rgba(0, 212, 255, 0.04);
+}
+
+.cf-source-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+}
+.cf-source-chip--bus { border-color: rgba(0, 212, 255, 0.35); color: #6fd8ff; }
+.cf-source-chip--slack { border-color: rgba(167, 139, 250, 0.35); color: #c4b5fd; }
+.cf-source-chip--telegram { border-color: rgba(56, 189, 248, 0.35); color: #7dd3fc; }
+.cf-source-chip--task { border-color: rgba(74, 222, 128, 0.35); color: #86efac; }
+
+.cf-body-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cf-fleet-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.9fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  padding: 0.5rem 0.25rem;
+}
+.cf-fleet-row:last-child { border-bottom: none; }
+
+.cf-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 10px;
+}
+.cf-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.cf-status-pill--live { background: rgba(74, 222, 128, 0.12); color: #86efac; }
+.cf-status-pill--live .cf-status-dot { background: #4ade80; box-shadow: 0 0 6px 1px rgba(74, 222, 128, 0.6); }
+.cf-status-pill--stale { background: rgba(251, 191, 36, 0.12); color: #fbbf24; }
+.cf-status-pill--stale .cf-status-dot { background: #fbbf24; box-shadow: 0 0 6px 1px rgba(251, 191, 36, 0.6); }
+.cf-status-pill--never { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+.cf-status-pill--never .cf-status-dot { background: #94a3b8; }
+.cf-status-pill--off { background: rgba(148, 163, 184, 0.08); color: #64748b; }
+.cf-status-pill--off .cf-status-dot { background: #64748b; }
+
+.cf-drift-flag {
+  border-radius: 9999px;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  color: #fda4af;
+  padding: 0.1rem 0.45rem;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}

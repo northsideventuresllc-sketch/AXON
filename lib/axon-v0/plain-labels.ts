@@ -79,6 +79,69 @@ export function routineAgentStatus(
   return BLOCKED_HEALTH.has(key) ? 'blocked' : 'active';
 }
 
+const COMMS_SOURCE_LABELS: Record<string, string> = {
+  bus: 'Agent Bus',
+  slack: 'Slack',
+  telegram: 'Telegram',
+  task: 'Task Log',
+};
+
+/** Short chip label for a v_agent_comms_feed row's `source`. */
+export function plainCommsSource(source: string | null | undefined): string {
+  if (!source) return 'Unknown';
+  const key = source.toLowerCase().trim();
+  return COMMS_SOURCE_LABELS[key] || deJargon(key);
+}
+
+const COMMS_STATUS_LABELS: Record<string, string> = {
+  open: 'Waiting',
+  pending: 'Waiting',
+  answered: 'Answered',
+  resolved: 'Answered',
+  dropped: 'Dropped',
+  failed: 'Dropped',
+};
+
+/** Plain label for a comms-feed row's `status` — never the raw open/answered/dropped
+ *  value on screen. */
+export function plainCommsStatus(status: string | null | undefined): string | undefined {
+  if (!status) return undefined;
+  const key = status.toLowerCase().trim();
+  return COMMS_STATUS_LABELS[key] || deJargon(key);
+}
+
+const FLEET_STATUS_LABELS: Record<string, string> = {
+  live: 'Alive',
+  stale: 'Quiet',
+  never_seen: 'Never checked in',
+  disabled_by_design: 'Off on purpose',
+};
+
+/** Plain label for v_fleet_live_status.status — never the raw LIVE/STALE/etc value. */
+export function plainFleetStatus(status: string | null | undefined): string {
+  if (!status) return 'Status unknown';
+  const key = status.toLowerCase().trim();
+  return FLEET_STATUS_LABELS[key] || deJargon(key);
+}
+
+const SURFACE_LABELS: Record<string, string> = {
+  claude_code: 'Claude Code',
+  claude_code_cloud: 'Claude Code',
+  axon_local: 'AXON Local',
+  axon: 'AXON Local',
+  github_actions: 'GitHub Actions',
+  mac_mini: 'Mac Mini',
+  cowork_ccr: 'Local (Cowork)',
+  cowork_local: 'Local (Cowork)',
+};
+
+/** Plain label for a fleet row's `surface` — e.g. "claude_code" -> "Claude Code". */
+export function plainSurface(surface: string | null | undefined): string {
+  if (!surface) return 'Unknown';
+  const key = surface.toLowerCase().trim();
+  return SURFACE_LABELS[key] || deJargon(key);
+}
+
 const DISPATCH_STATE_LABELS: Record<string, string> = {
   dispatched: 'Sent',
   running: 'Working on it',

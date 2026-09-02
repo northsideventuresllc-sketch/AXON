@@ -13,6 +13,7 @@ import { isTransientResearchError } from '../lib/axon-research-core.mjs';
 import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { runThreeAreaResearch, buildHandoffBody } from '../lib/axon-self-research-build-plans.mjs';
+import { AGENT } from '../lib/agent-names.mjs';
 import {
   handoffToAgent,
   telegramAlert,
@@ -90,8 +91,8 @@ async function main() {
       if (results.length && !dryRun) {
         const body = buildHandoffBody(results, stoppedEarly);
         await handoffToAgent(sbInsert, {
-          fromAgent: 'Self-Research',
-          toAgent: 'AXON Executive Agent',
+          fromAgent: AGENT.SELF_RESEARCH,
+          toAgent: AGENT.EXECUTIVE_AGENT,
           subject: `SELF-RESEARCH-BUILD-PLANS-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
           body,
           needsAnswer: true,

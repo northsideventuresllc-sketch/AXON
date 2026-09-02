@@ -35,6 +35,7 @@ import {
   getFirstPartyAnalytics,
 } from '../lib/axon-content-scaffold-shared.mjs';
 import { externalSearch, synthesizeFinding } from '../lib/axon-research-synthesis.mjs';
+import { AGENT } from '../lib/agent-names.mjs';
 
 const JOB_ID = 'axon-social-media-research';
 const PLATFORMS = ['Instagram', 'TikTok', 'X (Twitter)', 'LinkedIn'];
@@ -172,14 +173,14 @@ async function main() {
 
   try {
     await writeAgentBus(sb, {
-      from_agent: 'AXON Social Media Research',
-      to_agent: 'AXON Executive Agent',
+      from_agent: AGENT.SOCIAL_MEDIA_RESEARCH,
+      to_agent: AGENT.EXECUTIVE_AGENT,
       subject: `Social Media Research — ${ok.length}/${results.length} real finding(s)`,
       body: busBody,
       needs_answer: false,
     });
     await writeAgentBus(sb, {
-      from_agent: 'AXON Social Media Research',
+      from_agent: AGENT.SOCIAL_MEDIA_RESEARCH,
       to_agent: 'CONTENT',
       subject: `Fresh niche/competitor research for content drafts — ${ok.length} venture(s)`,
       body: busBody,

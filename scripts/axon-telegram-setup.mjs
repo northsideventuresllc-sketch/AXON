@@ -7,6 +7,7 @@
  *   node scripts/axon-telegram-setup.mjs --webhook https://your-domain/api/telegram-webhook
  *   node scripts/axon-telegram-setup.mjs --auto          # register commands + set default Vercel webhook
  *   node scripts/axon-telegram-setup.mjs --polling     # remove webhook (use GitHub cron poll)
+ *   node scripts/axon-telegram-setup.mjs --agent arceus  # set up a per-agent bot (or AXON_TELEGRAM_AGENT env)
  */
 import { loadConfig, DEFAULT_WEBHOOK_URL } from '../lib/config.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
@@ -18,10 +19,22 @@ import {
   telegramSetWebhook,
 } from '../lib/telegram.mjs';
 
+// --agent <KEY> / env AXON_TELEGRAM_AGENT selects a per-agent bot (falls back
+// to the shared default bot when that agent has no dedicated bot provisioned
+// — see TELEGRAM-PER-AGENT-BOT-0827 in lib/config.mjs).
+function resolveAgentKey() {
+  const flagIdx = process.argv.indexOf('--agent');
+  if (flagIdx !== -1 && process.argv[flagIdx + 1]) return process.argv[flagIdx + 1];
+  const eqArg = process.argv.find((a) => a.startsWith('--agent='));
+  if (eqArg) return eqArg.split('=')[1];
+  return process.env.AXON_TELEGRAM_AGENT || undefined;
+}
+
 async function main() {
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const { sbSelect } = createSupabaseClient(key);
-  const cfg = await loadConfig(sbSelect);
+  const agentKey = resolveAgentKey();
+  const cfg = await loadConfig(sbSelect, agentKey);
 
   if (!cfg.telegramToken) {
     throw new Error('TELEGRAM_BOT_TOKEN not configured');
