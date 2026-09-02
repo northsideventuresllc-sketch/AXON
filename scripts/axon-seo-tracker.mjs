@@ -36,6 +36,7 @@ import {
   getFirstPartyAnalytics,
 } from '../lib/axon-content-scaffold-shared.mjs';
 import { externalSearch, synthesizeFinding } from '../lib/axon-research-synthesis.mjs';
+import { AGENT } from '../lib/agent-names.mjs';
 
 const JOB_ID = 'axon-seo-tracker';
 const SEO_SOURCES = ['Google Search Console', 'Keyword rank tracker', 'Backlink data'];
@@ -176,14 +177,14 @@ async function main() {
 
   try {
     await writeAgentBus(sb, {
-      from_agent: 'AXON SEO Tracker',
-      to_agent: 'AXON Executive Agent',
+      from_agent: AGENT.SEO_TRACKER,
+      to_agent: AGENT.EXECUTIVE_AGENT,
       subject: `SEO Tracker — ${ok.length}/${results.length} real finding(s)`,
       body: busBody,
       needs_answer: false,
     });
     await writeAgentBus(sb, {
-      from_agent: 'AXON SEO Tracker',
+      from_agent: AGENT.SEO_TRACKER,
       to_agent: 'CONTENT',
       subject: `Fresh SEO/ranking signal for content drafts — ${ok.length} venture(s)`,
       body: busBody,

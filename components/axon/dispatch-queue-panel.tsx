@@ -25,6 +25,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const QUEUE_API = apiUrl('/api/axon/dispatch/queue');
 const FIRE_API = apiUrl('/api/axon/dispatch/fire');
+const POLL_MS = 10_000;
 
 export function DispatchQueuePanel() {
   const [items, setItems] = useState<DispatchItem[]>([]);
@@ -33,8 +34,8 @@ export function DispatchQueuePanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts: { silent?: boolean } = {}) => {
+    if (!opts.silent) setLoading(true);
     setError(null);
     try {
       const r = await fetch(QUEUE_API);
@@ -42,14 +43,30 @@ export function DispatchQueuePanel() {
       if (!data.ok) throw new Error(data.error || 'load failed');
       setItems(data.items || []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'load failed');
+      // A silent background poll failing shouldn't blank an already-loaded panel
+      // with an error banner — only surface it on the initial load.
+      if (!opts.silent) setError(e instanceof Error ? e.message : 'load failed');
     } finally {
-      setLoading(false);
+      if (!opts.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Keep the queue from going stale between manual refreshes — poll every 10s,
+  // paused while the tab is hidden.
+  useEffect(() => {
+    const poll = () => {
+      if (!document.hidden) load({ silent: true });
+    };
+    const id = setInterval(poll, POLL_MS);
+    document.addEventListener('visibilitychange', poll);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', poll);
+    };
   }, [load]);
 
   async function fireAll() {
