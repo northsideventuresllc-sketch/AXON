@@ -56,6 +56,21 @@ export default async function handler(req, res) {
     }
 
     const update = req.body;
+    // Remember every chat this bot hears from (DM, group, forum supergroup).
+    // getUpdates is unusable while this webhook is set, so this table is how
+    // nv-vault's telegram-topics-setup.mjs finds the "NVG Agents" forum group.
+    // Fire-and-forget: a failure here must never block the message itself.
+    const seenChat =
+      update?.message?.chat || update?.my_chat_member?.chat || update?.callback_query?.message?.chat || update?.channel_post?.chat;
+    if (seenChat?.id) {
+      sb.sbUpsert('axon_telegram_chats', {
+        chat_id: seenChat.id,
+        chat_type: seenChat.type || 'unknown',
+        title: seenChat.title || seenChat.username || seenChat.first_name || null,
+        is_forum: Boolean(seenChat.is_forum),
+        last_seen_at: new Date().toISOString(),
+      }).catch((e) => console.error('Telegram webhook: chat record failed:', e.message));
+    }
     const msg = update?.message;
     if (msg?.text) {
       await handleTelegramMessage(cfg, sb, msg);
