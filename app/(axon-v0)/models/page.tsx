@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiUrl } from '@/lib/api-base';
 import { loadPrefs, patchPrefs, type WindowMode } from '@/lib/axon-v0/view-prefs';
 import { ConnectorCatalog } from '@/components/axon-v0/connector-catalog';
+import { AiChainPanel } from '@/components/axon-v0/ai-chain-panel';
 import '@/components/axon-v0/settings-sections.css';
 
 interface Provider {
@@ -499,6 +500,14 @@ export default function SettingsPage() {
                     Tries each lane in this order and falls through automatically when one is down. Reorder
                     connectors below to change how ties get broken.
                   </p>
+                </div>
+
+                {/* AI Chain — the locked 5-tier default order, editable per account */}
+                <div className="rounded-lg border border-cyan-400/10 bg-black/20 p-4">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70">AI Chain</p>
+                  <div className="mt-3">
+                    <AiChainPanel />
+                  </div>
                 </div>
 
                 {/* Connector catalog */}
