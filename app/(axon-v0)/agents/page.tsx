@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { AgentsBoard } from '@/components/axon-v0/agents-board';
 import { AgentCommsFeed } from '@/components/axon-v0/agent-comms-feed';
 import { FleetStatusStrip } from '@/components/axon-v0/fleet-status-strip';
+import { RosterFleetPanel } from '@/components/axon-v0/roster-fleet-panel';
 
 const TABS = [
   { id: 'board', label: 'Board' },
   { id: 'comms', label: 'Comms' },
+  { id: 'fleet', label: 'Fleet' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -39,12 +41,16 @@ export default function AgentsPage() {
         ))}
       </div>
 
-      {tab === 'board' ? (
-        <AgentsBoard />
-      ) : (
+      {tab === 'board' && <AgentsBoard />}
+      {tab === 'comms' && (
         <div className="mt-6 space-y-6">
           <FleetStatusStrip />
           <AgentCommsFeed />
+        </div>
+      )}
+      {tab === 'fleet' && (
+        <div className="mt-6">
+          <RosterFleetPanel />
         </div>
       )}
     </div>

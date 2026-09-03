@@ -173,6 +173,106 @@ export function plainToolkitBuildStatus(status: string | null | undefined): stri
   return TOOLKIT_BUILD_STATUS_LABELS[key] || deJargon(key);
 }
 
+/**
+ * The five harnesses JB's Phase 2 order allows (agentic-os-phase2-harness-usage.md):
+ * AXON v0, Claude Code, Mac mini, Hermes, Supabase cron. `nvg_agent_routines.harness`
+ * still carries legacy values from before that consolidation (github_actions,
+ * claude_code_routine, claude_code_repo_manager, axon_local) — this buckets a raw value
+ * into one of the five for the Fleet panel's grouping, never inventing a 6th group.
+ * `github_actions` buckets into 'hermes': the harness-cron-map research found "Hermes-as-
+ * a-harness today is mostly GitHub Actions plus a Mac gateway" — these rows are
+ * candidates for Phase A1's move off GitHub Actions, not yet moved.
+ */
+const HARNESS_BUCKET: Record<string, string> = {
+  axon_local: 'axon_v0',
+  axon_v0: 'axon_v0',
+  claude_code_routine: 'claude_code',
+  claude_code_repo_manager: 'claude_code',
+  claude_code: 'claude_code',
+  mac_mini: 'mac_mini',
+  hermes: 'hermes',
+  github_actions: 'hermes',
+  supabase: 'supabase',
+};
+
+const HARNESS_BUCKET_LABELS: Record<string, string> = {
+  axon_v0: 'AXON v0',
+  claude_code: 'Claude Code',
+  mac_mini: 'Mac Mini',
+  hermes: 'Hermes',
+  supabase: 'Supabase Cron',
+  other: 'Unsorted',
+};
+
+/** Buckets a raw `nvg_agent_routines.harness` value into one of the five allowed
+ *  harnesses (or 'other' for a null/unrecognized value — never silently dropped). */
+export function rosterHarnessBucket(harness: string | null | undefined): string {
+  if (!harness) return 'other';
+  const key = harness.toLowerCase().trim();
+  return HARNESS_BUCKET[key] || 'other';
+}
+
+/** Plain group title for a harness bucket key (see rosterHarnessBucket). */
+export function plainHarnessBucket(bucket: string): string {
+  return HARNESS_BUCKET_LABELS[bucket] || deJargon(bucket);
+}
+
+export type RosterHealthChip = 'Healthy' | 'Needs attention' | 'Broken' | 'Stale' | 'Archived';
+
+const ROSTER_BROKEN = new Set(['broken', 'down', 'error', 'failing', 'unhealthy', 'critical', 'red']);
+const ROSTER_ATTENTION = new Set(['degraded', 'warning', 'yellow']);
+
+/**
+ * The Fleet panel's health chip — exactly five states, never a raw health_status value.
+ * retired_at wins over everything (Archived); otherwise: known-broken values -> Broken;
+ * known-degraded values -> Needs attention; known-healthy -> Healthy; anything else
+ * (including 'unknown') falls back to Stale when the row hasn't fired in over 3 days (or
+ * has never fired) and Needs attention otherwise — 'unknown' is never shown as-is.
+ */
+export function rosterHealthChip(
+  healthStatus: string | null | undefined,
+  retiredAt: string | null | undefined,
+  lastFiredAt: string | null | undefined
+): RosterHealthChip {
+  if (retiredAt) return 'Archived';
+  const key = (healthStatus || '').toLowerCase().trim();
+  if (key === 'healthy' || key === 'ok' || key === 'green') return 'Healthy';
+  if (ROSTER_BROKEN.has(key)) return 'Broken';
+  if (ROSTER_ATTENTION.has(key)) return 'Needs attention';
+
+  const lastFiredMs = lastFiredAt ? new Date(lastFiredAt).getTime() : NaN;
+  const staleMs = 3 * 24 * 60 * 60 * 1000;
+  if (Number.isNaN(lastFiredMs) || Date.now() - lastFiredMs > staleMs) return 'Stale';
+  return 'Needs attention';
+}
+
+const ROSTER_HEALTH_CHIP_CLASS: Record<RosterHealthChip, string> = {
+  Healthy: 'cf-status-pill--live',
+  'Needs attention': 'cf-status-pill--stale',
+  Broken: 'cf-status-pill--broken',
+  Stale: 'cf-status-pill--never',
+  Archived: 'cf-status-pill--archived',
+};
+
+/** CSS modifier class (comms-feed.css) for a rosterHealthChip() value. */
+export function rosterHealthChipClass(chip: RosterHealthChip): string {
+  return ROSTER_HEALTH_CHIP_CLASS[chip] || 'cf-status-pill--never';
+}
+
+/** "Model · run mode" line for a roster row — never raw column names on screen. */
+export function plainRunMode(
+  llmProvider: string | null | undefined,
+  model: string | null | undefined,
+  wakeType: string | null | undefined
+): string {
+  const parts: string[] = [];
+  if (model) parts.push(model);
+  else if (llmProvider) parts.push(deJargon(llmProvider));
+  const wake = plainWakeType(wakeType);
+  if (wake) parts.push(wake);
+  return parts.length ? parts.join(' · ') : 'No LLM';
+}
+
 /** Relative "last seen" line — never a raw ISO timestamp dump. */
 export function plainRelativeTime(iso: string | null | undefined): string | undefined {
   if (!iso) return undefined;
