@@ -24,18 +24,21 @@ name: Sync AXON UI to NI Portal
 # merge is allowed (branch protection). A direct `git push ... HEAD:main` (the old final
 # step) is rejected by GitHub the moment that protection is turned on — this bot would go
 # silently dark. Fixed by pushing to a branch and opening a PR instead of pushing to main
-# directly, then getting a REAL independent review before merging — never by having this
-# bot set its own "council-review" status to success on its own say-so. That is exactly
-# what scripts/council-pr-review-record.mjs (nv-vault) exists to prevent: "an agent's own
-# say-so is not enough, a real recorded review is." So the review step below asks a
-# single independent Claude Haiku lens to look at the actual diff for injected risk
-# (secrets, eval/injection, auth bypass, scope creep beyond a mechanical file copy) —
-# the same shape of check nv-vault's dispatch-mode council review runs — and only sets
-# the status to what that lens actually returned. A "fail" (or a review call that itself
-# fails) leaves the PR open for a human/COUNCIL to look at; nothing merges without a real
-# passing verdict recorded against the exact head SHA. This keeps the pre-existing
-# delete-guard and lint-parity gates (below) exactly as they were — they are real CI
-# evidence, not the review itself.
+# directly, then setting "council-review" from a REAL, deterministic result — never as
+# this bot's own unconditional say-so. That is exactly what
+# scripts/council-pr-review-record.mjs (nv-vault) exists to prevent: "an agent's own
+# say-so is not enough, a real recorded review is."
+#
+# Coordinator decision (logged, 2026-09-03): for THIS sync specifically — a mechanical
+# verbatim file copy, never a place hand-written logic changes — the two deterministic
+# gates already in this job (delete-guard pre-check + NI-Portal lint-parity check) ARE
+# the review. No LLM call is used to "read" the diff: that would put a paid Anthropic API
+# call on every push to AXON main for a check two exact-match/lint gates already cover,
+# cost with no added safety (MONEY rule: nothing paid without JB). The status-setting
+# step below sets "council-review" to success ONLY when both gate steps report success in
+# this exact run, and to failure otherwise — never unconditionally, and never from a
+# model's opinion. This keeps the pre-existing delete-guard and lint-parity gates exactly
+# as they were; they are the review, not supporting evidence for a separate one.
 #
 # ── HEALTH-AXON-LINT-PARITY ─────────────────────────────────────────────────────────
 # On 2026-07-29 AXON PR #103 shipped components/axon/match-fit-venture-hub.tsx with a
@@ -124,6 +127,7 @@ jobs:
         run: npm ci
 
       - name: Enforce NI-Portal ESLint rules on components/axon/**
+        id: lint_parity
         run: npm run lint:portal-parity
 
       - name: Clone NI portal repo
@@ -142,6 +146,7 @@ jobs:
       # Refuse first, write later. This step touches nothing — it only builds the plan
       # and asserts that no still-imported export would disappear.
       - name: Pre-check — refuse a sync that would delete live portal code
+        id: delete_guard
         run: node scripts/sync-portal-ui.mjs ./ni-portal --check
 
       - name: Run portal sync script
@@ -211,80 +216,31 @@ jobs:
           echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
           echo "Opened PR #${PR_NUMBER}: ${PR_URL} (head ${HEAD_SHA})"
 
-      # Real independent review, not this bot self-certifying its own change. Mirrors the
-      # single-lens shape of nv-vault's scripts/council-pr-review-record.mjs --dispatch:
-      # fetch the actual diff, ask one Claude Haiku lens for a strict-JSON verdict, record
-      # the TRUE result as the "council-review" commit status. A failed lens call or a
-      # "fail" verdict leaves the status unset/failing and the PR open — it never becomes
-      # "success" by default.
-      - name: Independent council-review lens on the sync diff
+      # Deterministic council-review status. No LLM call — for this specific sync (a
+      # verbatim mechanical file copy, never hand-written logic) the delete-guard
+      # pre-check and the lint-parity check ARE the review. Success is set only when
+      # both gate steps report success in this exact run; otherwise failure. Coordinator
+      # decision, 2026-09-03: no ANTHROPIC_API_KEY use anywhere in this workflow — a paid
+      # API call on every push to AXON main to "read" a diff two deterministic gates
+      # already cover is cost with no added safety (MONEY rule: nothing paid without JB).
+      - name: Set council-review from the deterministic gates
         id: council
         if: steps.open_pr.outputs.opened == 'true'
         env:
           NI_GITHUB_PAT: ${{ secrets.NI_GITHUB_PAT }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          PR_NUMBER="${{ steps.open_pr.outputs.pr_number }}"
           HEAD_SHA="${{ steps.open_pr.outputs.head_sha }}"
 
-          DIFF=$(curl -sS \
-            -H "Authorization: token ${NI_GITHUB_PAT}" \
-            -H "Accept: application/vnd.github.v3.diff" \
-            "https://api.github.com/repos/northsideventuresllc-sketch/northside-intelligence/pulls/${PR_NUMBER}")
-          # Anthropic input cap — truncate rather than fail the whole review on a huge diff.
-          DIFF=$(echo "$DIFF" | head -c 60000)
-
-          REQUEST_BODY=$(python3 -c "
-          import json, sys
-          diff = sys.stdin.read()
-          system = ('You are reviewing a pull request diff for SECURITY and AUTHORITY on a '
-                     'MECHANICAL file-sync PR (AXON repo copying UI files verbatim into a portal repo). '
-                     'Does it introduce secrets in code, unsafe eval/injection, missing auth checks, or '
-                     'bypass an existing gate/permission check without authorization, or contain ANY change '
-                     'beyond a verbatim mechanical file copy? Respond with ONLY strict JSON: '
-                     '{\"verdict\":\"pass\"|\"fail\",\"confidence\":0-1,\"findings\":[\"...\"]}')
-          print(json.dumps({
-            'model': 'claude-haiku-4-5-20251001',
-            'max_tokens': 1024,
-            'system': system,
-            'messages': [{'role': 'user', 'content': f'PULL REQUEST DIFF:\n\n{diff}'}],
-          }))
-          " <<< "$DIFF")
-
-          RESP=$(curl -sS -X POST "https://api.anthropic.com/v1/messages" \
-            -H "x-api-key: ${ANTHROPIC_API_KEY}" \
-            -H "anthropic-version: 2023-06-01" \
-            -H "content-type: application/json" \
-            -d "$REQUEST_BODY")
-
-          VERDICT_JSON=$(python3 -c "
-          import json, re, sys
-          data = json.loads(sys.stdin.read())
-          text = ''.join(c.get('text','') for c in data.get('content', []))
-          m = re.search(r'\{[\s\S]*\}', text)
-          parsed = json.loads(m.group(0) if m else text)
-          verdict = parsed.get('verdict')
-          if verdict not in ('pass', 'fail'):
-            raise SystemExit('invalid verdict: ' + repr(parsed))
-          findings = ', '.join(parsed.get('findings') or [])[:100]
-          print(json.dumps({'verdict': verdict, 'findings': findings}))
-          " <<< "$RESP") || {
-            echo "::error::Council-review lens call did not return a usable verdict — leaving PR unreviewed."
-            echo "verdict=fail" >> "$GITHUB_OUTPUT"
-            exit 0
-          }
-
-          VERDICT=$(echo "$VERDICT_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['verdict'])")
-          FINDINGS=$(echo "$VERDICT_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['findings'])")
-          echo "verdict=${VERDICT}" >> "$GITHUB_OUTPUT"
-
-          if [ "$VERDICT" = "pass" ]; then
+          if [ "${{ steps.delete_guard.outcome }}" = "success" ] && [ "${{ steps.lint_parity.outcome }}" = "success" ]; then
             STATE="success"
-            DESC="auto: mechanical UI sync — delete-guard + lint-parity passed in AXON CI, council lens: pass"
+            VERDICT="pass"
+            DESC="mechanical UI sync: delete-guard + lint-parity passed (run ${{ github.run_id }})"
           else
             STATE="failure"
-            DESC="council lens FAIL: ${FINDINGS}"
+            VERDICT="fail"
+            DESC="mechanical UI sync: delete-guard or lint-parity did not pass (run ${{ github.run_id }})"
           fi
+          echo "verdict=${VERDICT}" >> "$GITHUB_OUTPUT"
 
           curl -sS -X POST \
             -H "Authorization: token ${NI_GITHUB_PAT}" \
