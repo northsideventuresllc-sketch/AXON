@@ -12,8 +12,21 @@ export {
   scoreLanes,
   executeLane,
   recordUsage,
+  recordLlmUsage,
+  axonGenerate,
   CAPABILITY_CLASSES,
+  DEFAULT_LLM_CHAIN,
+  PLATFORM_ACCOUNT_ID,
 } from './axon-router-core.mjs';
+
+export type LlmChainTier = 'local' | 'runpod' | 'openrouter' | 'gemini' | 'anthropic';
+
+export interface AxonGenerateResult {
+  text: string;
+  provider: LlmChainTier;
+  model: string | null;
+  usage: { ms: number; attempts: number };
+}
 
 export type CapabilityClass =
   | 'cheap_chat'
