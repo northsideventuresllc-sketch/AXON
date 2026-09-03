@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { routeChat } from '@/lib/axon-router';
+import { getPreferences } from '@/lib/axon-preferences';
+import { POWER_LEVEL_TO_COST_TIER_FLOOR } from '@/lib/axon-types';
 import {
   addMessage,
   crossVentureContext,
@@ -83,6 +85,11 @@ export async function POST(req: Request) {
     // connected lane on capability fit x cost x live health and records WHY it picked one.
     const assignment = await getAssignment(agent.id);
     const account = await getAccount();
+    // Operator's manual power-bar lock (Settings > Models & routing > Power mode). Only
+    // constrains the 'auto' scoring path — a per-agent pin (assignment.mode === 'fixed')
+    // still wins outright, same as before this existed.
+    const powerMode = (await getPreferences()).powerMode;
+    const costTierFloor = powerMode.autoSwitchEnabled ? null : POWER_LEVEL_TO_COST_TIER_FLOOR[powerMode.level];
     const routed = await routeChat(supabaseKey(), {
       messages: [
         { role: 'system', content: contextPrompt },
@@ -97,6 +104,7 @@ export async function POST(req: Request) {
       hasMini: !!account?.has_mini_access,
       venture: venture.name,
       requestId: userMsg?.id ?? null,
+      costTierFloor,
     });
 
     const agentMsg = await addMessage({

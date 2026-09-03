@@ -289,10 +289,20 @@ export interface AxonNotification {
   isTest?: boolean;
 }
 
+/** Least to most powerful/expensive. Only takes effect when powerMode.autoSwitchEnabled is false. */
+export type PowerLevel = 'eco' | 'balanced' | 'power' | 'max';
+
+export interface PowerModePrefs {
+  /** true (default) = AXON Omni Router picks the best lane per prompt. false = locked to `level`. */
+  autoSwitchEnabled: boolean;
+  level: PowerLevel;
+}
+
 export interface AxonPreferences {
   homeLayout: HomeLayoutPrefs;
   notifications: NotificationSettings;
   notificationsInbox: AxonNotification[];
+  powerMode: PowerModePrefs;
 }
 
 export const DEFAULT_HOME_LAYOUT: HomeLayoutPrefs = {
@@ -335,10 +345,29 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 /** Archived notifications are permanently deleted after this many days. */
 export const NOTIFICATION_ARCHIVE_RETENTION_DAYS = 7;
 
+export const DEFAULT_POWER_MODE: PowerModePrefs = {
+  autoSwitchEnabled: true,
+  level: 'balanced',
+};
+
+/**
+ * Floor passed to the router's scoreLanes() as costTierFloor when autoSwitchEnabled is
+ * false — lanes cheaper (weaker) than this tier are excluded from ranking. 'eco' and
+ * 'balanced' both floor at 0 since router_models has no cost tier below "free"; the lock
+ * only meaningfully restricts choice from 'power' upward.
+ */
+export const POWER_LEVEL_TO_COST_TIER_FLOOR: Record<PowerLevel, 0 | 1 | 2 | 3> = {
+  eco: 0,
+  balanced: 0,
+  power: 1,
+  max: 2,
+};
+
 export const DEFAULT_PREFERENCES: AxonPreferences = {
   homeLayout: DEFAULT_HOME_LAYOUT_VISIBLE,
   notifications: DEFAULT_NOTIFICATION_SETTINGS,
   notificationsInbox: [],
+  powerMode: DEFAULT_POWER_MODE,
 };
 
 export const HOME_WIDGET_LABELS: Record<HomeWidgetId, string> = {

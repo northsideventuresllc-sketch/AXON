@@ -10,7 +10,11 @@ import {
   reviveNotification,
   updateHomeLayout,
   updateNotificationSettings,
+  updatePowerMode,
 } from '@/lib/axon-preferences';
+import { POWER_LEVEL_TO_COST_TIER_FLOOR, type PowerLevel } from '@/lib/axon-types';
+
+const VALID_POWER_LEVELS = new Set(Object.keys(POWER_LEVEL_TO_COST_TIER_FLOOR));
 
 export async function GET() {
   try {
@@ -35,6 +39,19 @@ export async function PATCH(req: Request) {
 
     if (body.notifications) {
       const preferences = await updateNotificationSettings(body.notifications);
+      return NextResponse.json({ preferences });
+    }
+
+    if (body.powerMode) {
+      if (body.powerMode.level !== undefined && !VALID_POWER_LEVELS.has(body.powerMode.level)) {
+        return NextResponse.json({ error: 'Invalid powerMode.level' }, { status: 400 });
+      }
+      if (body.powerMode.autoSwitchEnabled !== undefined && typeof body.powerMode.autoSwitchEnabled !== 'boolean') {
+        return NextResponse.json({ error: 'Invalid powerMode.autoSwitchEnabled' }, { status: 400 });
+      }
+      const preferences = await updatePowerMode(
+        body.powerMode as { autoSwitchEnabled?: boolean; level?: PowerLevel }
+      );
       return NextResponse.json({ preferences });
     }
 

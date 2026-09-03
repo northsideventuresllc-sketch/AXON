@@ -9,6 +9,7 @@ import {
   type AxonPreferences,
   type HomeLayoutPrefs,
   type NotificationSettings,
+  type PowerModePrefs,
 } from './axon-types';
 
 function parseNotificationsInbox(raw: unknown): AxonNotification[] {
@@ -45,6 +46,7 @@ function parsePreferences(contextData: Record<string, unknown> | null | undefine
     homeLayout: { ...DEFAULT_PREFERENCES.homeLayout, ...raw.homeLayout },
     notifications,
     notificationsInbox: inbox,
+    powerMode: { ...DEFAULT_PREFERENCES.powerMode, ...raw.powerMode },
   };
 }
 
@@ -89,6 +91,16 @@ export async function updateHomeLayout(
 ): Promise<AxonPreferences> {
   const prefs = await getPreferences(operatorId);
   const next = { ...prefs, homeLayout: layout };
+  await savePreferences(operatorId, next);
+  return next;
+}
+
+export async function updatePowerMode(
+  powerMode: Partial<PowerModePrefs>,
+  operatorId = 'default'
+): Promise<AxonPreferences> {
+  const prefs = await getPreferences(operatorId);
+  const next = { ...prefs, powerMode: { ...prefs.powerMode, ...powerMode } };
   await savePreferences(operatorId, next);
   return next;
 }

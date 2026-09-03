@@ -6,6 +6,7 @@ import { apiUrl } from '@/lib/api-base';
 import { loadPrefs, patchPrefs, type WindowMode } from '@/lib/axon-v0/view-prefs';
 import { ConnectorCatalog } from '@/components/axon-v0/connector-catalog';
 import { AiChainPanel } from '@/components/axon-v0/ai-chain-panel';
+import type { PowerLevel } from '@/lib/axon-types';
 import '@/components/axon-v0/settings-sections.css';
 
 interface Provider {
@@ -43,6 +44,13 @@ interface ChainEntry {
   score: number;
   reasons: string[];
 }
+
+const POWER_LEVELS: { value: PowerLevel; label: string }[] = [
+  { value: 'eco', label: 'Eco' },
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'power', label: 'Power' },
+  { value: 'max', label: 'Max' },
+];
 
 const CAPABILITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'cheap_chat', label: 'Quick chat' },
@@ -139,6 +147,8 @@ export default function SettingsPage() {
   const [chain, setChain] = useState<ChainEntry[]>([]);
   const [chainLoading, setChainLoading] = useState(true);
   const [chainError, setChainError] = useState('');
+  const [powerAuto, setPowerAuto] = useState(true);
+  const [powerLevel, setPowerLevel] = useState<PowerLevel>('balanced');
 
   // --- Settings state ---
   const [welcomeTemplate, setWelcomeTemplate] = useState('Welcome');
@@ -166,6 +176,16 @@ export default function SettingsPage() {
     fetch(apiUrl('/api/axon-v0/ventures'))
       .then((r) => r.json())
       .then((d) => setVentures(d.ventures || []))
+      .catch(() => {});
+    fetch(apiUrl('/api/axon/preferences'))
+      .then((r) => r.json())
+      .then((d) => {
+        const pm = d.preferences?.powerMode;
+        if (pm) {
+          setPowerAuto(!!pm.autoSwitchEnabled);
+          setPowerLevel(pm.level || 'balanced');
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -214,6 +234,17 @@ export default function SettingsPage() {
       body: JSON.stringify(body),
     }).catch(() => {});
     setStatus('Routing updated.');
+  }
+
+  async function savePowerMode(next: { autoSwitchEnabled: boolean; level: PowerLevel }) {
+    setPowerAuto(next.autoSwitchEnabled);
+    setPowerLevel(next.level);
+    await fetch(apiUrl('/api/axon/preferences'), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ powerMode: next }),
+    }).catch(() => {});
+    flashSaved('power');
   }
 
   // --- Settings persistence (patchPrefs / guarded localStorage) ---
@@ -459,6 +490,45 @@ export default function SettingsPage() {
             </button>
             {open.models && (
               <div className="st-section-body space-y-6">
+                {/* Power mode — global on/off for auto-switching + a manual power-bar lock */}
+                <div className="st-field">
+                  <div className="st-toggle-row">
+                    <div>
+                      <p className="st-toggle-label">Auto power switching</p>
+                      <p className="st-toggle-desc">
+                        On: AXON auto picks the best lane per prompt (default). Off: locked to the level below.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={powerAuto}
+                      aria-label="Auto power switching"
+                      onClick={() => savePowerMode({ autoSwitchEnabled: !powerAuto, level: powerLevel })}
+                      className={`st-switch ${powerAuto ? 'st-switch-on' : ''}`}
+                    >
+                      <span className="st-switch-knob" />
+                    </button>
+                  </div>
+                  <span className="st-label">Power level {powerAuto ? '(lock disabled while auto is on)' : ''}</span>
+                  <div className="st-seg">
+                    {POWER_LEVELS.map((p) => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        disabled={powerAuto}
+                        aria-pressed={!powerAuto && powerLevel === p.value}
+                        onClick={() => savePowerMode({ autoSwitchEnabled: false, level: p.value })}
+                        className={`st-seg-btn ${!powerAuto && powerLevel === p.value ? 'st-seg-btn-active' : ''}`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="st-hint">Least to most powerful. Picking a level here also switches auto off.</p>
+                  {flash.power && <p className="st-saved">{flash.power}</p>}
+                </div>
+
                 {/* Live auto-mode order, inspectable per capability */}
                 <div className="rounded-lg border border-cyan-400/10 bg-black/20 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
