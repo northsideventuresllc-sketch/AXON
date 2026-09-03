@@ -1,11 +1,13 @@
 name: AXON SEO Tracker
 
+# Schedule moved to mac mini cron manifest (AXON-SEO-Tracker) on 2026-09-02 (Decision #1699).
+# Was: cron '30 9 * * *'. Runs: node scripts/axon-seo-tracker.mjs.
+# workflow_dispatch below still fires it on demand.
+
 # REBUILT 2026-08-26 (JB direct correction). Does real public SEO signal now
 # via SerpApi + Gemini/Anthropic — does NOT wait on Search Console or other
 # first-party SEO credentials. Nightly + manual trigger, enabled.
 on:
-  schedule:
-    - cron: '30 9 * * *'  # nightly, 09:30 UTC (offset from Social Media Research)
   workflow_dispatch: {}
 
 concurrency:

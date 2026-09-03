@@ -1,9 +1,10 @@
 name: AXON MF Ad Tracker Sync
 
+# Schedule moved to mac mini cron manifest (AXON-Ad-Tracker) on 2026-09-02 (Decision #1699).
+# Was: cron '15 */6 * * *'. Runs: node tests/mf-ad-tracker.test.mjs.
+# workflow_dispatch below still fires it on demand.
+
 on:
-  schedule:
-    # Every 6 hours — Match Fit ↔ AXON sync spec cadence for ad tracking
-    - cron: '15 */6 * * *'
   workflow_dispatch:
     inputs:
       days:

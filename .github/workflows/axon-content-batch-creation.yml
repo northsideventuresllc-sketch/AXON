@@ -1,11 +1,13 @@
 name: AXON Content Batch Creation
 
+# Schedule moved to mac mini cron manifest (AXON-Content-Batch-Creation) on 2026-09-02 (Decision #1699).
+# Was: cron '0 14 * * *'. Runs: node scripts/axon-content-batch-creation.mjs.
+# workflow_dispatch below still fires it on demand.
+
 # Built 2026-08-26 (JB direct order). Rebuilt from AXON Content Batch Notify
 # (which only notifies). Manual trigger only until JB/EXEC review this PR —
 # do not add a schedule: trigger here without that review.
 on:
-  schedule:
-    - cron: '0 14 * * *'  # daily, 30min after the last IT product batch window
   workflow_dispatch:
     inputs:
       allow_match_fit:

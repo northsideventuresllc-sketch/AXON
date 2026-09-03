@@ -1,11 +1,13 @@
 name: AXON Social Media Research
 
+# Schedule moved to mac mini cron manifest (AXON-Social-Media-Research) on 2026-09-02 (Decision #1699).
+# Was: cron '0 9 * * *'. Runs: node scripts/axon-social-media-research.mjs.
+# workflow_dispatch below still fires it on demand.
+
 # REBUILT 2026-08-26 (JB direct correction). Does real external/public
 # research now via SerpApi + Gemini/Anthropic — does NOT wait on JB's own
 # social account credentials. Nightly + manual trigger, enabled.
 on:
-  schedule:
-    - cron: '0 9 * * *'  # nightly, 09:00 UTC
   workflow_dispatch: {}
 
 concurrency:
