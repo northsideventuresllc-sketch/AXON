@@ -1,5 +1,9 @@
 name: AXON Backlog Janitor
 
+# Schedule moved to mac mini cron manifest (AXON Backlog Janitor) on 2026-09-02 (Decision #1699).
+# Was: cron '30 9 * * *'. Runs: node scripts/backlog-janitor.mjs.
+# workflow_dispatch below still fires it on demand.
+
 # Nightly sweep of agent_dispatch for stale queued/needs_context tickets
 # NOT owned by BUILD or SENSEI (those need a real human-in-the-loop Claude
 # Code session, this job never touches their rows). Built 2026-08-26.
@@ -11,8 +15,6 @@ name: AXON Backlog Janitor
 # row without EXEC/JB sign-off on this PR.
 
 on:
-  schedule:
-    - cron: '30 9 * * *' # nightly, off-peak from the other AXON crons
   workflow_dispatch: {}
 
 concurrency:

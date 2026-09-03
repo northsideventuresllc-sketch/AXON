@@ -1,5 +1,9 @@
 name: AXON Executive Agent
 
+# Schedule moved to mac mini cron manifest (AXON Executive Agent) on 2026-09-02 (Decision #1699).
+# Was: cron '20 3 * * *'. Runs: npm run exec-agent.
+# workflow_dispatch below still fires it on demand.
+
 # scripts/axon-executive-agent.mjs merged to main 2026-08-26 (rebuild of
 # AX-WISDOM-LOOP, JB direct order) with no workflow to run it — this PR is
 # the missing schedule. Nightly brain + cross-platform bridge for AXON:
@@ -11,8 +15,6 @@ name: AXON Executive Agent
 # only run from the default branch). Do not merge without sign-off.
 
 on:
-  schedule:
-    - cron: '20 3 * * *' # nightly, off-peak — no other AXON/nv-vault cron fires in this window
   workflow_dispatch: {}
 
 concurrency:
