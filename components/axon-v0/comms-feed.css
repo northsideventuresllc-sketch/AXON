@@ -105,3 +105,54 @@
   letter-spacing: 0.15em;
   text-transform: uppercase;
 }
+
+/* Roster/Fleet panel (app/(axon-v0)/agents "Fleet" tab) */
+.cf-status-pill--broken { background: rgba(251, 113, 133, 0.12); color: #fda4af; }
+.cf-status-pill--broken .cf-status-dot { background: #fb7185; box-shadow: 0 0 6px 1px rgba(251, 113, 133, 0.6); }
+.cf-status-pill--archived { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+.cf-status-pill--archived .cf-status-dot { background: #475569; }
+
+.cf-roster-group {
+  margin-bottom: 1.1rem;
+}
+.cf-roster-group:last-child { margin-bottom: 0; }
+.cf-roster-group-title {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(0, 212, 255, 0.6);
+  margin-bottom: 0.4rem;
+}
+
+.cf-roster-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr) minmax(0, 1.3fr) auto auto;
+  gap: 0.6rem;
+  align-items: center;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  padding: 0.5rem 0.25rem;
+}
+.cf-roster-row:last-child { border-bottom: none; }
+
+.cf-fire-btn {
+  border-radius: 0.4rem;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  background: rgba(0, 212, 255, 0.08);
+  color: #6fd8ff;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.cf-fire-btn:hover:not(:disabled) { background: rgba(0, 212, 255, 0.18); }
+.cf-fire-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cf-fire-result {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+.cf-fire-result--ok { color: #86efac; }
+.cf-fire-result--err { color: #fda4af; }

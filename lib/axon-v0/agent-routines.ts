@@ -12,20 +12,30 @@ import { createSupabaseClient } from '@/lib/supabase.mjs';
 export interface AgentRoutineRow {
   agent_name: string;
   routine_id: string;
+  fire_token?: string | null;
   active: boolean;
   wake_type: string | null;
   wake_config: Record<string, unknown> | null;
   function_summary: string | null;
   platform: string | null;
+  harness?: string | null;
+  llm_provider?: string | null;
+  model?: string | null;
   health_status: string | null;
   health_note: string | null;
   last_fired_at: string | null;
   last_health_check_at: string | null;
+  retired_at?: string | null;
   updated_at: string | null;
 }
 
 const FIELDS =
-  'agent_name,routine_id,active,wake_type,wake_config,function_summary,platform,health_status,health_note,last_fired_at,last_health_check_at,updated_at';
+  'agent_name,routine_id,active,wake_type,wake_config,function_summary,platform,harness,llm_provider,model,health_status,health_note,last_fired_at,last_health_check_at,retired_at,updated_at';
+
+// fire_token is only ever fetched by the roster fire route (getAgentRoutine) — it is a
+// live credential and must never ride along in the board's list payload, which the
+// browser reads directly.
+const FIELDS_WITH_TOKEN = `${FIELDS},fire_token`;
 
 function sb() {
   const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -46,5 +56,23 @@ export async function listAgentRoutines(): Promise<AgentRoutineRow[]> {
     return Array.isArray(rows) ? rows : [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * One routine row by exact `agent_name`, WITH `fire_token` included — used only by the
+ * server-side roster fire route (never sent to the browser). Returns null on any failure
+ * or when no row matches, same fail-safe shape as listAgentRoutines.
+ */
+export async function getAgentRoutine(agentName: string): Promise<AgentRoutineRow | null> {
+  if (!agentName || typeof agentName !== 'string') return null;
+  try {
+    const rows = await sb().sbSelect(
+      'nvg_agent_routines',
+      `agent_name=eq.${encodeURIComponent(agentName)}&select=${FIELDS_WITH_TOKEN}&limit=1`
+    );
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  } catch {
+    return null;
   }
 }

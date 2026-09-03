@@ -45,7 +45,8 @@
     "test:chat-windows": "node tests/chat-windows.test.mjs",
     "test:cross-venture-dispatch": "node tests/cross-venture-dispatch.test.mjs",
     "test:toolkit-build": "node tests/toolkit-build.test.mjs",
-    "test:mini-jobs-tier-gate": "node tests/mini-jobs-tier-gate.test.mjs"
+    "test:mini-jobs-tier-gate": "node tests/mini-jobs-tier-gate.test.mjs",
+    "test:roster-fire": "node tests/roster-fire-decision.test.mjs"
   },
   "engines": {
     "node": ">=20"
