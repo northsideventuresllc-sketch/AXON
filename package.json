@@ -34,6 +34,7 @@
     "exec-agent": "node scripts/axon-executive-agent.mjs",
     "exec-agent:dry": "AXON_DRY_RUN=1 node scripts/axon-executive-agent.mjs",
     "test:wisdom": "node tests/wisdom-absorb-loop.test.mjs",
+    "test:cron-guard": "node tests/axon-cron-guard.test.mjs",
     "test:runpod-tier": "node tests/runpod-tier.test.mjs",
     "test:axon-generate-chain": "node tests/axon-generate-chain.test.mjs",
     "registry:check": "node scripts/axon-arceus-registry-check.mjs",
