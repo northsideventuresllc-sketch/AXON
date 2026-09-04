@@ -41,9 +41,19 @@ function allowMatchFit() {
   );
 }
 
+/**
+ * Match Fit is worldwide — soft-rewrite any "nationwide"/place-based phrasing that a source row
+ * may carry so AXON drafts never reintroduce the geo error (JB standing rule 6 / 2026-09-03).
+ */
+function worldwideSafe(text) {
+  return String(text || '')
+    .replace(/\bnation[-\s]?wide\b/gi, (m) => (m === m.toUpperCase() ? 'WORLDWIDE' : 'worldwide'))
+    .replace(/\bacross the (?:country|nation)\b/gi, 'around the world');
+}
+
 /** Build one draft caption from real internal rows only — no invention, no API call. */
 function templateCaption({ brandName, sourceText, sourceKind }) {
-  const clean = String(sourceText || '').replace(/\s+/g, ' ').trim().slice(0, 220);
+  const clean = worldwideSafe(String(sourceText || '').replace(/\s+/g, ' ').trim()).slice(0, 220);
   if (!clean) {
     return `${brandName} update — draft pending a real content angle (no recent ${sourceKind} found to template from). Needs a human pass before this goes anywhere.`;
   }

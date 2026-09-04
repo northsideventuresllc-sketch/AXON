@@ -46,6 +46,20 @@ function nicheKeyword(brand) {
   return vp ? `${brand.name} (${vp})` : brand.name;
 }
 
+/**
+ * Product truths a venture's public copy must respect. Prefer the live brand-profile field
+ * (skeleton.product_truths) so this is never hardcoded; fall back to Match Fit's known truths
+ * (worldwide, lead with trending terms not our internal "Fitness Pro" label — JB 2026-09-03).
+ */
+export function brandProductTruths(brand) {
+  const fromDb = brand?.skeleton?.product_truths;
+  if (typeof fromDb === 'string' && fromDb.trim()) return fromDb.trim();
+  if (brand?.slug === 'match-fit') {
+    return 'Match Fit is WORLDWIDE — never say "nationwide" or name a place. In public/social copy lead with trending, widely-understood words ("coach", "trainer", "personal trainer"); "Fitness Pro" is our internal brand term, so use it sparingly and never lead with it while the brand is still being established.';
+  }
+  return '';
+}
+
 /** One real external research pass for one venture: SerpApi -> synthesis. */
 async function researchVenture(cfg, brand) {
   const keyword = nicheKeyword(brand);
@@ -93,9 +107,10 @@ End with one concrete, specific content idea NVG could act on this week.
 Only use what's actually in the search results below — never invent a stat, a post, or a
 competitor that isn't there.`;
 
+  const truths = brandProductTruths(brand);
   const prompt = `Venture: ${brand.name} (${brand.venture})
 What this venture does: ${brand?.skeleton?.value_props?.[0]?.text || 'not specified'}
-
+${truths ? `Product truths (any copy you suggest MUST respect these): ${truths}\n` : ''}
 Raw Google search results for "${query}":
 ${JSON.stringify(results.map((r) => ({ title: r.title, snippet: r.snippet, link: r.link, source: r.source })), null, 2)}`;
 
