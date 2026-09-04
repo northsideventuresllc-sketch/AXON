@@ -27,9 +27,10 @@ grading material for that run — not a manual fallback fire.
 
 One live deviation from Section 2 below: AXON Executive Agent currently addresses these rows
 `to_agent='ALL'`, not `to_agent='SENSEI'` — SENSEI still finds them via its normal ALL-inbox
-check, so this hasn't broken anything, but it's worth tightening to the spec at some point.
+check, so this hasn't broken anything. Tracked as a real fix, not just a note:
+`AXON-EXEC-HANDOFF-TO-AGENT-TARGET-0904` (owner BUILD, `agent_dispatch`).
 
-## 2. The handoff, once AXON Executive Agent exists
+## 2. The handoff mechanism (live — see Section 1)
 
 1. **AXON Executive Agent finishes its daily run** — whatever its own report/status content is.
 2. It writes one row to `agent_bus`:
