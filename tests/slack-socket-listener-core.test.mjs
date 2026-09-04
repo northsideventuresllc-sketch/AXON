@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import {
   parseEnvelope,
   isEventsApiEnvelope,
+  isValidRouterPayload,
   needsAck,
   buildAck,
   isDisconnectEnvelope,
@@ -29,6 +30,18 @@ import {
   assert.equal(isEventsApiEnvelope({ type: 'hello' }), false, 'hello frames are not events_api');
   assert.equal(isEventsApiEnvelope({ type: 'events_api' }), false, 'missing payload is not forwardable');
   assert.equal(isEventsApiEnvelope(null), false);
+}
+
+// --- isValidRouterPayload -------------------------------------------------------------------
+{
+  assert.equal(isValidRouterPayload({ event: { type: 'message', text: 'hi' } }), true);
+  assert.equal(isValidRouterPayload({ event: {} }), true, 'an empty event object is still shape-valid');
+  assert.equal(isValidRouterPayload(null), false);
+  assert.equal(isValidRouterPayload('not an object'), false);
+  assert.equal(isValidRouterPayload([1, 2, 3]), false, 'array payload is not forwardable');
+  assert.equal(isValidRouterPayload({}), false, 'missing event key');
+  assert.equal(isValidRouterPayload({ event: 'not an object' }), false, 'event must be an object');
+  assert.equal(isValidRouterPayload({ event: [1, 2] }), false, 'event must not be an array');
 }
 
 // --- needsAck / buildAck -------------------------------------------------------------------

@@ -24,6 +24,7 @@
 import {
   parseEnvelope,
   isEventsApiEnvelope,
+  isValidRouterPayload,
   needsAck,
   buildAck,
   isDisconnectEnvelope,
@@ -103,7 +104,11 @@ function runOneConnection(url) {
       if (needsAck(msg)) ws.send(buildAck(msg));
 
       if (isEventsApiEnvelope(msg)) {
-        forwardToRouter(msg.payload);
+        if (isValidRouterPayload(msg.payload)) {
+          forwardToRouter(msg.payload);
+        } else {
+          console.error('[slack-socket-listener] dropped events_api envelope with malformed payload shape');
+        }
       } else if (isDisconnectEnvelope(msg)) {
         console.log(`[slack-socket-listener] server requested disconnect (${msg.reason || 'unknown'}), reconnecting`);
         ws.close();
@@ -140,9 +145,18 @@ async function main() {
     process.exit(1);
   }
 
+  let shuttingDown = false;
+  const shutdown = (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[slack-socket-listener] ${signal} received, shutting down`);
+    process.exit(0);
+  };
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+
   let attempt = 0;
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+  while (!shuttingDown) {
     try {
       const url = await openSocketModeUrl(appToken);
       const { opened } = await runOneConnection(url);
@@ -150,6 +164,7 @@ async function main() {
     } catch (err) {
       console.error(`[slack-socket-listener] connection attempt failed: ${err.message}`);
     }
+    if (shuttingDown) break;
     const wait = nextBackoffMs(attempt++);
     console.log(`[slack-socket-listener] reconnecting in ${wait}ms`);
     await new Promise((r) => setTimeout(r, wait));
