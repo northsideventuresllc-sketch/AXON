@@ -38,6 +38,7 @@ function fakeSbSelect(secrets) {
     telegramToken: 'default-token',
     telegramChatId: 'default-chat',
     telegramWebhookSecret: 'default-secret',
+    telegramApprovalsThreadId: null,
   });
 }
 
@@ -53,6 +54,43 @@ function fakeSbSelect(secrets) {
     telegramToken: 'default-token',
     telegramChatId: 'default-chat',
     telegramWebhookSecret: 'default-secret',
+    telegramApprovalsThreadId: null,
+  });
+}
+
+// --- 2b. group + approvals thread both provisioned — default path prefers the group ---
+{
+  const sbSelect = fakeSbSelect({
+    TELEGRAM_BOT_TOKEN: 'default-token',
+    TELEGRAM_CHAT_ID: 'default-chat',
+    TELEGRAM_WEBHOOK_SECRET: 'default-secret',
+    TELEGRAM_GROUP_CHAT_ID: '-1004204591575',
+    TELEGRAM_APPROVALS_THREAD_ID: '42',
+  });
+  const cfg = await loadTelegramConfig(undefined, sbSelect);
+  assert.deepEqual(cfg, {
+    telegramToken: 'default-token',
+    telegramChatId: '-1004204591575',
+    telegramWebhookSecret: 'default-secret',
+    telegramApprovalsThreadId: '42',
+  });
+}
+
+// --- 2c. group set WITHOUT the approvals thread — mirrors fn_telegram_approval_ping's
+//         own precedence and stays on the legacy chat until both are provisioned -------
+{
+  const sbSelect = fakeSbSelect({
+    TELEGRAM_BOT_TOKEN: 'default-token',
+    TELEGRAM_CHAT_ID: 'default-chat',
+    TELEGRAM_WEBHOOK_SECRET: 'default-secret',
+    TELEGRAM_GROUP_CHAT_ID: '-1004204591575',
+  });
+  const cfg = await loadTelegramConfig(undefined, sbSelect);
+  assert.deepEqual(cfg, {
+    telegramToken: 'default-token',
+    telegramChatId: 'default-chat',
+    telegramWebhookSecret: 'default-secret',
+    telegramApprovalsThreadId: null,
   });
 }
 
@@ -90,7 +128,12 @@ function fakeSbSelect(secrets) {
   const cfg = await loadTelegramConfig('ARCEUS', sbSelect);
   assert.deepEqual(
     cfg,
-    { telegramToken: 'default-token', telegramChatId: 'default-chat', telegramWebhookSecret: 'default-secret' },
+    {
+      telegramToken: 'default-token',
+      telegramChatId: 'default-chat',
+      telegramWebhookSecret: 'default-secret',
+      telegramApprovalsThreadId: null,
+    },
     'a partially-provisioned agent bot must fall back to the default bot entirely, not mix credentials'
   );
 }

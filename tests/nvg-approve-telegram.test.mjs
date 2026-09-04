@@ -123,4 +123,51 @@ const cfg = { telegramToken: 'tok', telegramChatId: '999' };
   assert.equal(tapLog.row.message_type, 'approval_tap');
 }
 
+// --- 5. NVG Agents group: right chat, wrong topic -> rejected as thread_id_mismatch ----
+{
+  const cfgWithThread = { telegramToken: 'tok', telegramChatId: '999', telegramApprovalsThreadId: '42' };
+  const { sb, patches, inserts } = makeSb();
+  const { fn, calls } = fakeFetch();
+  const realFetch = global.fetch;
+  global.fetch = fn;
+  try {
+    const wrongTopicCbq = {
+      id: 'cbq-2',
+      data: `nvga:d:${AGENT_DISPATCH_ID}:a`,
+      message: { chat: { id: 999 }, message_id: 556, message_thread_id: 7 },
+    };
+    const result = await handleTelegramCallback(cfgWithThread, sb, wrongTopicCbq);
+    assert.equal(result, null);
+  } finally {
+    global.fetch = realFetch;
+  }
+  assert.ok(!patches.some((p) => p.table === 'agent_dispatch'), 'must not touch agent_dispatch on a wrong-topic tap');
+  const tapLog = inserts.find((i) => i.table === 'axon_telegram_messages');
+  assert.equal(tapLog.row.metadata.note, 'thread_id_mismatch');
+  assert.ok(calls.some((c) => c.url.includes('answerCallbackQuery')));
+}
+
+// --- 6. NVG Agents group: right chat AND right topic -> proceeds normally --------------
+{
+  const cfgWithThread = { telegramToken: 'tok', telegramChatId: '999', telegramApprovalsThreadId: '42' };
+  const { sb, patches } = makeSb();
+  const { fn } = fakeFetch();
+  const realFetch = global.fetch;
+  global.fetch = fn;
+  try {
+    const rightTopicCbq = {
+      id: 'cbq-3',
+      data: `nvga:d:${AGENT_DISPATCH_ID}:a`,
+      message: { chat: { id: 999 }, message_id: 557, message_thread_id: 42 },
+    };
+    const result = await handleTelegramCallback(cfgWithThread, sb, rightTopicCbq);
+    assert.equal(result, true);
+  } finally {
+    global.fetch = realFetch;
+  }
+  const dispatchPatch = patches.find((p) => p.table === 'agent_dispatch');
+  assert.ok(dispatchPatch, 'a tap from the correct topic must go through');
+  assert.equal(dispatchPatch.values.status, 'queued');
+}
+
 console.log('nvg-approve-telegram.test.mjs passed');
