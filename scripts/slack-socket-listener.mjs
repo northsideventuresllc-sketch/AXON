@@ -61,17 +61,27 @@ async function openSocketModeUrl(appToken) {
   return json.url;
 }
 
+// Tracks in-flight forwardToRouter() calls so a shutdown signal can drain them instead of
+// killing the process mid-fetch — an event already ack'd to Slack (won't be redelivered)
+// must not also silently fail to reach the router just because SIGTERM landed first.
+const pendingForwards = new Set();
+
 async function forwardToRouter(payload) {
-  try {
-    const res = await fetch(ROUTER_URL, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${EDGE_ANON_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) console.error(`[slack-socket-listener] router HTTP ${res.status}`);
-  } catch (err) {
-    console.error(`[slack-socket-listener] router forward failed: ${err.message}`);
-  }
+  const p = (async () => {
+    try {
+      const res = await fetch(ROUTER_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${EDGE_ANON_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) console.error(`[slack-socket-listener] router HTTP ${res.status}`);
+    } catch (err) {
+      console.error(`[slack-socket-listener] router forward failed: ${err.message}`);
+    }
+  })();
+  pendingForwards.add(p);
+  p.finally(() => pendingForwards.delete(p));
+  return p;
 }
 
 /**
@@ -146,10 +156,17 @@ async function main() {
   }
 
   let shuttingDown = false;
-  const shutdown = (signal) => {
+  const shutdown = async (signal) => {
     if (shuttingDown) return;
     shuttingDown = true;
-    console.log(`[slack-socket-listener] ${signal} received, shutting down`);
+    console.log(`[slack-socket-listener] ${signal} received, draining ${pendingForwards.size} in-flight forward(s)`);
+    // Give any already-ack'd events a real chance to actually reach the router before the
+    // process dies — capped so a hung fetch can't block shutdown forever.
+    await Promise.race([
+      Promise.allSettled([...pendingForwards]),
+      new Promise((r) => setTimeout(r, 5_000)),
+    ]);
+    console.log('[slack-socket-listener] shutting down');
     process.exit(0);
   };
   process.on('SIGINT', () => shutdown('SIGINT'));
