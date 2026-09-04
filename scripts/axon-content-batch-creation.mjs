@@ -41,9 +41,24 @@ function allowMatchFit() {
   );
 }
 
+/** Brands whose positioning is worldwide, so "nationwide"/place-based phrasing is an error to fix. */
+const WORLDWIDE_BRAND_SLUGS = new Set(['match-fit']);
+
+/**
+ * Soft-rewrite "nationwide"/place-based phrasing that a source row may carry — but ONLY for brands
+ * that are actually worldwide (Match Fit; JB standing rule 6 / 2026-09-03). A genuinely US-only
+ * venture may legitimately say "nationwide", so this is gated by brand and never applied globally.
+ */
+function worldwideSafe(text) {
+  return String(text || '')
+    .replace(/\bnation[-\s]?wide\b/gi, (m) => (m === m.toUpperCase() ? 'WORLDWIDE' : 'worldwide'))
+    .replace(/\bacross the (?:country|nation)\b/gi, 'around the world');
+}
+
 /** Build one draft caption from real internal rows only — no invention, no API call. */
-function templateCaption({ brandName, sourceText, sourceKind }) {
-  const clean = String(sourceText || '').replace(/\s+/g, ' ').trim().slice(0, 220);
+function templateCaption({ brandName, brandSlug, sourceText, sourceKind }) {
+  const raw = String(sourceText || '').replace(/\s+/g, ' ').trim();
+  const clean = (WORLDWIDE_BRAND_SLUGS.has(brandSlug) ? worldwideSafe(raw) : raw).slice(0, 220);
   if (!clean) {
     return `${brandName} update — draft pending a real content angle (no recent ${sourceKind} found to template from). Needs a human pass before this goes anywhere.`;
   }
@@ -83,7 +98,7 @@ async function draftsForBrand(sb, sbSelect, brand) {
     const src = sources[i] || { text: '', kind: 'internal data' };
     drafts.push({
       brand,
-      caption: templateCaption({ brandName: brand.name, sourceText: src.text, sourceKind: src.kind }),
+      caption: templateCaption({ brandName: brand.name, brandSlug: brand.slug, sourceText: src.text, sourceKind: src.kind }),
       themeName: src.kind === 'Decision' ? 'from-a-recent-decision' : 'from-content-history',
     });
   }
