@@ -18,17 +18,16 @@ grade yet.
 
 ---
 
-## 1. Precondition
+## 1. Precondition — LIVE (2026-09-04)
 
-This handoff is only live once **AXON Executive Agent** has a row in `nvg_agent_routines`
-(`agent_name='AXON Executive Agent'`). As of this write, that row does not exist yet — a separate
-track is building the agent. Until it exists:
+The precondition is met and the handoff has fired for real: **AXON Executive Agent** has a row in
+`nvg_agent_routines`, and SENSEI's 2026-09-04 run read and answered a real `agent_bus` row
+(`AXON-EXEC-AGENT-NIGHTLY-2026-09-04`, id `35640a3e-c859-4ced-9990-7a960456d935`) as its actual
+grading material for that run — not a manual fallback fire.
 
-- `sensei-daily.yml` stays on `workflow_dispatch`-only (no automatic fire).
-- SENSEI (or a human) triggers it manually when a report is actually needed.
-- Nothing here is faked as "live" before the precondition is real — check
-  `select 1 from nvg_agent_routines where agent_name='AXON Executive Agent'` before assuming this
-  handoff is wired.
+One live deviation from Section 2 below: AXON Executive Agent currently addresses these rows
+`to_agent='ALL'`, not `to_agent='SENSEI'` — SENSEI still finds them via its normal ALL-inbox
+check, so this hasn't broken anything, but it's worth tightening to the spec at some point.
 
 ## 2. The handoff, once AXON Executive Agent exists
 
