@@ -6,8 +6,15 @@
 import assert from 'node:assert/strict';
 import {
   buildPostingConfirmationNotification,
+  handlePostingConfirmationRequest,
   validatePostingConfirmationPayload,
 } from '../lib/match-fit-posting-confirmation.mjs';
+
+const VALID_RAW_BODY = JSON.stringify({
+  batchId: 'batch-42',
+  posts: [{ platform: 'instagram', url: 'https://instagram.com/p/abc', postedAt: '2026-07-23T14:00:00Z' }],
+});
+const noopAddNotification = async () => {};
 
 // Valid payload passes and normalizes fields.
 {
@@ -102,6 +109,91 @@ import {
   });
   const notification = buildPostingConfirmationNotification(data);
   assert.match(notification.title, /^1 post went live on instagram$/);
+}
+
+// Full route handler: missing/wrong secret header is rejected with 401, addNotification never called.
+{
+  let called = false;
+  const result = await handlePostingConfirmationRequest({
+    headerSecret: 'wrong-secret',
+    envSecret: 'real-secret',
+    rawBody: VALID_RAW_BODY,
+    addNotification: async () => {
+      called = true;
+    },
+  });
+  assert.equal(result.status, 401);
+  assert.equal(result.body.ok, false);
+  assert.equal(called, false);
+}
+
+// No MATCH_FIT_WEBHOOK_SECRET configured server-side also rejects with 401 (fail closed).
+{
+  const result = await handlePostingConfirmationRequest({
+    headerSecret: 'anything',
+    envSecret: undefined,
+    rawBody: VALID_RAW_BODY,
+    addNotification: noopAddNotification,
+  });
+  assert.equal(result.status, 401);
+}
+
+// Malformed JSON body is rejected with 400 before validation runs.
+{
+  const result = await handlePostingConfirmationRequest({
+    headerSecret: 'real-secret',
+    envSecret: 'real-secret',
+    rawBody: '{not json',
+    addNotification: noopAddNotification,
+  });
+  assert.equal(result.status, 400);
+  assert.match(result.body.error, /Malformed JSON/);
+}
+
+// Invalid payload (passes JSON.parse, fails schema) is rejected with 400 and the validator's error.
+{
+  const result = await handlePostingConfirmationRequest({
+    headerSecret: 'real-secret',
+    envSecret: 'real-secret',
+    rawBody: JSON.stringify({ posts: [] }),
+    addNotification: noopAddNotification,
+  });
+  assert.equal(result.status, 400);
+  assert.match(result.body.error, /batchId/);
+}
+
+// Happy path: correct secret + valid payload calls addNotification with the built notification
+// and returns 200 with the batch/post-count echoed back.
+{
+  let received;
+  const result = await handlePostingConfirmationRequest({
+    headerSecret: 'real-secret',
+    envSecret: 'real-secret',
+    rawBody: VALID_RAW_BODY,
+    addNotification: async (notification) => {
+      received = notification;
+    },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.ok, true);
+  assert.equal(result.body.batchId, 'batch-42');
+  assert.equal(result.body.postsRecorded, 1);
+  assert.equal(received.source, 'Match Fit');
+  assert.match(received.title, /1 post went live/);
+}
+
+// addNotification failure surfaces as a 500 instead of throwing out of the handler.
+{
+  const result = await handlePostingConfirmationRequest({
+    headerSecret: 'real-secret',
+    envSecret: 'real-secret',
+    rawBody: VALID_RAW_BODY,
+    addNotification: async () => {
+      throw new Error('preferences store unavailable');
+    },
+  });
+  assert.equal(result.status, 500);
+  assert.match(result.body.error, /preferences store unavailable/);
 }
 
 console.log('match-fit-posting-confirmation.test.mjs: all assertions passed');
