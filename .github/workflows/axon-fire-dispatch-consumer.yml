@@ -1,0 +1,42 @@
+name: AXON Fire Dispatch Consumer
+
+# AX-FIRE-DISPATCH-CONSUMER: closes the loop on manual_fire_requests rows
+# (FIRE buttons on axon-report + nvg-today-board) that nothing was consuming.
+# Recurring schedule lives in NI-Brain nvg_agent_routines (harness='mac_mini'),
+# not here — per Decision #1699 (BUILD-A1-NO-GH-SCHEDULES-0902), no new GH
+# Actions `schedule:` triggers. This workflow is manual/on-demand only.
+
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: axon-fire-dispatch-consumer
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  consume:
+    name: AXON — consume manual fire requests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run fire dispatch consumer
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/axon-fire-dispatch-consumer.mjs
+
+      - name: Report failure
+        if: failure()
+        run: echo "❌ AXON fire dispatch consumer failed — check Actions logs"
