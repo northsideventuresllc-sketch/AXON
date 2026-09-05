@@ -22,9 +22,6 @@ function assert(cond, msg) {
 
 const ids = [
   'axon-self-research',
-  'axon-telegram-poll',
-  'axon-content-batch-notify',
-  'axon-ni-outreach',
   'hermes-agent-dispatch',
   'axon-mf-ad-tracker',
   'axon-local-model-daily',

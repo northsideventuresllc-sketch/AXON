@@ -44,58 +44,6 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
     defaultEnabled: true,
   },
   {
-    id: 'axon-telegram-poll',
-    title: 'Telegram Command Poll',
-    scheduleLabel: 'Every 15 minutes',
-    cronUtc: '*/15 * * * *',
-    workflowFile: 'axon-telegram-poll.yml',
-    workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'AXON',
-    droidRole: 'Comms',
-    faceShape: 'diamond',
-    axonTools: ['Test Mode', 'Repo Manager Agent Dispatch'],
-    description: 'Fallback poll for @axon_ni_bot when webhook is unavailable — approve sends, dispatch cues.',
-    howItWorks:
-      'Polls Telegram getUpdates, mirrors chat to dashboard, routes approve/reject to outreach and dispatch handlers.',
-    whyImportant:
-      'No auto-send without JB approval — this droid is the safety net so Telegram cues never stall.',
-    defaultEnabled: true,
-  },
-  {
-    id: 'axon-content-batch-notify',
-    title: 'Content Machine Batch',
-    scheduleLabel: 'Daily · 8:00 AM EST',
-    cronUtc: '0 13 * * *',
-    workflowFile: 'axon-content-batch-notify.yml',
-    workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'Match Fit',
-    droidRole: 'Content',
-    faceShape: 'square',
-    axonTools: ['AXON Management-Match Fit', 'NI Marketing HQ'],
-    description: 'Morning Telegram preview of pending Match Fit content awaiting JB approval.',
-    howItWorks:
-      'After Content Machine generation window, bundles pending posts and sends a Telegram summary — no auto-publish.',
-    whyImportant: 'Match Fit social cadence depends on this batch cue — operator approves before anything goes live.',
-    defaultEnabled: true,
-  },
-  {
-    id: 'axon-ni-outreach',
-    title: 'NI Outreach Nightly',
-    scheduleLabel: 'Manual only (auto cron off)',
-    cronUtc: null,
-    workflowFile: 'axon-ni-outreach.yml',
-    workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'Northside',
-    droidRole: 'Outreach',
-    faceShape: 'triangle',
-    axonTools: ['NI Outreach HQ'],
-    description: 'Prospect discovery + draft generation — training mode; workflow_dispatch only until ICP locked.',
-    howItWorks:
-      'When enabled and manually dispatched, runs ICP scan, scores leads, drafts outreach — all pending Telegram approve.',
-    whyImportant: 'Core revenue engine — kept manual while JB trains ICP and reject reasons.',
-    defaultEnabled: false,
-  },
-  {
     id: 'hermes-agent-dispatch',
     title: 'Hermes Dispatch Seed',
     scheduleLabel: '3× daily (nv-vault)',
@@ -115,8 +63,8 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
   {
     id: 'axon-mf-ad-tracker',
     title: 'Match Fit Ad Tracker Sync',
-    scheduleLabel: 'Every 6 hours',
-    cronUtc: '15 */6 * * *',
+    scheduleLabel: 'Dormant (Agentic OS audit 2026-09-05, Decision #1767) — was every 6 hours',
+    cronUtc: null,
     workflowFile: 'axon-mf-ad-tracker.yml',
     workflowRepo: 'northsideventuresllc-sketch/AXON',
     venture: 'Match Fit',
@@ -129,7 +77,7 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
       'GitHub Actions loads Ads API keys from secrets/ni_platform_secrets, writes mf_ad_platform_daily_snapshots, Telegram cues only if keys missing.',
     whyImportant:
       'July $50 MF tests need spend/click truth so August winners are locked from real ROAS — not gut feel.',
-    defaultEnabled: true,
+    defaultEnabled: false,
   },
   {
     id: 'axon-local-model-daily',
@@ -167,25 +115,6 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
       'npm run comm:skill (or POST /api/axon/comm-skill / learning refresh) scans axon_communication_profile + signals, bumps weights, inserts an audit row into axon_comm_skill_runs.',
     whyImportant:
       'Without run telemetry JB cannot see whether the communication adaptation skill is practicing — this closes the Post-Comm gap.',
-    defaultEnabled: true,
-  },
-  {
-    id: 'axon-wisdom-loop',
-    title: 'Wisdom Absorb Loop',
-    scheduleLabel: 'Mac cron · daily 6:30 AM local',
-    cronUtc: null,
-    workflowFile: 'axon-wisdom-loop.mjs',
-    workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'AXON',
-    droidRole: 'Learning',
-    faceShape: 'hex',
-    axonTools: ['Briefing Panel', 'NI Outreach HQ'],
-    description:
-      'AX-WISDOM-LOOP — Watch→digest→enhance absorb of ND corpus, research, Learnings, and signals into durable wisdom.',
-    howItWorks:
-      'Mac cron runs npm run wisdom, ranks multi-source wisdom, enhances J-space, upserts axon_wisdom_items + axon_wisdom_runs. Chat loads the prompt block.',
-    whyImportant:
-      'Slow Takeover / Mac ON path — AXON keeps JB corrections and verified ND principles without re-deriving them every session.',
     defaultEnabled: true,
   },
 ];
