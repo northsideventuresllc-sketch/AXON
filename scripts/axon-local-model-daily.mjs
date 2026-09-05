@@ -17,6 +17,7 @@
  */
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { SUPABASE_URL, SOURCE } from '../lib/constants.mjs';
+import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import {
   LOCAL_MODEL_RUN_TABLE,
   macCronChecklist,
@@ -69,6 +70,8 @@ async function main() {
     const client = createSupabaseClient(serviceKey);
     sbSelect = client.sbSelect;
     sbInsert = client.sbInsert;
+
+    if (await cronGuardShouldSkip('axon-local-model-daily', sbSelect)) return;
     // Refresh env overrides from brain secrets (never print values)
     for (const key of ['OLLAMA_HOST', 'OLLAMA_MODEL']) {
       if (!process.env[key]) {

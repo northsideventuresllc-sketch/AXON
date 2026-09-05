@@ -13,6 +13,7 @@
  */
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { SUPABASE_URL } from '../lib/constants.mjs';
+import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import {
   COMM_PROFILE_TABLE,
   COMM_SIGNALS_TABLE,
@@ -46,6 +47,8 @@ async function main() {
     const client = createSupabaseClient(serviceKey);
     sbPatch = client.sbPatch;
     sbInsert = client.sbInsert;
+
+    if (await cronGuardShouldSkip('axon-comm-skill', client.sbSelect)) return;
     try {
       techniques = await client.sbSelect(
         COMM_PROFILE_TABLE,
