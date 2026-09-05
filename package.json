@@ -49,7 +49,8 @@
     "test:mini-jobs-tier-gate": "node tests/mini-jobs-tier-gate.test.mjs",
     "test:roster-fire": "node tests/roster-fire-decision.test.mjs",
     "slack:listener": "node scripts/slack-socket-listener.mjs",
-    "test:slack-socket-listener": "node tests/slack-socket-listener-core.test.mjs"
+    "test:slack-socket-listener": "node tests/slack-socket-listener-core.test.mjs",
+    "test:match-fit-webhook": "node tests/match-fit-posting-confirmation.test.mjs"
   },
   "engines": {
     "node": ">=20"
