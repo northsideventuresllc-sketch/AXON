@@ -7,6 +7,10 @@ import { isAuthorizedChat } from '../lib/telegram-handler.mjs';
 import { resolveJbTarget } from '../lib/jb-route.mjs';
 import { loadTelegramConfig } from '../lib/config.mjs';
 
+// Never let an ambient bot token reach loadConfig here — it would trigger a real
+// identity check against Telegram from a unit test.
+delete process.env.TELEGRAM_BOT_TOKEN;
+
 const cfg = {
   telegramChatId: '-100999',
   telegramDmChatId: '7722',
