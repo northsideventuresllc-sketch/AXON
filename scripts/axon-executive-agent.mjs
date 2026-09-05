@@ -267,7 +267,7 @@ async function main() {
     loopNotes.push(`Slack post: ${slackResult.ok ? 'ok' : `FAILED (${slackResult.error || slackResult.status})`}`);
 
     await postToAgentBus(sbInsert, {
-      to_agent: 'ALL',
+      to_agent: 'SENSEI',
       subject: `AXON-EXEC-AGENT-NIGHTLY-${today}`,
       body: {
         kind: 'executive_agent_nightly_summary',
