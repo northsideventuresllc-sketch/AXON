@@ -117,6 +117,25 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
       'Without run telemetry JB cannot see whether the communication adaptation skill is practicing — this closes the Post-Comm gap.',
     defaultEnabled: true,
   },
+  {
+    id: 'axon-executive-agent',
+    title: 'AXON Executive Agent',
+    scheduleLabel: 'Mac cron · daily 6:30 AM local',
+    cronUtc: null,
+    workflowFile: 'axon-executive-agent.mjs',
+    workflowRepo: 'northsideventuresllc-sketch/AXON',
+    venture: 'AXON',
+    droidRole: 'Learning',
+    faceShape: 'hex',
+    axonTools: ['Briefing Panel', 'NI Outreach HQ'],
+    description:
+      'AXON Executive Agent — rebuilt from AX-WISDOM-LOOP (2026-08-26): watch→digest→enhance absorb of ND corpus, research, Learnings, and signals into durable wisdom, plus durable Decisions/Learnings ingest, cross-repo git history, training-bundle merge, RunPod manifest sync, and the agent_bus/Slack/Telegram bridge.',
+    howItWorks:
+      'Mac cron runs npm run wisdom (scripts/axon-wisdom-loop.mjs, now a thin forwarding shim) which invokes scripts/axon-executive-agent.mjs — ranks multi-source wisdom, enhances J-space, upserts axon_wisdom_items + axon_wisdom_runs, and bridges to agent_bus/Slack/Telegram.',
+    whyImportant:
+      'Slow Takeover / Mac ON path — AXON keeps JB corrections and verified ND principles without re-deriving them every session. Catalog id matches CRON_JOB_ID used by the script itself so the dashboard enabled-toggle actually reaches this job (the old axon-wisdom-loop id was orphaned after the 2026-08-26 rebuild).',
+    defaultEnabled: true,
+  },
 ];
 
 export function getCronJobDef(id: string): AxonCronJobDef | undefined {
