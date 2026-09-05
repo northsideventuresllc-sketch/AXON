@@ -14,9 +14,9 @@ Heuristic is the default provider (CI / dry-run safe). Pass `--haiku` when `ANTH
 ## Commands
 
 ```bash
-npm run wisdom:dry          # no writes
-npm run wisdom              # live absorb → NI-Brain
-npm run wisdom -- --checklist
+# The standalone `wisdom` scripts were retired 2026-09-05 (Decision #1767).
+# The absorb loop now runs inside the AXON Executive agent's nightly run:
+node scripts/axon-executive-agent.mjs
 npm run test:wisdom
 ```
 
@@ -32,7 +32,7 @@ Schema: `scripts/axon_wisdom_loop_bc.sql`
 ## Schedule (optional Mac cron)
 
 ```cron
-30 6 * * * cd ~/Projects/AXON && /usr/bin/npm run wisdom >>/tmp/axon-wisdom.log 2>&1
+# (retired) the Mac mini cron manifest entry 'AXON Executive Agent' owns this schedule now
 ```
 
 Runs before `model:daily` so scoring inherits fresh wisdom.

@@ -100,7 +100,7 @@ export function OutreachGenerateLeads({ stats }: { stats: PipelineStats }) {
           <input
             type="number"
             min={1}
-            max={Math.min(15, remaining || 15)}
+            max={Math.min(10, remaining || 10)}
             value={max}
             disabled={loading || atCap}
             onChange={(e) => setMax(Number(e.target.value) || 3)}
@@ -126,23 +126,28 @@ export function OutreachGenerateLeads({ stats }: { stats: PipelineStats }) {
 
       {runStatus && !runStatus.configured && (
         <p className="mt-3 text-sm text-axon-muted">
-          GitHub dispatch not configured — set <span className="font-mono">AXON_GITHUB_PAT</span>{' '}
-          on Vercel (actions:write on AXON repo).
+          Lead handoff is not set up on this deploy yet — the request cannot reach the outreach agent.
         </p>
       )}
 
       {lastRun && (
         <p className="mt-3 text-xs text-axon-muted">
           Last run:{' '}
-          <a
-            href={lastRun.htmlUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-axon-teal hover:underline"
-          >
-            {lastRun.status}
-            {lastRun.conclusion ? ` · ${lastRun.conclusion}` : ''}
-          </a>
+          {lastRun.htmlUrl ? (
+            <a
+              href={lastRun.htmlUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-axon-teal hover:underline"
+            >
+              {lastRun.status}
+              {lastRun.conclusion ? ` · ${lastRun.conclusion}` : ''}
+            </a>
+          ) : (
+            <span className="text-axon-text">
+              {lastRun.status === 'completed' ? 'Handled by the outreach agent' : 'Queued for the outreach agent'}
+            </span>
+          )}
           {' · '}
           {new Date(lastRun.createdAt).toLocaleString()}
         </p>
