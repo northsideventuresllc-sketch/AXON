@@ -1,0 +1,79 @@
+name: AXON Deploy QA
+
+# AX-SMALL-BUILDS-BUNDLE-0904 item (1). Fires on every push to `main` — the
+# same event that triggers AXON's own Vercel auto-deploy (this repo has no
+# dedicated Vercel deploy-hook workflow to key off of; push-to-main is already
+# used as the "on deploy" signal by axon-telegram-webhook-on-deploy.yml, same
+# convention here). No `paths:` filter — a deploy QA note is wanted for every
+# deploy, not a subset of files.
+#
+# The QA.md log lives on a dedicated `qa-log` orphan branch, never on `main`
+# directly: `main` requires the "council-review" status check (branch
+# protection, verified live via the GitHub API when this was built) and a
+# direct bot push to a protected branch is rejected by GitHub, exactly the
+# failure mode documented in sync-ni-portal.yml's HEALTH-BRANCH-PROTECTION-PR-FLOW
+# note. A running bookkeeping log isn't worth a PR-per-deploy cycle, so this
+# avoids branch protection entirely instead of fighting it.
+#
+# Rollback: delete this file, or remove the `on: push` trigger below (leaving
+# `workflow_dispatch:` for manual runs only), or set axon_cron_jobs.enabled=false
+# for id "axon-deploy-qa" (scripts/axon-deploy-qa.mjs checks that gate first).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-qa:
+    name: Write deploy QA entry
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run deploy QA script (writes qa/QA.md into the working tree)
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/axon-deploy-qa.mjs "${{ github.sha }}"
+
+      - name: Commit qa/QA.md to the qa-log branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # qa-log is an orphan branch holding only qa/QA.md — never merged into
+          # main, so it is never subject to main's branch protection.
+          cp qa/QA.md /tmp/QA.md.new
+
+          if git fetch origin qa-log 2>/dev/null && git rev-parse --verify origin/qa-log >/dev/null 2>&1; then
+            git checkout -B qa-log origin/qa-log
+          else
+            git checkout --orphan qa-log
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          mkdir -p qa
+          cp /tmp/QA.md.new qa/QA.md
+          git add qa/QA.md
+
+          if git diff --staged --quiet; then
+            echo "No QA.md changes to push."
+            exit 0
+          fi
+
+          git commit -m "chore(axon-deploy-qa): QA entry for ${{ github.sha }}"
+          git push origin qa-log
