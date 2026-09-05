@@ -27,7 +27,7 @@
  */
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
-import { buildFireAckNote } from '../lib/axon-fire-dispatch-consumer-core.mjs';
+import { processFireRequests } from '../lib/axon-fire-dispatch-consumer-core.mjs';
 
 const JOB_ID = 'axon-fire-dispatch-consumer';
 const MAX_REQUESTS_PER_RUN = 20;
@@ -44,51 +44,20 @@ async function main() {
 
   if (await cronGuardShouldSkip(JOB_ID, sb.sbSelect)) return;
 
-  const requests = await sb.sbSelect(
-    'manual_fire_requests',
-    `status=eq.queued&order=requested_at.asc&limit=${MAX_REQUESTS_PER_RUN}&select=id,source,requested_at,note`,
-  );
+  const { acked, raced, total } = await processFireRequests({
+    sbSelect: sb.sbSelect,
+    sbPatch: sb.sbPatch,
+    nowIso,
+    maxPerRun: MAX_REQUESTS_PER_RUN,
+  });
 
-  if (!requests.length) {
+  if (!total) {
     console.log('No queued manual_fire_requests — nothing to consume.');
     return;
   }
 
-  const queueRows = await sb.sbSelect(
-    'agent_dispatch',
-    'status=eq.queued&executor=eq.local_ollama&select=id',
-  );
-  const queuedCount = queueRows.length;
-
-  let acked = 0;
-  let raced = 0;
-  for (const req of requests) {
-    // Atomic claim: the status=eq.queued filter on the PATCH means a
-    // concurrent run that already claimed this row gets zero rows back here,
-    // same guard shape as nvg-dispatch-local-runner-v2.py's claim_next().
-    const picked = await sb.sbPatch(
-      'manual_fire_requests',
-      `id=eq.${req.id}&status=eq.queued`,
-      { status: 'processing', picked_up_at: nowIso() },
-    );
-    if (!picked) {
-      raced += 1;
-      console.log(`SKIP ${req.id}: already claimed by another run.`);
-      continue;
-    }
-
-    const note = buildFireAckNote({ source: req.source, queuedCount, nowIso: nowIso() });
-    await sb.sbPatch(
-      'manual_fire_requests',
-      `id=eq.${req.id}`,
-      { status: 'done', completed_at: nowIso(), note },
-    );
-    acked += 1;
-    console.log(`DONE ${req.id}: ${note}`);
-  }
-
   console.log(
-    `AXON Fire Dispatch Consumer complete — acknowledged=${acked} raced=${raced} of ${requests.length} request(s).`,
+    `AXON Fire Dispatch Consumer complete — acknowledged=${acked} raced=${raced} of ${total} request(s).`,
   );
 }
 
