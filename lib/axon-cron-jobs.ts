@@ -170,22 +170,22 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
     defaultEnabled: true,
   },
   {
-    id: 'axon-wisdom-loop',
-    title: 'Wisdom Absorb Loop',
+    id: 'axon-executive-agent',
+    title: 'AXON Executive Agent',
     scheduleLabel: 'Mac cron · daily 6:30 AM local',
     cronUtc: null,
-    workflowFile: 'axon-wisdom-loop.mjs',
+    workflowFile: 'axon-executive-agent.mjs',
     workflowRepo: 'northsideventuresllc-sketch/AXON',
     venture: 'AXON',
     droidRole: 'Learning',
     faceShape: 'hex',
     axonTools: ['Briefing Panel', 'NI Outreach HQ'],
     description:
-      'AX-WISDOM-LOOP — Watch→digest→enhance absorb of ND corpus, research, Learnings, and signals into durable wisdom.',
+      'AXON Executive Agent — rebuilt from AX-WISDOM-LOOP (2026-08-26): watch→digest→enhance absorb of ND corpus, research, Learnings, and signals into durable wisdom, plus durable Decisions/Learnings ingest, cross-repo git history, training-bundle merge, RunPod manifest sync, and the agent_bus/Slack/Telegram bridge.',
     howItWorks:
-      'Mac cron runs npm run wisdom, ranks multi-source wisdom, enhances J-space, upserts axon_wisdom_items + axon_wisdom_runs. Chat loads the prompt block.',
+      'Mac cron runs npm run wisdom (scripts/axon-wisdom-loop.mjs, now a thin forwarding shim) which invokes scripts/axon-executive-agent.mjs — ranks multi-source wisdom, enhances J-space, upserts axon_wisdom_items + axon_wisdom_runs, and bridges to agent_bus/Slack/Telegram.',
     whyImportant:
-      'Slow Takeover / Mac ON path — AXON keeps JB corrections and verified ND principles without re-deriving them every session.',
+      'Slow Takeover / Mac ON path — AXON keeps JB corrections and verified ND principles without re-deriving them every session. Catalog id matches CRON_JOB_ID used by the script itself so the dashboard enabled-toggle actually reaches this job (the old axon-wisdom-loop id was orphaned after the 2026-08-26 rebuild).',
     defaultEnabled: true,
   },
 ];
