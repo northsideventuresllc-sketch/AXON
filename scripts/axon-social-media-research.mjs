@@ -201,7 +201,7 @@ async function main() {
       body: busBody,
       needs_answer: false,
     });
-    console.log('Wrote run summary to agent_bus (AXON Executive Agent + CONTENT).');
+    console.log('Wrote run summary to agent_bus (AXON Executive + CONTENT).');
   } catch (err) {
     console.warn(`agent_bus write failed: ${err.message}`);
   }

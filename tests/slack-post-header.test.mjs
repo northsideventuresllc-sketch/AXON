@@ -32,7 +32,7 @@ import { AGENT } from '../lib/agent-names.mjs';
     assert.ok(calls[0].url.includes('/functions/v1/slack-post'));
     const sentBody = JSON.parse(calls[0].opts.body);
     assert.equal(sentBody.channel, 'C0BQMTYMNRH');
-    assert.ok(sentBody.text.startsWith('*AXON Executive Agent — nightly run 2026-09-02*'));
+    assert.ok(sentBody.text.startsWith('*AXON Executive — nightly run 2026-09-02*'));
     assert.ok(sentBody.text.includes('• Wisdom: ok'));
   } finally {
     globalThis.fetch = realFetch;

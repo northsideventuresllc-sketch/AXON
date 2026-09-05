@@ -284,7 +284,7 @@ async function main() {
     if (!result.ok) {
       await alertTelegramUrgent(
         sbSelect,
-        `🚨 AXON Executive Agent nightly run had a real problem: ${result.summary || 'unknown error'}. Check Slack #agent-ops for the full wrap.`,
+        `🚨 AXON Executive nightly run had a real problem: ${result.summary || 'unknown error'}. Check Slack #agent-ops for the full wrap.`,
       );
     }
   }
