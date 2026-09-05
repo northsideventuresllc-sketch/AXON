@@ -24,6 +24,8 @@ Set in [Vercel → workspace → Settings → Environment Variables](https://ver
 | `TELEGRAM_BOT_TOKEN` | Telegram |
 | `TELEGRAM_CHAT_ID` | Telegram |
 | `RESEND_API_KEY` | Email send |
+| `RESEND_FROM_EMAIL` | Optional — default `JB <jb@northsideintelligence.com>` |
+| `RESEND_REPLY_TO_EMAIL` | Optional — default `jb@northsideintelligence.com` |
 
 Redeploy after adding env vars.
 

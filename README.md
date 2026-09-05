@@ -74,7 +74,8 @@ Add in **Settings → Secrets → Actions** on this repo:
 | `TELEGRAM_BOT_TOKEN` | **Yes** | From [@BotFather](https://t.me/BotFather) |
 | `TELEGRAM_CHAT_ID` | **Yes** | Your personal chat ID |
 | `RESEND_API_KEY` | For email send | After approve |
-| `RESEND_FROM_EMAIL` | Optional | Default: `Jonny <northside@northsideintelligence.com>` |
+| `RESEND_FROM_EMAIL` | Optional | Default: `JB <jb@northsideintelligence.com>` |
+| `RESEND_REPLY_TO_EMAIL` | Optional | Default: `jb@northsideintelligence.com` |
 | `TELEGRAM_WEBHOOK_SECRET` | Optional | Webhook auth header |
 | `AXON_WEBHOOK_URL` | Optional | Override default Vercel webhook URL |
 | `AXON_DASHBOARD_SECRET` | **Yes** | Web UI login |
