@@ -50,7 +50,13 @@
     "test:mini-jobs-tier-gate": "node tests/mini-jobs-tier-gate.test.mjs",
     "test:roster-fire": "node tests/roster-fire-decision.test.mjs",
     "slack:listener": "node scripts/slack-socket-listener.mjs",
-    "test:slack-socket-listener": "node tests/slack-socket-listener-core.test.mjs"
+    "test:slack-socket-listener": "node tests/slack-socket-listener-core.test.mjs",
+    "deploy-qa": "node scripts/axon-deploy-qa.mjs",
+    "test:deploy-qa": "node tests/axon-deploy-qa-core.test.mjs",
+    "test:agent-bus-high-stakes": "node tests/agent-bus-high-stakes.test.mjs",
+    "skill-scout": "node scripts/axon-skill-candidate-scout.mjs",
+    "skill-scout:dry": "node scripts/axon-skill-candidate-scout.mjs --dry",
+    "test:skill-scout": "node tests/axon-skill-candidate-scout-core.test.mjs"
   },
   "engines": {
     "node": ">=20"
