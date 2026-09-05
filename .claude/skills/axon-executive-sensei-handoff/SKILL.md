@@ -34,7 +34,7 @@ check, so this hasn't broken anything, but it's worth tightening to the spec at 
 1. **AXON Executive Agent finishes its daily run** — whatever its own report/status content is.
 2. It writes one row to `agent_bus`:
    ```
-   from_agent = 'AXON Executive Agent'
+   from_agent = 'AXON Executive' (renamed from 'AXON Executive Agent' on 2026-09-05, Decision #1767)
    to_agent   = 'SENSEI'
    subject    = 'AXON-EXEC-DAILY-REPORT-<YYYY-MM-DD>'   -- date-scoped, never reused, so a
                                                           -- retry doesn't collide with the same day

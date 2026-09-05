@@ -65,3 +65,56 @@ test('jb-route: agent topic, EXEC fallback, approvals topic, private chat withou
   assert.deepEqual(await resolveJbTarget(fakeSelect({ group: null, threads }), { agentName: 'EXEC' }),
     { chatId: '7722', threadId: null, viaGroup: false });
 });
+
+// Council finding (2026-09-05): the live webhook passes loadConfig()'s object,
+// not loadTelegramConfig()'s — so the ids must survive that hop too.
+test('loadConfig carries the private-chat and group ids so the webhook authorizes both', async () => {
+  const { loadConfig } = await import('../lib/config.mjs');
+  const { isAuthorizedChat: authz } = await import('../lib/telegram-auth.mjs');
+  const secrets = {
+    SUPABASE_SERVICE_ROLE_KEY: 'k',
+    ANTHROPIC_API_KEY: 'a',
+    GEMINI_API_KEY: 'g',
+    RESEND_API_KEY: 'r',
+    SERPAPI_API_KEY: 's',
+    TELEGRAM_BOT_TOKEN: 'tok',
+    TELEGRAM_CHAT_ID: '7722',
+    TELEGRAM_WEBHOOK_SECRET: 'wh',
+    TELEGRAM_GROUP_CHAT_ID: '-100999',
+    TELEGRAM_APPROVALS_THREAD_ID: '80',
+  };
+  const sbSelect = async (_t, q) => {
+    const m = q.match(/key=eq\.([^&]+)/);
+    const key = m ? decodeURIComponent(m[1]) : '';
+    return secrets[key] ? [{ value: secrets[key] }] : [];
+  };
+  const prev = process.env.SUPABASE_SERVICE_KEY;
+  process.env.SUPABASE_SERVICE_KEY = 'k';
+  try {
+    const cfg = await loadConfig(sbSelect);
+    assert.equal(cfg.telegramChatId, '-100999');
+    assert.equal(cfg.telegramDmChatId, '7722');
+    assert.equal(cfg.telegramGroupChatId, '-100999');
+    assert.equal(authz(cfg, '7722'), true);
+    assert.equal(authz(cfg, '-100999'), true);
+    assert.equal(authz(cfg, '1'), false);
+    assert.equal(authz({}, '7722'), true, 'unconfigured bot keeps the legacy open behaviour (webhook 503s before this point)');
+  } finally {
+    if (prev === undefined) delete process.env.SUPABASE_SERVICE_KEY; else process.env.SUPABASE_SERVICE_KEY = prev;
+  }
+});
+
+test('keyboard sends carry the approvals topic when given', async () => {
+  const { telegramSendWithKeyboard } = await import('../lib/telegram.mjs');
+  const realFetch = globalThis.fetch;
+  let body;
+  globalThis.fetch = async (_u, init) => { body = JSON.parse(init.body); return { json: async () => ({ ok: true, result: { message_id: 1 } }) }; };
+  try {
+    await telegramSendWithKeyboard('t', '-100999', 'hi', { inline_keyboard: [] }, false, { threadId: 80 });
+    assert.equal(body.message_thread_id, 80);
+    await telegramSendWithKeyboard('t', '7722', 'hi', { inline_keyboard: [] }, false);
+    assert.equal('message_thread_id' in body, false);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
