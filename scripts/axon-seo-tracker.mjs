@@ -196,7 +196,7 @@ async function main() {
   }
 
   if (ok.length === 0 && results.length > 0) {
-    await notifyJbUrgent(cfg, `⚠️ SEO Tracker ran but got zero real findings (${results.length} venture(s) checked) — worth a look when you have a sec.`);
+    await notifyJbUrgent(cfg, `⚠️ SEO Tracker ran but got zero real findings (${results.length} venture(s) checked) — worth a look when you have a sec.`, { agentName: 'AXON-SEO-Tracker' });
   }
 
   const humanSummary = plainEnglish([

@@ -37,6 +37,8 @@ function fakeSbSelect(secrets) {
   assert.deepEqual(cfg, {
     telegramToken: 'default-token',
     telegramChatId: 'default-chat',
+    telegramDmChatId: 'default-chat',
+    telegramGroupChatId: null,
     telegramWebhookSecret: 'default-secret',
     telegramApprovalsThreadId: null,
   });
@@ -53,6 +55,8 @@ function fakeSbSelect(secrets) {
   assert.deepEqual(cfg, {
     telegramToken: 'default-token',
     telegramChatId: 'default-chat',
+    telegramDmChatId: 'default-chat',
+    telegramGroupChatId: null,
     telegramWebhookSecret: 'default-secret',
     telegramApprovalsThreadId: null,
   });
@@ -71,6 +75,8 @@ function fakeSbSelect(secrets) {
   assert.deepEqual(cfg, {
     telegramToken: 'default-token',
     telegramChatId: '-1004204591575',
+    telegramDmChatId: 'default-chat',
+    telegramGroupChatId: '-1004204591575',
     telegramWebhookSecret: 'default-secret',
     telegramApprovalsThreadId: '42',
   });
@@ -89,6 +95,8 @@ function fakeSbSelect(secrets) {
   assert.deepEqual(cfg, {
     telegramToken: 'default-token',
     telegramChatId: 'default-chat',
+    telegramDmChatId: 'default-chat',
+    telegramGroupChatId: '-1004204591575',
     telegramWebhookSecret: 'default-secret',
     telegramApprovalsThreadId: null,
   });
@@ -131,6 +139,8 @@ function fakeSbSelect(secrets) {
     {
       telegramToken: 'default-token',
       telegramChatId: 'default-chat',
+      telegramDmChatId: 'default-chat',
+      telegramGroupChatId: null,
       telegramWebhookSecret: 'default-secret',
       telegramApprovalsThreadId: null,
     },
