@@ -9,3 +9,6 @@ tsconfig.tsbuildinfo
 
 # AXON-STARTER-TEMPLATES-001 generated output
 dist/
+
+# NVG close-out markers (per-session, never committed)
+.nvg/

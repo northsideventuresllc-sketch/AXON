@@ -201,13 +201,13 @@ async function main() {
       body: busBody,
       needs_answer: false,
     });
-    console.log('Wrote run summary to agent_bus (AXON Executive Agent + CONTENT).');
+    console.log('Wrote run summary to agent_bus (AXON Executive + CONTENT).');
   } catch (err) {
     console.warn(`agent_bus write failed: ${err.message}`);
   }
 
   if (ok.length === 0 && results.length > 0) {
-    await notifyJbUrgent(cfg, `⚠️ Social Media Research ran but got zero real findings (${results.length} venture(s) checked) — worth a look when you have a sec.`);
+    await notifyJbUrgent(cfg, `⚠️ Social Media Research ran but got zero real findings (${results.length} venture(s) checked) — worth a look when you have a sec.`, { agentName: 'AXON Content Research' });
   }
 
   const humanSummary = plainEnglish([

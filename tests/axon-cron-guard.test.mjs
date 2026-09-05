@@ -58,15 +58,14 @@ const SUPABASE_URL = 'https://kxijunwgbrlfzvgkhklo.supabase.co';
 // deprecated forwarding shim, so the guard belongs on the real entrypoint,
 // keyed to its own registered axon_cron_jobs id (CRON_JOB_ID in
 // lib/axon-executive-agent.mjs), not the old 'axon-wisdom-loop' id.
+// axon-telegram-poll.mjs and axon-ni-outreach.mjs were retired 2026-09-05
+// (Decision #1767) and are no longer in the tree.
 const GUARDED_ENTRYPOINTS = [
   ['../scripts/axon-self-research.mjs', 'axon-self-research'],
-  ['../scripts/axon-telegram-poll.mjs', 'axon-telegram-poll'],
-  ['../scripts/axon-content-batch-notify.mjs', 'axon-content-batch-notify'],
   ['../scripts/axon-mf-ad-tracker-sync.mjs', 'axon-mf-ad-tracker'],
   ['../scripts/axon-executive-agent.mjs', 'axon-executive-agent'],
   ['../scripts/axon-local-model-daily.mjs', 'axon-local-model-daily'],
   ['../scripts/axon-comm-skill.mjs', 'axon-comm-skill'],
-  ['../scripts/axon-ni-outreach.mjs', 'axon-ni-outreach'],
 ];
 
 async function runEntrypoint(modPath, enabled) {

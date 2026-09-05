@@ -97,8 +97,7 @@ npm run research       # live research → findings + axon_research_runs lab log
 npm run test:research-runs  # AX-RESEARCH-RUNS lab-log unit tests
 npm run model:daily:dry # local model build (no Ollama required)
 npm run model:daily    # live local score → axon_local_model_runs
-npm run wisdom:dry     # wisdom absorb loop (no writes)
-npm run wisdom         # live Watch→digest→enhance → axon_wisdom_*
+npm run exec-agent     # AXON Executive (nightly brain; runs the wisdom absorb loop inside it)
 npm run telegram:poll  # process Telegram commands once
 npm run telegram:setup # register slash commands
 ```
