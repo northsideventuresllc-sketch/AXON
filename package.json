@@ -43,6 +43,7 @@
     "test:roster-fire": "node tests/roster-fire-decision.test.mjs",
     "slack:listener": "node scripts/slack-socket-listener.mjs",
     "test:slack-socket-listener": "node tests/slack-socket-listener-core.test.mjs",
+    "test:resend": "node tests/resend-reply-to.test.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "engines": {
