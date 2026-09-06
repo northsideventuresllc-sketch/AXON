@@ -76,6 +76,24 @@ after posting a scheduled batch, so AXON can notify JB the posts went live.
 
 ---
 
+## Match Fit outreach-event webhook
+
+`POST /api/axon/match-fit/outreach-event` — Match Fit's Outreach HQ v2 calls this for three
+event types (a fresh batch of Today's Leads, a follow-up becoming due, a new pending-response)
+via `matchfit/src/lib/outreach-axon-notify.ts`. AXON surfaces each lead in Telegram with
+Approve / Delete / Rewrite inline buttons through the existing @northsideaxonbot plumbing.
+
+- **Auth:** `X-Match-Fit-Webhook-Secret` header must equal `MATCH_FIT_WEBHOOK_SECRET`. Whitelisted
+  in `middleware.ts` `PUBLIC_PATHS` (server-to-server call, no AXON dashboard session cookie).
+- **Body:** `{ eventType: "new_leads"|"follow_up_due"|"pending_response", leads: [{ platform, leadId, handle?, contact?, summary? }], meta? }`.
+- **On success:** pushes one Telegram message per lead with an Approve/Delete/Rewrite keyboard.
+  Button taps round-trip through `api/telegram-webhook.js` → `lib/telegram-handler.mjs` →
+  `lib/match-fit-outreach-actions.mjs`, which calls back into Match Fit's admin API using
+  `MATCH_FIT_APP_URL` + `MATCH_FIT_SERVICE_TOKEN` (unset = buttons reply "blocked", never a fake success).
+- Malformed payloads return `400`; missing/wrong secret returns `401`; Telegram not configured returns `503`.
+
+---
+
 ## GitHub Actions secrets
 
 Add in **Settings → Secrets → Actions** on this repo:
@@ -95,7 +113,8 @@ Add in **Settings → Secrets → Actions** on this repo:
 | `AXON_WEBHOOK_URL` | Optional | Override default Vercel webhook URL |
 | `AXON_DASHBOARD_SECRET` | **Yes** | Web UI login |
 | `GEMINI_API_KEY_BACKUP` | Optional | Fallback |
-| `MATCH_FIT_WEBHOOK_SECRET` | For MF posting-confirmation webhook | Vercel env var (not a GH Action secret) — shared secret Match Fit sends as `X-Match-Fit-Webhook-Secret` on `POST /api/axon/match-fit/posting-confirmation`. Set the identical value in both repos' Vercel projects. |
+| `MATCH_FIT_WEBHOOK_SECRET` | For MF posting-confirmation + outreach-event webhooks | Vercel env var (not a GH Action secret) — shared secret Match Fit sends as `X-Match-Fit-Webhook-Secret`. Set the identical value in both repos' Vercel projects. |
+| `MATCH_FIT_APP_URL` / `MATCH_FIT_SERVICE_TOKEN` | Optional, for outreach-event Approve/Delete/Rewrite buttons | Vercel env vars (not GH Action secrets) — let AXON call back into Match Fit's admin API. Token must match `MATCH_FIT_SERVICE_TOKEN` on the Match Fit side. |
 
 Keys can also live in NI-Brain `ni_platform_secrets` — env vars take precedence.
 
