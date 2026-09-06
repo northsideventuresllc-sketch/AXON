@@ -25,9 +25,10 @@ The precondition is met and the handoff has fired for real: **AXON Executive Age
 (`AXON-EXEC-AGENT-NIGHTLY-2026-09-04`, id `35640a3e-c859-4ced-9990-7a960456d935`) as its actual
 grading material for that run — not a manual fallback fire.
 
-One live deviation from Section 2 below: AXON Executive Agent currently addresses these rows
-`to_agent='ALL'`, not `to_agent='SENSEI'` — SENSEI still finds them via its normal ALL-inbox
-check, so this hasn't broken anything, but it's worth tightening to the spec at some point.
+Fixed 2026-09-04 (dispatch AXON-EXEC-HANDOFF-TO-AGENT-TARGET-0904): AXON Executive Agent now
+addresses these rows `to_agent='SENSEI'`, matching Section 2 exactly. Previously it wrote
+`to_agent='ALL'`; SENSEI found the rows via its normal ALL-inbox check either way, so the old
+behavior never broke anything, but scoping is now correct.
 
 ## 2. The handoff, once AXON Executive Agent exists
 
