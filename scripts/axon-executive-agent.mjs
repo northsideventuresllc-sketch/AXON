@@ -16,7 +16,7 @@
  *   SUPABASE_SERVICE_KEY / SUPABASE_SERVICE_ROLE_KEY — required for live persist
  *   GH_PAT — required for the git-history pull (falls back to skipped+logged)
  * Optional:
- *   ANTHROPIC_API_KEY — Haiku polish (off by default; pass --haiku)
+ *   --polish — optional wisdom polish pass through the one router chain (off by default)
  *   NV_VAULT_GIT_DIR — nv-vault checkout path for the training-bundle merge
  *     (defaults to ~/nv-vault); merge is skipped+logged if not reachable.
  */
@@ -55,7 +55,9 @@ import {
 
 const START_MS = Date.now();
 const dryRun = process.env.AXON_DRY_RUN === '1' || process.argv.includes('--dry');
-const useHaiku = process.argv.includes('--haiku');
+// --polish (legacy alias --haiku) turns on the model polish pass; off by default so a
+// scheduled run stays purely heuristic unless someone asks for it.
+const usePolish = process.argv.includes('--polish') || process.argv.includes('--haiku');
 const showChecklist = process.argv.includes('--checklist');
 
 async function upsertWisdomItems(sbSelect, sbInsert, sbPatch, rows) {
@@ -111,7 +113,6 @@ async function main() {
   let learnings = [];
   let signals = [];
   let jspaceState = null;
-  let anthropicKey = process.env.ANTHROPIC_API_KEY || '';
   const loopNotes = []; // loop-engineering: what worked / what didn't, this run
 
   if (serviceKey) {
@@ -121,7 +122,6 @@ async function main() {
     sbPatch = client.sbPatch;
 
     if (await cronGuardShouldSkip(CRON_JOB_ID, sbSelect)) return;
-    if (!anthropicKey) anthropicKey = await secret(sbSelect, 'ANTHROPIC_API_KEY');
 
     try {
       [corpus, findings, learnings, signals, jspaceState] = await Promise.all([
@@ -162,8 +162,8 @@ async function main() {
     signals: signals || [],
     jspaceState,
     dryRun: effectiveDry,
-    forceHeuristic: !useHaiku,
-    anthropicKey,
+    forceHeuristic: !usePolish,
+    supabaseKey: serviceKey,
     persistItems: async (rows) => upsertWisdomItems(sbSelect, sbInsert, sbPatch, rows),
     persistRun: async (record) => sbInsert(WISDOM_RUNS_TABLE, record),
     persistJspace:async (state) => saveJspaceState(sbInsert, sbPatch, state, 'default', sbSelect),

@@ -1,4 +1,3 @@
-import { HAIKU_MODEL, GEMINI_MODEL } from './constants.mjs';
 import { loadConfig } from './config.mjs';
 import {
   buildToneInstructions,
@@ -26,107 +25,34 @@ import { getPreferences } from './axon-preferences';
 import { routeChat } from './axon-router';
 import { createSupabaseClient } from './supabase.mjs';
 
-// GEMINI_MODEL now imported from constants.mjs (retired model removed - same root cause as Telegram path).
-
-async function callHaiku(apiKey: string, system: string, messages: { role: string; content: string }[]) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: HAIKU_MODEL,
-      max_tokens: 900,
-      system,
-      messages,
-    }),
-  });
-  if (!r.ok) throw new Error(`Anthropic HTTP ${r.status}: ${await r.text()}`);
-  const data = await r.json();
-  return data.content?.map((c: { text?: string }) => c.text || '').join('').trim();
-}
-
-async function callGeminiOnce(
-  apiKey: string,
-  system: string,
-  messages: { role: string; content: string }[],
-): Promise<string | null> {
-  const contents = messages.map((m) => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents,
-        generationConfig: { maxOutputTokens: 900, temperature: 0.6 },
-      }),
-    },
-  );
-  if (!r.ok) return null;
-  const data = await r.json();
-  const text = data.candidates?.[0]?.content?.parts
-    ?.map((p: { text?: string }) => p.text)
-    .join('')
-    ?.trim();
-  return text || null;
-}
-
 /**
- * AXON-EVERYWHERE-PROJECT (2026-08-05): AXON-local first, then free-tier Gemini,
- * then paid Haiku only as the last resort — per JB directive DW-LOCAL-MODEL-MIGRATION
- * and the locked tier order (Decision #598 item 11 / #619). callHaiku and the Gemini
- * calls below are unchanged; AXON-local is a new attempt prepended so behavior never
- * regresses below what shipped before this change whenever it fails/times out.
- * Same call shape as callHaiku so existing call sites need only add geminiKey/geminiBackup.
+ * Every chat surface goes through the one router: it scores each connected lane on
+ * capability fit, cost, live health and quota, prefers free/local/subscription over
+ * metered, and records why it chose — with the locked chain (local -> RunPod ->
+ * OpenRouter free -> Gemini -> Anthropic last) underneath it for plain text.
  *
- * AXON-TIER-SYSTEM (2026-08-20, JB direct order): RunPod (AXON v1) tier inserted right
- * Routes through lib/axon-router-core.mjs. Gemini and Haiku remain as a direct emergency
- * fallback for the case where the router itself cannot be reached at all.
+ * ONE ROUTER (2026-09-06): the direct Gemini/Anthropic emergency fallback that used
+ * to sit below this call is gone. It bypassed router_routes/router_models entirely,
+ * so operator lane ordering had no effect on Telegram or voice and they fell through
+ * to PAID Anthropic instead of the free lanes sitting right there.
  */
 async function callChatModel(
-  keys: { anthropicKey: string; geminiKey?: string; geminiBackup?: string; supabaseKey?: string },
+  keys: { supabaseKey?: string },
   system: string,
   messages: { role: string; content: string }[],
 ): Promise<string> {
-  // Every chat surface goes through the one router: it scores each connected lane on
-  // capability fit, cost, live health and quota, prefers free/local/subscription over
-  // metered, and records why it chose. The old hardcoded cascade that lived here bypassed
-  // router_routes/router_models entirely, so operator lane ordering had no effect on
-  // Telegram or voice and they fell through to PAID Anthropic instead of the free
-  // OpenRouter lanes sitting right there. Found 2026-08-28.
-  try {
-    // Same operator power-bar lock as app/api/axon-v0/agent-chat/route.ts — Telegram/voice
-    // share the one operator, so their live routing respects the same manual lock.
-    const powerMode = (await getPreferences()).powerMode;
-    const costTierFloor = powerMode.autoSwitchEnabled ? null : POWER_LEVEL_TO_COST_TIER_FLOOR[powerMode.level];
-    const routed = await routeChat(keys.supabaseKey ?? '', {
-      messages: [{ role: 'system', content: system }, ...messages],
-      mode: 'auto',
-      hasMini: true, // these surfaces run where the mini relay is reachable
-      costTierFloor,
-    });
-    if (routed?.reply) return routed.reply;
-  } catch {
-    // Router unreachable (no lanes configured, DB down). Fall back to the direct calls
-    // below rather than dropping the operator's message on the floor.
-  }
-
-  for (const key of [keys.geminiKey, keys.geminiBackup].filter((k): k is string => Boolean(k))) {
-    try {
-      const text = await callGeminiOnce(key, system, messages);
-      if (text) return text;
-    } catch {
-      // try next key / fall through to Haiku
-    }
-  }
-  return callHaiku(keys.anthropicKey, system, messages);
+  // Same operator power-bar lock as app/api/axon-v0/agent-chat/route.ts — Telegram/voice
+  // share the one operator, so their live routing respects the same manual lock.
+  const powerMode = (await getPreferences()).powerMode;
+  const costTierFloor = powerMode.autoSwitchEnabled ? null : POWER_LEVEL_TO_COST_TIER_FLOOR[powerMode.level];
+  const routed = await routeChat(keys.supabaseKey ?? '', {
+    messages: [{ role: 'system', content: system }, ...messages],
+    mode: 'auto',
+    hasMini: true, // these surfaces run where the mini relay is reachable
+    costTierFloor,
+  });
+  if (!routed?.reply) throw new Error('the router returned no reply');
+  return routed.reply;
 }
 
 function extractJson(text: string) {
@@ -237,7 +163,7 @@ Brand: Northside Intelligence — standard title case (use NORTHSIDE only in int
 }
 
 async function analyzeAndLearn(
-  cfg: { anthropicKey: string; geminiKey?: string; geminiBackup?: string },
+  cfg: { supabaseKey?: string },
   userMessage: string,
   assistantReply: string,
   currentPreset: TonePreset,
