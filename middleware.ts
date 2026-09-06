@@ -11,9 +11,10 @@ const PUBLIC_PATHS = [
   '/api/waitlist',
   '/api/telegram-webhook',
   '/api/axon/guest-chat',
-  // Inbound server-to-server webhook — auth'd by its own shared-secret header
+  // Inbound server-to-server webhooks — auth'd by their own shared-secret header
   // (MATCH_FIT_WEBHOOK_SECRET), not the AXON dashboard session cookie.
   '/api/axon/match-fit/posting-confirmation',
+  '/api/axon/match-fit/outreach-event',
 ];
 
 export function middleware(request: NextRequest) {

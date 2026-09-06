@@ -177,6 +177,15 @@ export const LIB_FILES = [
   'axon-local-relay.mjs',
   'axon-v1-cloud-relay.mjs',
   'relay-metrics.mjs',
+
+  // Added after merging main (2026-09-06): #178 extracted the pure cron parser out
+  // of axon-cron-jobs.ts into axon-cron-parser-core.mjs (and this A3/A4 branch added
+  // axon-cron-catalog-core.mjs the same way); #179 added axon-generate.mjs, imported
+  // by lib/ai.mjs and lib/wisdom-absorb-loop.mjs. All three are transitively imported
+  // by the mirrored sources — found by scripts/check-portal-sync-imports.mjs.
+  'axon-cron-parser-core.mjs',
+  'axon-cron-catalog-core.mjs',
+  'axon-generate.mjs',
 ];
 
 /**

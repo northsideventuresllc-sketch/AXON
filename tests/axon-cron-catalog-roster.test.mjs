@@ -12,18 +12,21 @@
  *   3. Every currently-live mac_mini AXON job in the mocked roster (repo === 'axon')
  *      is represented by a catalog entry, so the Cron tab has a toggle for it.
  *
- * No network, no Supabase — imports only the pure merge from lib/axon-cron-jobs.ts.
- * The live-fetch wiring (lib/axon-cron-service.ts) is exercised at the type level by
+ * No network, no Supabase — imports only the pure merge from
+ * lib/axon-cron-catalog-core.mjs (a plain .mjs module, loadable under the Node 20 CI
+ * pin in .github/workflows/axon-tests.yml with no TS loader; lib/axon-cron-jobs.ts
+ * re-exports the same functions, typed, for TS callers). The live-fetch wiring
+ * (lib/axon-cron-service.ts) and the .ts re-exports are exercised at the type level by
  * `npx tsc --noEmit`, not here.
  *
  * Run: node --test tests/axon-cron-catalog-roster.test.mjs
  */
 import assert from 'node:assert/strict';
 import {
-  AXON_CRON_CATALOG,
+  AXON_CRON_CATALOG_CORE as AXON_CRON_CATALOG,
   deriveScheduleFromWakeConfig,
   mergeCatalogWithRoster,
-} from '../lib/axon-cron-jobs.ts';
+} from '../lib/axon-cron-catalog-core.mjs';
 
 // ── mocked nvg_agent_routines rows (harness='mac_mini' already applied) ──────────
 const MOCK_ROSTER = [

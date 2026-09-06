@@ -45,6 +45,7 @@
     "test:slack-socket-listener": "node tests/slack-socket-listener-core.test.mjs",
     "test:resend": "node tests/resend-reply-to.test.mjs",
     "test:match-fit-webhook": "node tests/match-fit-posting-confirmation.test.mjs",
+    "test:match-fit-outreach": "node tests/match-fit-outreach-event.test.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "engines": {

@@ -155,7 +155,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const dryRun = body?.dryRun === true || process.env.AXON_DRY_RUN === '1';
-    const useHaiku = body?.haiku === true;
+    // `polish` turns on the model polish pass (legacy body flag `haiku` still accepted);
+    // it now runs through the one router chain, not a provider key held here.
+    const usePolish = body?.polish === true || body?.haiku === true;
     const key = serviceKey();
 
     let corpus: Record<string, unknown>[] = [];
@@ -197,8 +199,8 @@ export async function POST(req: Request) {
       signals,
       jspaceState,
       dryRun: dryRun || !key,
-      forceHeuristic: !useHaiku,
-      anthropicKey: process.env.ANTHROPIC_API_KEY || '',
+      forceHeuristic: !usePolish,
+      supabaseKey: key,
       persistItems: async (rows: Record<string, unknown>[]) => upsertWisdomItems(rows),
       persistRun: async (record: Record<string, unknown>) => sbInsert(WISDOM_RUNS_TABLE, record),
       persistJspace: async (state: Record<string, unknown>) =>
