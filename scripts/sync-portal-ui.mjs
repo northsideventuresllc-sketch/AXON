@@ -251,11 +251,30 @@ export const API_FILES = [
  *   components/axon-v0/*  → NOT synced (2026-08-26 incident — see the v0 skip block below)
  *   lib/axon-v0/*         → NOT synced (same)
  *   app/api/axon-v0/*     → NOT synced (same)
- * The ENTIRE v0 harness is un-synced: the vintage V0_* lists reference newer build-1.5/2
- * files never synced, and the v0 API targets a generateAxonReply signature the portal does
- * not share, so it does not compile in the portal. Re-enable only once it is portal-compatible.
+ * The ENTIRE v0 harness is un-synced: the vintage V0_* lists below reference newer
+ * build-1.5/2 files never synced, and the v0 API targets a generateAxonReply signature
+ * the portal does not share, so it does not compile in the portal. Re-enable only once
+ * it is portal-compatible.
  * The v0 PAGES (app/(axon-v0)/…) are NOT synced yet — the portal gets its page shells
  * via the portal-integration overlay once JB approves the slice.
+ *
+ * THE FACE step 5 (2026-09-06) checked whether this could change for Face specifically:
+ *   - northside-intelligence main has NO `src/app/(axon-v0)` route group and no page
+ *     anywhere that mounts an axon-v0 screen — confirmed against the live repo, not just
+ *     this comment. The only axon-v0 work on that repo lives on two unmerged branches
+ *     (`claude/axon-v0-setup-vsog4h`, `claude/axon-v0-migration-plan-sfv8o3`) that never
+ *     reached `main`, so there is no existing "how axon-v0 pages land in the portal"
+ *     pattern to copy — the instruction that gates this ("if no pattern exists, STOP
+ *     that half") applies: no minimal page wiring was added here. Mounting `/face` in
+ *     the portal needs real portal-side work (a route + the generateAxonReply
+ *     compatibility fix above) that is out of scope for a mirror-list update.
+ *   - The Face-specific entries below are added to V0_COMPONENT_FILES / V0_LIB_FILES /
+ *     V0_API_FILES so the list is CORRECT and ready (this is "the correct lists" the
+ *     step asked for), but they stay inside the `void V0_*` no-op — the write loops
+ *     that would actually copy them into the portal are not enabled, because enabling
+ *     them would re-open the exact 2026-08-26 incident (portal build breaks on an API
+ *     signature it doesn't share) for a page the portal has nowhere to mount. Nothing
+ *     Face-related is written to the portal by this change.
  */
 const V0_COMPONENT_FILES = [
   'remotion/axon-boot.tsx',
@@ -265,12 +284,33 @@ const V0_COMPONENT_FILES = [
   'venture-room.tsx',
   'notifications-board.tsx',
   'quick-links-rail.tsx',
+  // THE FACE (step 5) — see comment above: listed for correctness, not yet synced.
+  'face-hero.tsx',
+  'face-orb-scene.tsx',
+  'face-command-panel.tsx',
+  'face-voice-panel.tsx',
+  'face-stat-card.tsx',
+  'face-activity-trail.tsx',
+  'face.css',
 ];
 
 const V0_LIB_FILES = [
   'types.ts',
   'store.ts',
   'omni-router.ts',
+  // THE FACE (step 5) — see comment above: listed for correctness, not yet synced.
+  'face-reads.ts',
+  'face-summary.mjs',
+  'use-face-summary.ts',
+  'face-plan-reads.ts',
+  'face-commands.mjs',
+  'use-face-commands.ts',
+  'face-signal.mjs',
+  'use-face-voice.ts',
+  'face-activity.mjs',
+  'face-activity-reads.ts',
+  'use-face-activity.ts',
+  'use-agent-working.ts',
 ];
 
 const V0_API_FILES = [
@@ -280,6 +320,11 @@ const V0_API_FILES = [
   'venture-tools/route.ts',
   'brain-graph/route.ts',
   'notifications/route.ts',
+  // THE FACE (step 5) — see comment above: listed for correctness, not yet synced.
+  'face/summary/route.ts',
+  'face/plan/route.ts',
+  'face/needs-me/route.ts',
+  'face/activity/route.ts',
 ];
 
 function rewriteImports(content) {
