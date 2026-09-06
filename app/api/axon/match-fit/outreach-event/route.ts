@@ -19,6 +19,7 @@ import { telegramSendWithKeyboard } from '@/lib/telegram.mjs';
 import {
   buildLeadKeyboard,
   buildLeadMessage,
+  pushOutreachLeadsBatch,
   validateOutreachEventPayload,
 } from '@/lib/match-fit-outreach-event.mjs';
 
@@ -65,21 +66,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'Telegram not configured' }, { status: 503 });
     }
 
-    let pushed = 0;
-    for (const lead of leads) {
+    const { pushed, failed, skipped } = await pushOutreachLeadsBatch(leads, async (lead: any) => {
       const text = buildLeadMessage(eventType, lead, meta ?? {});
       const keyboard = buildLeadKeyboard(lead);
-      await telegramSendWithKeyboard(
-        cfg.telegramToken,
-        cfg.telegramChatId,
-        text,
-        keyboard,
-        cfg.dryRun,
-      );
-      pushed += 1;
-    }
+      await telegramSendWithKeyboard(cfg.telegramToken, cfg.telegramChatId, text, keyboard, cfg.dryRun);
+    });
 
-    return NextResponse.json({ ok: true, eventType, leadsPushed: pushed });
+    return NextResponse.json({
+      ok: true,
+      eventType,
+      leadsPushed: pushed,
+      leadsFailed: failed,
+      leadsSkipped: skipped,
+    });
   } catch (err) {
     console.error('Match Fit outreach-event webhook failed:', err);
     return NextResponse.json(
