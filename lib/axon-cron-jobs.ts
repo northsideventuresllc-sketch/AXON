@@ -2,6 +2,12 @@
  * AXON cron job catalog — definitions for Droid Space + Repo Manager Cron tab.
  * Runtime state (enabled, last/next run) lives in NI-Brain `axon_cron_jobs`.
  */
+import { estimateNextRunUtc } from './axon-cron-parser-core.mjs';
+
+// A9: re-exported unchanged so every existing `import { estimateNextRunUtc }
+// from '@/lib/axon-cron-jobs'` keeps working — the pure parser itself now
+// lives in axon-cron-parser-core.mjs so it can be unit-tested without a TS loader.
+export { estimateNextRunUtc };
 
 export type DroidFaceShape = 'circle' | 'square' | 'triangle' | 'hex' | 'diamond';
 
@@ -140,44 +146,6 @@ export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
 
 export function getCronJobDef(id: string): AxonCronJobDef | undefined {
   return AXON_CRON_CATALOG.find((j) => j.id === id);
-}
-
-/** Rough next-run estimate from cron (UTC). Returns null when no schedule. */
-export function estimateNextRunUtc(cronUtc: string | null, from = new Date()): Date | null {
-  if (!cronUtc) return null;
-  const parts = cronUtc.trim().split(/\s+/);
-  if (parts.length < 5) return null;
-
-  const [minField, hourField, , , dowField] = parts;
-  const start = new Date(from.getTime() + 60_000);
-
-  for (let i = 0; i < 60 * 24 * 14; i++) {
-    const d = new Date(start.getTime() + i * 60_000);
-    const min = d.getUTCMinutes();
-    const hour = d.getUTCHours();
-    const dow = d.getUTCDay();
-
-    if (!matchCronField(minField, min)) continue;
-    if (!matchCronField(hourField, hour)) continue;
-    if (dowField !== '*' && !matchCronField(dowField, dow)) continue;
-    return d;
-  }
-  return null;
-}
-
-function matchCronField(field: string, value: number): boolean {
-  if (field === '*') return true;
-  if (field.startsWith('*/')) {
-    const step = Number(field.slice(2));
-    return step > 0 && value % step === 0;
-  }
-  return field.split(',').some((part) => {
-    if (part.includes('-')) {
-      const [a, b] = part.split('-').map(Number);
-      return value >= a && value <= b;
-    }
-    return Number(part) === value;
-  });
 }
 
 export type AxonCronJobView = AxonCronJobDef & {
