@@ -11,9 +11,11 @@ import {
   resolveSendEmail,
   resolveSocialAccount,
 } from '@/lib/axon/outreach-settings';
+import { requireAxonOperatorId } from '@/lib/axon/operator';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAxonOperatorId();
     const { id } = await params;
     const lead = await fetchLeadById(id);
     if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
@@ -136,9 +138,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         { status: 423 }
       );
     }
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Send failed' },
-      { status: 500 }
-    );
+    const message = err instanceof Error ? err.message : 'Send failed';
+    const status = message === 'AXON access denied' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
