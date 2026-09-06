@@ -10,21 +10,26 @@
  *   (b) an entry in COMPONENT_FILES / LIB_FILES / API_FILES no longer exists on disk
  *       (the sync would silently `console.warn` and skip it rather than fail); or
  *   (c) portal-integration/.last-verified-sync/manifest.json (the audit record a real
- *       sync run leaves — see scripts/sync-portal-ui.mjs's usage comment) names an
- *       axonCommit that is NOT an ancestor of HEAD in this worktree — i.e. the record
- *       claims to have verified a commit this branch has never actually reached, which
- *       means it was copied in from a different run than what's committed here.
+ *       sync run leaves — see scripts/sync-portal-ui.mjs's usage comment) is missing,
+ *       or is not current-shaped: no 40-hex `axonCommit`, no ISO `syncedAt`, or its
+ *       recorded `libFilesCount` doesn't match LIB_FILES.length right now — i.e. the
+ *       record is stale (LIB_FILES grew or shrank since the last verified run) even
+ *       though nobody edited the manifest by hand.
  *
- *       NOTE what (c) does NOT do: it does not diff any file tree.
+ *       NOTE what (c) does NOT do: it does not check git ancestry, and it does not
+ *       diff any file tree. An ancestry check (is `axonCommit` an ancestor of `HEAD`)
+ *       was tried and removed — CI checks out a shallow merge ref with no ancestry to
+ *       walk, and this repo squash-merges, so the recorded branch commit is never an
+ *       ancestor of `main` after merge; that made the check permanently red on `main`
+ *       for a reason with nothing to do with staleness. And
  *       portal-integration/northside-intelligence/ holds only the hand-maintained
  *       overlay (portal-only registries, page shells with no AXON counterpart) — the
  *       full mirrored output (components/axon-ui, lib/axon) is never committed in this
  *       repo, it's written straight into a northside-intelligence checkout by a real
- *       sync run. So this check is only "the last audited run's claimed commit is
- *       plausible for this branch," not "the committed files match the sync output."
- *       Confirming the sync itself is clean is what a real (or --check) run of
- *       scripts/sync-portal-ui.mjs against an actual northside-intelligence checkout
- *       is for — see this test's (a)/(b) plus that command, not this file diff.
+ *       sync run, so there is no tree here to diff against anyway. Confirming the sync
+ *       itself is clean is what a real (or --check) run of scripts/sync-portal-ui.mjs
+ *       against an actual northside-intelligence checkout is for — see this test's
+ *       (a)/(b) plus that command, not this file.
  *
  * Offline: no network, no NI-Brain, no real northside-intelligence checkout — this
  * only checks what's already in this repo.
@@ -35,7 +40,6 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
 import { COMPONENT_FILES, LIB_FILES, API_FILES } from '../scripts/sync-portal-ui.mjs';
 import { findMissingLibFiles } from '../scripts/lib/portal-sync-import-graph.mjs';
 
@@ -77,8 +81,9 @@ const LAST_VERIFIED_SYNC_MANIFEST = join(
   assert.deepEqual(missingApi, [], `API_FILES entries missing on disk: ${missingApi.join(', ')}`);
 }
 
-// ── (c) the last-verified-sync audit record names a commit this branch actually
-// reached — see the docstring above for exactly what this does and does not prove ──
+// ── (c) the last-verified-sync audit record is present and current-shaped — see the
+// docstring above for exactly what this does and does not prove (no git ancestry,
+// no file-tree diff) ──────────────────────────────────────────────────────────────
 {
   assert.ok(
     existsSync(LAST_VERIFIED_SYNC_MANIFEST),
@@ -89,27 +94,24 @@ const LAST_VERIFIED_SYNC_MANIFEST = join(
   );
 
   const manifest = JSON.parse(readFileSync(LAST_VERIFIED_SYNC_MANIFEST, 'utf8'));
-  assert.ok(manifest.axonCommit, 'manifest.json is missing axonCommit');
-  assert.ok(manifest.syncedAt, 'manifest.json is missing syncedAt');
 
-  if (manifest.axonCommit !== 'unknown') {
-    let isAncestor = true;
-    try {
-      execSync(`git merge-base --is-ancestor ${manifest.axonCommit} HEAD`, {
-        cwd: AXON_ROOT,
-        stdio: 'ignore',
-      });
-    } catch {
-      isAncestor = false;
-    }
-    assert.ok(
-      isAncestor,
-      `portal-integration/.last-verified-sync/manifest.json records axonCommit ` +
-        `${manifest.axonCommit}, which is not an ancestor of HEAD in this worktree — ` +
-        `it does not describe a sync run this branch actually reached. Re-run ` +
-        `scripts/sync-portal-ui.mjs and update the manifest.`,
-    );
-  }
+  assert.match(
+    manifest.axonCommit ?? '',
+    /^[0-9a-f]{40}$/,
+    `manifest.json axonCommit "${manifest.axonCommit}" is not a 40-hex commit SHA`,
+  );
+  assert.match(
+    manifest.syncedAt ?? '',
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+    `manifest.json syncedAt "${manifest.syncedAt}" is not an ISO timestamp`,
+  );
+  assert.equal(
+    manifest.libFilesCount,
+    LIB_FILES.length,
+    `manifest.json libFilesCount (${manifest.libFilesCount}) does not match the current ` +
+      `LIB_FILES length (${LIB_FILES.length}) — the recorded sync run is stale. Re-run ` +
+      `scripts/sync-portal-ui.mjs and update the manifest (including libFilesCount).`,
+  );
 }
 
 console.log('portal-sync-drift.test.mjs: all assertions passed');
