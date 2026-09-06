@@ -273,6 +273,29 @@ export function plainRunMode(
   return parts.length ? parts.join(' · ') : 'No LLM';
 }
 
+const TODO_STATUS_LABELS: Record<string, string> = {
+  urgent: 'Urgent',
+  semi_urgent: 'High this week',
+  non_urgent: 'Open',
+};
+
+/** Plain label for a rolling to-do row's `status` — never the raw
+ *  urgent/semi_urgent/non_urgent value on screen. `done` wins over the raw status. */
+export function plainTodoStatus(status: string | null | undefined, done?: boolean): string {
+  if (done) return 'Done';
+  const key = (status || '').toLowerCase().trim();
+  return TODO_STATUS_LABELS[key] || deJargon(key) || 'Open';
+}
+
+/** Urgency dot color class (todo.css) for a rolling to-do row's status/done. */
+export function todoStatusDotClass(status: string | null | undefined, done?: boolean): string {
+  if (done) return 'td-dot-done';
+  const key = (status || '').toLowerCase().trim();
+  if (key === 'urgent') return 'td-dot-urgent';
+  if (key === 'semi_urgent') return 'td-dot-high';
+  return 'td-dot-open';
+}
+
 /** Relative "last seen" line — never a raw ISO timestamp dump. */
 export function plainRelativeTime(iso: string | null | undefined): string | undefined {
   if (!iso) return undefined;
