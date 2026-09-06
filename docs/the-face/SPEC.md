@@ -253,8 +253,9 @@ hidden tab and on unmount, resizes are throttled, and the pixel ratio is capped 
   it on narrow screens. Reticles, the top micro-bar and the OPEN DECK link all kept.
 - Screenshots of the built screen: `step2-wide.png` (1440×900) and `step2-narrow.png`
   (390×844), both taken with no database credentials so they show the empty states, plus
-  `step2-wide-with-data.png` — the same screen with roster-shaped rows, showing the numbers,
-  the pills and the working orb.
+  `step2-wide-SAMPLE-DATA.png` — the same screen fed **made-up sample rows** so the numbers,
+  the pills and the working orb can be seen. **Nothing in that third image is a live figure**
+  — it is a layout proof, not a reading of the business.
 
 **Still open, and still JB's call:**
 

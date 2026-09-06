@@ -13,12 +13,47 @@
  *   ni_brain_outreach   — outreach leads (source = axon_ni_services), same table lib/leads.ts reads
  */
 import { createSupabaseClient } from '@/lib/supabase.mjs';
-import { SOURCE } from '@/lib/constants.mjs';
-import { LEADS_WINDOW_MS, shapeFaceSummary } from '@/lib/axon-v0/face-summary.mjs';
+import { SOURCE, SUPABASE_URL } from '@/lib/constants.mjs';
+import { LEADS_WINDOW_MS, parseExactCount, shapeFaceSummary } from '@/lib/axon-v0/face-summary.mjs';
+
+function serviceKey(): string {
+  return process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+}
 
 function sb() {
-  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  return createSupabaseClient(key) as { sbSelect: (t: string, f?: string) => Promise<unknown[]> };
+  return createSupabaseClient(serviceKey()) as {
+    sbSelect: (t: string, f?: string) => Promise<unknown[]>;
+  };
+}
+
+/**
+ * Exact number of rows matching a filter, without pulling the rows.
+ *
+ * `Prefer: count=exact` plus `Range: 0-0` asks PostgREST for the head count and one row;
+ * the total comes back in `Content-Range` (`0-0/183`). This exists because counting a
+ * capped page of rows silently undercounts the moment the queue grows past that page — an
+ * "Open tickets" number that quietly stops climbing is worse than no number at all.
+ *
+ * Returns null on any failure, which the card draws as its empty state.
+ */
+async function countRows(table: string, filter: string): Promise<number | null> {
+  const key = serviceKey();
+  if (!key) return null;
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        Accept: 'application/json',
+        Prefer: 'count=exact',
+        Range: '0-0',
+      },
+    });
+    if (!response.ok && response.status !== 206) return null;
+    return parseExactCount(response.headers.get('content-range')) as number | null;
+  } catch {
+    return null;
+  }
 }
 
 /** Read a table, or resolve to null if it cannot be read. Never throws. */
@@ -61,16 +96,20 @@ export interface FaceSummary {
 export async function loadFaceSummary(): Promise<FaceSummary> {
   const since = new Date(Date.now() - LEADS_WINDOW_MS).toISOString();
 
-  const [rosterRows, presenceRows, dispatchRows, leadRows] = await Promise.all([
+  const [rosterRows, presenceRows, dispatchRows, openTicketsCount, leadRows] = await Promise.all([
     readOrNull(
       'nvg_agent_routines',
       'select=agent_name,function_summary,active,health_status,retired_at&order=agent_name.asc'
     ),
     readOrNull('nvg_agent_presence', 'select=agent_name,status,last_seen_at'),
+    // Only the in-flight rows, and only as the fallback working signal when presence is
+    // unreadable. The open-ticket number never comes from this page — it is counted exactly
+    // by the call below.
     readOrNull(
       'agent_dispatch',
-      'select=status,updated_at,fired_at,claimed_at&order=updated_at.desc&limit=2000'
+      'status=in.(running,in_progress,claimed,dispatched)&select=status,updated_at,fired_at,claimed_at&order=updated_at.desc&limit=500'
     ),
+    countRows('agent_dispatch', 'status=not.in.(done,rejected,skipped)&select=status'),
     readOrNull(
       'ni_brain_outreach',
       `source=eq.${SOURCE}&created_at=gte.${since}&select=created_at&limit=2000`
@@ -81,6 +120,7 @@ export async function loadFaceSummary(): Promise<FaceSummary> {
     rosterRows,
     presenceRows,
     dispatchRows,
+    openTicketsCount,
     leadRows,
     nowMs: Date.now(),
   }) as FaceSummary;

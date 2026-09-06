@@ -22,6 +22,8 @@ import {
   countOpenTickets,
   groupModules,
   isLiveModule,
+  parseExactCount,
+  planFaceFetch,
   plainModuleHealth,
   shapeFaceSummary,
 } from '../lib/axon-v0/face-summary.mjs';
@@ -204,4 +206,68 @@ test('an empty roster reads as zero live agents, not as unreadable', () => {
   const summary = shapeFaceSummary({ rosterRows: [], nowMs: NOW });
   assert.equal(summary.agentsLive, 0);
   assert.equal(summary.modules.readable, true, 'we read it — there was just nothing in it');
+});
+
+test('a screen mounted in a hidden tab still settles its loading state', () => {
+  // The defect this guards against: the poll used to bail out before the loading flag was
+  // cleared, so a screen opened behind another tab sat on "Reading…" until it was looked at.
+  const hiddenAtMount = planFaceFetch({ hidden: true, inFlight: false });
+  assert.equal(hiddenAtMount.fetch, false, 'a hidden tab does not spend a request');
+  assert.equal(
+    hiddenAtMount.settleLoading,
+    true,
+    'but it must stop claiming to be reading — loading settles to false'
+  );
+
+  assert.deepEqual(
+    planFaceFetch({ hidden: false, inFlight: false }),
+    { fetch: true, settleLoading: false },
+    'a visible tab reads'
+  );
+
+  // A tick that lands while a request is still out is skipped, not stacked — and it must
+  // not settle loading either, because the request in flight will do that itself.
+  assert.deepEqual(planFaceFetch({ hidden: false, inFlight: true }), {
+    fetch: false,
+    settleLoading: false,
+  });
+  assert.deepEqual(planFaceFetch({ hidden: true, inFlight: true }), {
+    fetch: false,
+    settleLoading: false,
+  });
+
+  assert.deepEqual(planFaceFetch(), { fetch: true, settleLoading: false }, 'defaults to reading');
+});
+
+test('the exact open-ticket count is read off Content-Range', () => {
+  // PostgREST answers `Prefer: count=exact` with the total after the slash. This is how the
+  // ticket number stays right past any page size — counting a capped page would silently
+  // stop climbing once the queue outgrew it.
+  assert.equal(parseExactCount('0-0/183'), 183);
+  assert.equal(parseExactCount('0-24/3573'), 3573);
+  assert.equal(parseExactCount('*/0'), 0, 'an empty result is a real zero');
+  assert.equal(parseExactCount('0-24/ 91 '), 91, 'whitespace around the total is fine');
+
+  // Anything that is not a real total is null, so the card shows its empty state rather
+  // than a zero standing in for a number nobody read.
+  assert.equal(parseExactCount('0-24/*'), null, 'no count was asked for');
+  assert.equal(parseExactCount('0-24'), null, 'no total in the header at all');
+  assert.equal(parseExactCount(''), null);
+  assert.equal(parseExactCount(null), null);
+  assert.equal(parseExactCount(undefined), null);
+  assert.equal(parseExactCount('0-24/not-a-number'), null);
+  assert.equal(parseExactCount('0-24/-5'), null, 'a negative total is not a count');
+});
+
+test('the exact ticket count wins over counting a page of rows', () => {
+  const rows = [{ status: 'queued' }, { status: 'queued' }];
+
+  const counted = shapeFaceSummary({ dispatchRows: rows, openTicketsCount: 183, nowMs: NOW });
+  assert.equal(counted.openTickets, 183, 'the head-count is the number on screen');
+
+  const unreadable = shapeFaceSummary({ dispatchRows: rows, openTicketsCount: null, nowMs: NOW });
+  assert.equal(unreadable.openTickets, null, 'a failed count is null, never the page length');
+
+  const noCount = shapeFaceSummary({ dispatchRows: rows, nowMs: NOW });
+  assert.equal(noCount.openTickets, 2, 'with no head-count given, the rows are counted');
 });
