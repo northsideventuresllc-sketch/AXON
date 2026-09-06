@@ -396,10 +396,12 @@ hidden tab and on unmount, resizes are throttled, and the pixel ratio is capped 
 - A poll on the same 15-second cadence as the rest of the screen
   (`lib/axon-v0/use-face-activity.ts`), same hidden-tab/in-flight/unmount discipline as
   `use-face-summary.ts`.
-- A screenshot at 1440×900 (`docs/the-face/step4-trail-SAMPLE-DATA.png`) with the activity
-  route stubbed to **made-up sample rows** so the trail, the dots and a working orb can be
-  seen. Nothing in that image is a live figure — it is a layout proof, not a reading of the
-  business.
+- A screenshot at a 1440×900 viewport (`docs/the-face/step4-trail-SAMPLE-DATA.png`, full
+  page — the trail sits in the lower band, below the first 900px) with the activity route
+  stubbed to **made-up sample rows** so the trail, the dots and a working orb can be seen.
+  Every other route ran with no database credentials, so the stat cards and module list show
+  their real empty states in the same shot. Nothing in that image is a live figure — it is a
+  layout proof, not a reading of the business.
 
 **Still open, and still JB's call:**
 
