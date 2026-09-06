@@ -1,0 +1,193 @@
+/* THE FACE — hero chrome. Palette locked: ground #07080C, cyan #00D4FF, navy #0A1628. */
+
+.face-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100vh - 6rem);
+  overflow: hidden;
+  border: 1px solid rgba(0, 212, 255, 0.14);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(10, 22, 40, 0.85) 0%, rgba(7, 8, 12, 0.98) 62%),
+    #07080c;
+}
+
+/* Faint navy grid so the orb sits in a room, not on a void. */
+.face-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.75) 0%, transparent 72%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.face-orb-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.face-orb-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.face-orb-canvas[data-reduced='true'] {
+  animation: face-breathe 9s ease-in-out infinite;
+}
+
+/* Used only if WebGL is unavailable — a still cyan bloom, never a broken box. */
+.face-orb-fallback {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 50% 48%,
+    rgba(223, 246, 255, 0.9) 0%,
+    rgba(0, 212, 255, 0.5) 14%,
+    rgba(10, 22, 40, 0.35) 46%,
+    rgba(7, 8, 12, 0) 72%
+  );
+  animation: face-breathe 9s ease-in-out infinite;
+}
+
+@keyframes face-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* --- corner-bracket reticles ------------------------------------------------------- */
+.face-reticle {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(0, 212, 255, 0.55);
+  pointer-events: none;
+  z-index: 3;
+}
+.face-reticle--tl {
+  top: 16px;
+  left: 16px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.face-reticle--tr {
+  top: 16px;
+  right: 16px;
+  border-left: 0;
+  border-bottom: 0;
+}
+.face-reticle--bl {
+  bottom: 16px;
+  left: 16px;
+  border-right: 0;
+  border-top: 0;
+}
+.face-reticle--br {
+  bottom: 16px;
+  right: 16px;
+  border-left: 0;
+  border-top: 0;
+}
+
+/* --- micro-labels ------------------------------------------------------------------ */
+.face-micro {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(0, 212, 255, 0.72);
+}
+
+.face-topbar,
+.face-readout {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.face-topbar {
+  top: 26px;
+  gap: 18px;
+}
+
+.face-readout {
+  bottom: 34px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.face-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(10, 22, 40, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.face-state[data-working='true'] {
+  border-color: rgba(0, 212, 255, 0.62);
+  box-shadow: 0 0 22px rgba(0, 212, 255, 0.18);
+}
+
+.face-state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(0, 212, 255, 0.45);
+}
+
+.face-state[data-working='true'] .face-state-dot {
+  background: #00d4ff;
+  box-shadow: 0 0 10px #00d4ff;
+  animation: face-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes face-dot {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.face-sentence {
+  max-width: 46ch;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(226, 240, 252, 0.78);
+}
+
+.face-hint {
+  font-size: 11px;
+  color: rgba(226, 240, 252, 0.42);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .face-state[data-working='true'] .face-state-dot,
+  .face-orb-canvas[data-reduced='true'],
+  .face-orb-fallback {
+    animation: none;
+  }
+}

@@ -10,6 +10,7 @@ const NI_PORTAL_URL = 'https://northsideintelligence.com';
 const NI_TOOLS_URL = 'https://northsideintelligence.com/tools';
 
 const NAV: Array<{ href: string; label: string; external?: boolean }> = [
+  { href: '/face', label: 'The Face' },
   { href: '/brain', label: 'Brain' },
   { href: '/agents', label: 'Agents' },
   { href: '/skills', label: 'Skills & MCP' },
