@@ -19,7 +19,7 @@ import {
   getDashboardSecret,
   tryGetDashboardSecret,
 } from '../lib/axon-secrets.mjs';
-import { evaluateDashboardAuth } from '../lib/axon-dashboard-gate.mjs';
+import { evaluateDashboardAuth, decideLoginResponse } from '../lib/axon-dashboard-gate.mjs';
 
 function withEnv(overrides, fn) {
   const saved = {};
@@ -109,6 +109,41 @@ assert.deepEqual(
 assert.deepEqual(
   evaluateDashboardAuth({ secret: 'real-secret', sessionCookie: 'real-secret' }),
   { outcome: 'authenticated' },
+);
+
+// --- decideLoginResponse: the council PR #177 regression fix -----------------------------
+// This is exactly the bug: env secret unset, but a login could still "succeed" via a live
+// NI-Brain-sourced code. Must refuse (503, no cookie) rather than set a null/broken cookie
+// that middleware.ts would then 503 the whole dashboard on.
+assert.deepEqual(
+  decideLoginResponse(null, { ok: true }),
+  { status: 503, setCookie: false, body: { error: 'Dashboard secret is not configured' } },
+  'must refuse even when the login credential itself was valid (e.g. a brain-sourced code) — there is no env secret to set as a cookie',
+);
+assert.deepEqual(
+  decideLoginResponse(null, { ok: false, reason: 'code' }),
+  { status: 503, setCookie: false, body: { error: 'Dashboard secret is not configured' } },
+);
+assert.deepEqual(
+  decideLoginResponse('', { ok: true }),
+  { status: 503, setCookie: false, body: { error: 'Dashboard secret is not configured' } },
+);
+
+// Env secret configured, but the submitted credential is wrong -> 401, still no cookie.
+assert.deepEqual(
+  decideLoginResponse('real-dashboard-secret', { ok: false, reason: 'code' }),
+  { status: 401, setCookie: false, body: { error: 'That AXON code does not match.' } },
+);
+assert.deepEqual(
+  decideLoginResponse('real-dashboard-secret', { ok: false, reason: 'email' }),
+  { status: 401, setCookie: false, body: { error: 'That email is not on the AXON account list.' } },
+);
+
+// Env secret configured and the credential is valid -> 200, cookie is the ENV secret —
+// never anything else (e.g. a brain-sourced code that happened to be the valid credential).
+assert.deepEqual(
+  decideLoginResponse('real-dashboard-secret', { ok: true }),
+  { status: 200, setCookie: true, cookieValue: 'real-dashboard-secret', body: { ok: true } },
 );
 
 console.log('axon-secrets-and-dashboard-gate.test.mjs: all assertions passed');

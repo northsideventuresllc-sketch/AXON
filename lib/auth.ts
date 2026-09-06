@@ -86,3 +86,16 @@ export async function validateLogin(email: string, password: string): Promise<Lo
   }
   return { ok: true };
 }
+
+export type LoginRouteDecision =
+  | { status: 503; setCookie: false; body: { error: string } }
+  | { status: 401; setCookie: false; body: { error: string } }
+  | { status: 200; setCookie: true; cookieValue: string; body: { ok: true } };
+
+/**
+ * Pure decision for POST /api/auth/login (AX-DASHBOARD-SECRET-OWN-0906 follow-up, council
+ * PR #177 review). Re-exported here for callers of lib/auth.ts; the implementation lives in
+ * lib/axon-dashboard-gate.mjs (plain .mjs, no `next/headers` import) so it loads and is
+ * directly unit-testable under plain `node --test`. See that file for the full rationale.
+ */
+export { decideLoginResponse } from './axon-dashboard-gate.mjs';
