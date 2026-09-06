@@ -1,0 +1,36 @@
+name: AXON Tests + Typecheck
+
+# A9 — tests actually run in CI. `npm test` (node --test tests/*.test.mjs) and
+# `tsc --noEmit` previously only ran on a developer's own machine — nothing
+# blocked a PR that broke either. This is the gate: pull_request + push to
+# main only. No `schedule:` trigger (forbidden org-wide).
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: npm test + tsc --noEmit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout AXON
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Typecheck
+        run: npx tsc --noEmit
