@@ -24,7 +24,9 @@ import {
   shapeActivityTrail,
   shapeFaceActivity,
   shapePresenceList,
+  shouldBurst,
   subjectToVerb,
+  trailItemIdentity,
 } from '../lib/axon-v0/face-activity.mjs';
 
 const NOW = Date.parse('2026-09-06T12:00:00.000Z');
@@ -230,4 +232,82 @@ test('shapeFaceActivity builds the whole route shape, complete even with nothing
 test('house rule: ACTIVITY_WINDOW_MS and BUS_PULSE_WINDOW_MS match the spec', () => {
   assert.equal(ACTIVITY_WINDOW_MS, 30 * 60 * 1000);
   assert.equal(BUS_PULSE_WINDOW_MS, 2 * 60 * 1000);
+});
+
+test('trailItemIdentity is stable per row and prefers a real id when one exists', () => {
+  const a = { at: minutesAgo(1), from: 'BUILD', subject: 'skill-ledger-open' };
+  const b = { at: minutesAgo(1), from: 'BUILD', subject: 'skill-ledger-open' };
+  const c = { at: minutesAgo(1), from: 'COUNCIL', subject: 'skill-ledger-open' };
+  assert.equal(trailItemIdentity(a), trailItemIdentity(b), 'same fields, same identity');
+  assert.notEqual(trailItemIdentity(a), trailItemIdentity(c), 'a different agent is a different row');
+  assert.equal(trailItemIdentity({ id: 'row-1', at: minutesAgo(1) }), 'row-1');
+  assert.equal(trailItemIdentity(null), '');
+});
+
+test('shouldBurst: the first poll only seeds the baseline, never a burst', () => {
+  assert.equal(
+    shouldBurst({ prevNewestMs: null, nextNewestMs: NOW, isFirstPoll: true }),
+    false,
+    'nothing was watched before the first answer, so nothing was missed'
+  );
+  assert.equal(
+    shouldBurst({ prevNewestMs: null, nextNewestMs: null, isFirstPoll: true }),
+    false,
+    'an empty first answer is still not a burst'
+  );
+});
+
+test('shouldBurst: a genuinely newer row bursts', () => {
+  assert.equal(
+    shouldBurst({ prevNewestMs: NOW - 60_000, nextNewestMs: NOW, isFirstPoll: false }),
+    true
+  );
+  assert.equal(
+    shouldBurst({ prevNewestMs: null, nextNewestMs: NOW, isFirstPoll: false }),
+    true,
+    'previously nothing readable, now something is — genuinely new'
+  );
+});
+
+test('shouldBurst: the old newest row aging out of the window never bursts', () => {
+  // This is the exact regression this function exists to close: the previous poll's
+  // newest row (at NOW) falls outside the 30-minute window on the next poll, so an
+  // older, already-seen row (at NOW - 20 minutes) becomes items[0] instead. That is a
+  // SMALLER timestamp than before, not new traffic.
+  assert.equal(
+    shouldBurst({ prevNewestMs: NOW, nextNewestMs: NOW - 20 * 60_000, isFirstPoll: false }),
+    false
+  );
+});
+
+test('shouldBurst: an unchanged newest timestamp never bursts', () => {
+  assert.equal(shouldBurst({ prevNewestMs: NOW, nextNewestMs: NOW, isFirstPoll: false }), false);
+  assert.equal(
+    shouldBurst({
+      prevNewestMs: NOW,
+      nextNewestMs: NOW,
+      isFirstPoll: false,
+      prevIdentity: 'a',
+      nextIdentity: 'a',
+    }),
+    false,
+    'same instant, same row'
+  );
+});
+
+test('shouldBurst: same instant but a different row (identity differs) still bursts', () => {
+  assert.equal(
+    shouldBurst({
+      prevNewestMs: NOW,
+      nextNewestMs: NOW,
+      isFirstPoll: false,
+      prevIdentity: 'BUILD|skill-ledger-open',
+      nextIdentity: 'COUNCIL|skill-ledger-open',
+    }),
+    true
+  );
+});
+
+test('shouldBurst: an empty trail this poll is never a burst, whatever came before', () => {
+  assert.equal(shouldBurst({ prevNewestMs: NOW, nextNewestMs: null, isFirstPoll: false }), false);
 });

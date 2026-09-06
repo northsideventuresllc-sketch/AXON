@@ -11,13 +11,19 @@
  *
  * One thing this hook adds on top of use-face-summary.ts: `burstToken`. It bumps by one
  * every time a bus row arrives that was not in the previous poll's trail — the hero passes
- * that straight to the orb scene to trigger one visible burst. Detected by the newest row's
- * timestamp changing, which is enough: two different agents posting in the same second is
- * a false negative worth accepting over a stale timestamp being read as "new" forever.
+ * that straight to the orb scene to trigger one visible burst.
+ *
+ * The decision of whether a poll counts as "new traffic" is NOT "did the newest timestamp
+ * change" — the previously-newest row can age out of the 30-minute window between polls,
+ * leaving an older, already-seen row as `items[0]` with a different (older) timestamp and
+ * no new traffic at all. That comparison lives as a pure function,
+ * `shouldBurst` in lib/axon-v0/face-activity.mjs, so it is testable offline
+ * (tests/face-activity.test.mjs) without a DOM or a timer.
  */
 import { useEffect, useRef, useState } from 'react';
 import { apiUrl } from '@/lib/api-base';
 import { planFaceFetch } from '@/lib/axon-v0/face-summary.mjs';
+import { shouldBurst, trailItemIdentity } from '@/lib/axon-v0/face-activity.mjs';
 import type { FaceActivity } from '@/lib/axon-v0/face-activity-reads';
 
 export const FACE_ACTIVITY_POLL_MS = 15_000;
@@ -41,8 +47,13 @@ export function useFaceActivity(): FaceActivityState {
   const aliveRef = useRef(true);
   const inFlightRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
-  /** The newest trail timestamp seen so far, so a fresher one can be told apart from a repeat. */
-  const newestAtRef = useRef<string | null>(null);
+  /** The previous poll's newest row — ms since epoch plus an identity, for shouldBurst. */
+  const prevNewestRef = useRef<{ ms: number | null; identity: string | null }>({
+    ms: null,
+    identity: null,
+  });
+  /** True once the first poll has landed — shouldBurst never fires on that first answer. */
+  const firstPollDoneRef = useRef(false);
 
   useEffect(() => {
     aliveRef.current = true;
@@ -69,12 +80,24 @@ export function useFaceActivity(): FaceActivityState {
           setActivity(next);
           setLive(true);
 
-          const newestAt = next.trail?.items?.[0]?.at ?? null;
-          if (newestAt && newestAt !== newestAtRef.current) {
-            // First answer just seeds the baseline — no burst on initial load.
-            if (newestAtRef.current !== null) setBurstToken((n) => n + 1);
-            newestAtRef.current = newestAt;
+          const newestItem = next.trail?.items?.[0] ?? null;
+          const nextNewestMs = newestItem?.at ? Date.parse(newestItem.at) : NaN;
+          const nextNewestMsOrNull = Number.isFinite(nextNewestMs) ? nextNewestMs : null;
+          const nextIdentity = newestItem ? trailItemIdentity(newestItem) : null;
+
+          if (
+            shouldBurst({
+              prevNewestMs: prevNewestRef.current.ms,
+              prevIdentity: prevNewestRef.current.identity,
+              nextNewestMs: nextNewestMsOrNull,
+              nextIdentity,
+              isFirstPoll: !firstPollDoneRef.current,
+            })
+          ) {
+            setBurstToken((n) => n + 1);
           }
+          prevNewestRef.current = { ms: nextNewestMsOrNull, identity: nextIdentity };
+          firstPollDoneRef.current = true;
         } else {
           setLive(false);
         }
