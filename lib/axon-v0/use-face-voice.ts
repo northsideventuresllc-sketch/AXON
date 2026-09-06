@@ -11,9 +11,11 @@
  *  - **speechSynthesis** for the one-line reply. Silent under reduced motion or Mute.
  *
  * **Push-to-talk, never always-on.** The microphone opens while the button is held and
- * closes the moment it is let go. On release and on unmount every media track is stopped and
- * the audio context is closed, so the browser's recording indicator goes out — a screen that
- * sits on a wall must never be quietly listening.
+ * closes the moment it is let go. On release, on a hidden tab, on the window losing focus,
+ * and on unmount every media track is stopped and the audio context is closed, so the
+ * browser's recording indicator goes out — a screen that sits on a wall must never be
+ * quietly listening. The tab-switch path matters on its own: the button is still held, so
+ * no pointer event is ever coming to close it.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -103,6 +105,7 @@ export function useFaceVoice({ onHeard, muted }: FaceVoiceOptions): FaceVoiceSta
   const audioCtxRef = useRef<AudioContext | null>(null);
   const frameRef = useRef<number | null>(null);
   const finalRef = useRef('');
+  const listeningRef = useRef(false);
   const onHeardRef = useRef(onHeard);
   onHeardRef.current = onHeard;
 
@@ -175,6 +178,7 @@ export function useFaceVoice({ onHeard, muted }: FaceVoiceOptions): FaceVoiceSta
   }, [releaseMic]);
 
   const stop = useCallback(() => {
+    listeningRef.current = false;
     setListening(false);
     const recognition = recognitionRef.current;
     recognitionRef.current = null;
@@ -224,12 +228,14 @@ export function useFaceVoice({ onHeard, muted }: FaceVoiceOptions): FaceVoiceSta
       setMicError('That did not come through. Hold the button and try again, or type it.');
     };
     recognition.onend = () => {
+      listeningRef.current = false;
       setListening(false);
     };
 
     recognitionRef.current = recognition;
     try {
       recognition.start();
+      listeningRef.current = true;
       setListening(true);
       void openMeter();
     } catch {
@@ -237,6 +243,59 @@ export function useFaceVoice({ onHeard, muted }: FaceVoiceOptions): FaceVoiceSta
       setMicError('The microphone could not be opened, so type instead.');
     }
   }, [openMeter]);
+
+  /**
+   * Let go of the microphone without running anything.
+   *
+   * This is the tab-switch path, not the release path: the button is still held, so no
+   * pointer or key event is coming, and `stop()` would fire a half-heard sentence at the
+   * command runner. Nothing is heard, nothing is run, and the panel goes back to Idle —
+   * but every track is stopped and the audio context is closed, which is the point.
+   */
+  const abandon = useCallback(() => {
+    if (!listeningRef.current) return;
+    listeningRef.current = false;
+    setListening(false);
+
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (recognition) {
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
+      try {
+        recognition.abort();
+      } catch {
+        /* already stopped */
+      }
+    }
+    releaseMic();
+    finalRef.current = '';
+    setInterim('');
+  }, [releaseMic]);
+
+  /**
+   * A held button plus a switched tab used to leave the microphone open until the pointer
+   * came back or the screen closed — the browser's recording indicator stayed lit with
+   * nobody looking at the page. Hiding the tab now releases it, and so does the window
+   * losing focus, which is what an alt-tab looks like when the tab itself stays visible.
+   * Both listeners come off on unmount. Same shape as the orb's own visibility handling in
+   * components/axon-v0/face-orb-scene.tsx.
+   */
+  useEffect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return;
+    const onVisibility = () => {
+      if (document.hidden) abandon();
+    };
+    const onBlur = () => abandon();
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, [abandon]);
 
   const cancelSpeech = useCallback(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {

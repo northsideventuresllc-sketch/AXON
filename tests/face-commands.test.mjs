@@ -6,6 +6,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   UNKNOWN_COMMAND_REPLY,
@@ -154,4 +155,29 @@ test('the spoken line reads back the first three items and counts the rest', () 
     'Back to the agent list. 1 agent on it.'
   );
   assert.equal(spokenLineFor({ panel: 'modules', moduleCount: null }), 'Back to the agent list.');
+});
+
+/**
+ * The microphone hook is a React hook over three browser APIs, so it cannot be exercised
+ * under plain `node --test`. What can be checked offline is that it still closes the
+ * microphone on the paths that have no pointer event coming — a held button plus a switched
+ * tab used to leave the recording indicator lit with nobody looking at the page. Same style
+ * as the repo's other file-content guards.
+ */
+test('the microphone is released on a hidden tab and on a lost focus, and both listeners come off', () => {
+  const source = readFileSync(new URL('../lib/axon-v0/use-face-voice.ts', import.meta.url), 'utf8');
+
+  assert.match(source, /document\.addEventListener\('visibilitychange'/);
+  assert.match(source, /window\.addEventListener\('blur'/);
+  assert.match(source, /document\.removeEventListener\('visibilitychange'/);
+  assert.match(source, /window\.removeEventListener\('blur'/);
+
+  // Both listeners have to reach the same release path, or one of them is decoration.
+  assert.match(source, /if \(document\.hidden\) abandon\(\);/);
+  assert.match(source, /const onBlur = \(\) => abandon\(\);/);
+
+  // And that path has to actually stop the tracks and close the audio context.
+  assert.match(source, /const abandon = useCallback\(\(\) => \{[\s\S]*?releaseMic\(\);/);
+  assert.match(source, /streamRef\.current\?\.getTracks\(\)\.forEach\(\(track\) => track\.stop\(\)\)/);
+  assert.match(source, /if \(ctx && ctx\.state !== 'closed'\) void ctx\.close\(\)/);
 });
