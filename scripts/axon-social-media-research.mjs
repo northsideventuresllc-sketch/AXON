@@ -35,6 +35,7 @@ import {
   getFirstPartyAnalytics,
 } from '../lib/axon-content-scaffold-shared.mjs';
 import { externalSearch, synthesizeFinding } from '../lib/axon-research-synthesis.mjs';
+import { researchAiSearchAngle } from '../lib/axon-ai-search-research.mjs';
 import { AGENT } from '../lib/agent-names.mjs';
 
 const JOB_ID = 'axon-social-media-research';
@@ -128,6 +129,16 @@ ${JSON.stringify(results.map((r) => ({ title: r.title, snippet: r.snippet, link:
   };
 }
 
+/**
+ * AI-search-optimization lane (BPA ticket A2, folds AXON-SEO-Tracker's Phase-4
+ * successor angle): what people ask AI assistants about this venture — real
+ * questions, not keywords. One finding per venture per run. lib/web-search.mjs
+ * webSearchRows only (never SerpApi direct) -> the one router chain.
+ */
+async function researchVentureAiSearch(cfg, brand) {
+  return researchAiSearchAngle(cfg, brand, { productTruths: brandProductTruths(brand) });
+}
+
 async function main() {
   console.log(`AXON Social Media Research — ${new Date().toISOString()}`);
   const budget = startTimeBudget(8);
@@ -146,6 +157,7 @@ async function main() {
   }
 
   const results = [];
+  const aiSearchResults = [];
   for (const brand of ventures) {
     if (budget.expired()) {
       console.log(`Time budget hit after ${budget.elapsedSec()}s — stopping cleanly, will resume within ~12h.`);
@@ -158,9 +170,16 @@ async function main() {
       console.warn(`Research failed for ${brand.slug}: ${err.message}`);
       results.push({ venture: brand.venture, brand: brand.name, slug: brand.slug, status: `ERROR: ${err.message}`, finding: null });
     }
+    try {
+      aiSearchResults.push(await researchVentureAiSearch(cfg, brand));
+    } catch (err) {
+      console.warn(`AI-search research failed for ${brand.slug}: ${err.message}`);
+      aiSearchResults.push({ venture: brand.venture, brand: brand.name, slug: brand.slug, lane: 'ai_search', status: `ERROR: ${err.message}`, finding: null });
+    }
   }
 
   const ok = results.filter((r) => r.status === 'OK');
+  const aiSearchOk = aiSearchResults.filter((r) => r.status === 'OK');
 
   // Loop-engineer: write each real finding to Decisions so it's searchable
   // by brand name — the exact lookup axon-content-batch-creation.mjs already
@@ -178,12 +197,30 @@ async function main() {
     }
   }
 
+  // AI-search-optimization lane (BPA A2): same write-back door, tagged so it's
+  // distinguishable from the social-trends finding above for the same venture.
+  for (const r of aiSearchOk) {
+    try {
+      await writeDecision(sb, {
+        decision: `[AXON Content Research — AI Search, ${new Date().toISOString().slice(0, 10)}] ${r.brand}: ${r.finding} (source: ${r.findingSource}, ${r.resultCount || 0} search result(s) reviewed.)`,
+        status: 'active',
+        durability: 'durable',
+      });
+    } catch (err) {
+      console.warn(`Decisions write failed for ${r.slug} (ai_search): ${err.message}`);
+    }
+  }
+
   const busBody = plainEnglish([
     `Social Media Research run — ${new Date().toISOString().slice(0, 10)}.`,
     `Checked ${results.length} of ${ventures.length} venture(s). Real external research via SerpApi + Gemini/Anthropic synthesis — ${ok.length} finding(s), ${results.length - ok.length} blocked/empty.`,
+    `AI-search-optimization lane (what people ask assistants, not keywords) — ${aiSearchOk.length}/${aiSearchResults.length} real finding(s).`,
     `First-party account analytics (JB's own social accounts) still NEEDS_CREDENTIALS — that stays a separate add-on, not a blocker for this run.`,
     '',
     ...results.map((r) => (r.status === 'OK' ? `${r.brand} (${r.venture}): ${r.finding}` : `${r.brand} (${r.venture}): ${r.status}`)),
+    '',
+    '--- AI-search-optimization ---',
+    ...aiSearchResults.map((r) => (r.status === 'OK' ? `${r.brand} (${r.venture}) — AI search: ${r.finding}` : `${r.brand} (${r.venture}) — AI search: ${r.status}`)),
   ]);
 
   try {
@@ -206,13 +243,13 @@ async function main() {
     console.warn(`agent_bus write failed: ${err.message}`);
   }
 
-  if (ok.length === 0 && results.length > 0) {
-    await notifyJbUrgent(cfg, `⚠️ Social Media Research ran but got zero real findings (${results.length} venture(s) checked) — worth a look when you have a sec.`, { agentName: 'AXON Content Research' });
+  if (ok.length === 0 && aiSearchOk.length === 0 && results.length > 0) {
+    await notifyJbUrgent(cfg, `⚠️ Social Media Research ran but got zero real findings across both lanes (${results.length} venture(s) checked) — worth a look when you have a sec.`, { agentName: 'AXON Content Research' });
   }
 
   const humanSummary = plainEnglish([
-    `AXON did real social media research for ${ok.length} of your ${ventures.length} ventures today. 🔎`,
-    `It searched Google for what's trending and what competitors are doing in each niche, then summed it up in plain English — not raw data dumps.`,
+    `AXON did real social media and AI-search research for ${ok.length}/${aiSearchOk.length} of your ${ventures.length} ventures today. 🔎`,
+    `It searched for what's trending, what competitors are doing, and what people actually ask AI assistants in each niche, then summed it up in plain English — not raw data dumps.`,
     `Your own accounts aren't hooked up yet, so that part's still off — but this doesn't need them to be useful. Nothing here was made up.`,
   ]);
   console.log(humanSummary);
