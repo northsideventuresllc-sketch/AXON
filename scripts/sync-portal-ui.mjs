@@ -48,7 +48,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const AXON_ROOT = join(__dirname, '..');
 const INTEGRATION_ROOT = join(AXON_ROOT, 'portal-integration/northside-intelligence');
 
-const COMPONENT_FILES = [
+export const COMPONENT_FILES = [
   'match-fit-venture-hub.tsx',
   'match-fit-admin-tool.tsx',
   'dispatch-queue-panel.tsx',
@@ -105,7 +105,7 @@ const COMPONENT_FILES = [
   'deal-tracker-tool.tsx',
 ];
 
-const LIB_FILES = [
+export const LIB_FILES = [
   'match-fit-hub.ts',
   'agent-dispatch.ts',
   'dispatch-session-store.ts',
@@ -155,13 +155,35 @@ const LIB_FILES = [
   'telegram.mjs',
   'axon-fire-gate.ts',
   'axon-fire-gate-core.mjs',
+
+  // Added by scripts/check-portal-sync-imports.mjs (portal-sync-drift.test.mjs) —
+  // transitively imported by the mirrored components/lib/API routes above but
+  // previously absent, so the portal's typecheck could fail on a missing module
+  // even though the AXON build was green. See tests/portal-sync-drift.test.mjs.
+  'axon-router.ts',
+  'axon-router-core.mjs',
+  'axon-agent-bus.mjs',
+  'axon-agent-boot.mjs',
+  'nvg-mini-queue.mjs',
+  'nvg-mini-risk-gate.mjs',
+  'axon-account-keys.mjs',
+  'axon-subscription-cli.mjs',
+  'axon-retrieve-before-reason.mjs',
+  'axon-j-space.ts',
+  'axon-j-space-core.mjs',
+  'axon-wisdom.ts',
+  'wisdom-absorb-loop.mjs',
+  'axon-comm-skill.mjs',
+  'axon-local-relay.mjs',
+  'axon-v1-cloud-relay.mjs',
+  'relay-metrics.mjs',
 ];
 
 /**
  * Removed from AXON — delete from portal on sync to avoid .ts/.mjs resolution collisions.
  * A stale file that the portal still imports is now a REFUSAL, not a silent unlink.
  */
-const STALE_LIB_FILES = [
+export const STALE_LIB_FILES = [
   'outreach-learn.mjs',
   'outreach-reject.mjs',
   'outreach-run.mjs',
@@ -177,7 +199,7 @@ const STALE_LIB_FILES = [
  * NOTE while touching these: MF-KILL-MONDAY-APPROVALS orders the monday-review screen
  * deleted outright, so nothing here should be taken as a reason to restore that entry.
  */
-const PORTAL_ONLY_FILES = new Set([
+export const PORTAL_ONLY_FILES = new Set([
   'axon-tool-meta.ts',
   'axon-user-tools.ts',
   'types.ts',
@@ -185,7 +207,7 @@ const PORTAL_ONLY_FILES = new Set([
   'outreach-hq-tool.tsx',
 ]);
 
-const API_FILES = [
+export const API_FILES = [
   'deals/route.ts',
   'dispatch/fire/route.ts',
   'dispatch/queue/route.ts',
@@ -549,4 +571,8 @@ function writeSyncManifest(niRoot) {
   console.log('manifest: .axon-sync-manifest.json');
 }
 
-main();
+// Only run when invoked directly (node scripts/sync-portal-ui.mjs ...), not when
+// imported for its exported manifests (check-portal-sync-imports.mjs, tests).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}
