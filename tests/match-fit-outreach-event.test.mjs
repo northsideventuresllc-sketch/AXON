@@ -9,8 +9,10 @@ import {
   buildLeadKeyboard,
   buildLeadMessage,
   isDuplicateApprove,
+  MAX_OUTREACH_LEADS_PER_CALL,
   parseOutreachCallback,
   parseRewriteCommand,
+  pushOutreachLeadsBatch,
   rewriteCommandTemplate,
   validateOutreachEventPayload,
 } from '../lib/match-fit-outreach-event.mjs';
@@ -187,6 +189,21 @@ import {
   assert.equal(isDuplicateApprove('instagram', 'dedupe_lead_1', t0 + 500), true);
   assert.equal(isDuplicateApprove('instagram', 'dedupe_lead_2', t0 + 500), false);
   assert.equal(isDuplicateApprove('instagram', 'dedupe_lead_1', t0 + 60_000), false);
+}
+
+// Batch cap + partial progress: posting 50 leads sends at most the cap per call, and a
+// mid-batch send failure doesn't abort the rest or lose the progress already made.
+{
+  const leads = Array.from({ length: 50 }, (_, i) => ({ platform: 'instagram', leadId: `lead_${i}` }));
+  let calls = 0;
+  const result = await pushOutreachLeadsBatch(leads, async (lead) => {
+    calls += 1;
+    if (lead.leadId === 'lead_5') throw new Error('simulated Telegram failure');
+  });
+  assert.equal(calls, MAX_OUTREACH_LEADS_PER_CALL, 'only the capped count is ever sent per call');
+  assert.equal(result.pushed, MAX_OUTREACH_LEADS_PER_CALL - 1);
+  assert.equal(result.failed, 1);
+  assert.equal(result.skipped, 50 - MAX_OUTREACH_LEADS_PER_CALL);
 }
 
 console.log('match-fit-outreach-event.test.mjs: all assertions passed');
