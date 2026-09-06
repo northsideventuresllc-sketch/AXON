@@ -1,9 +1,13 @@
 import { cookies } from 'next/headers';
+import { tryGetDashboardSecret, tryGetSupabaseServiceKey } from './axon-secrets.mjs';
 
 export const SESSION_COOKIE = 'axon_session';
 
-export function getDashboardSecret() {
-  return process.env.AXON_DASHBOARD_SECRET || process.env.SUPABASE_SERVICE_KEY?.slice(0, 32);
+// AX-DASHBOARD-SECRET-OWN-0906: never derive from the Supabase service key — the
+// dashboard secret is its own secret, or it's unset (callers below already treat an
+// unset secret as "not authenticated", never as "boot with a fallback").
+export function getDashboardSecret(): string | null {
+  return tryGetDashboardSecret();
 }
 
 export async function isAuthenticated(): Promise<boolean> {
@@ -38,7 +42,7 @@ export function getAllowedEmails(): string[] {
  * Returns null on any failure — callers fall back to env, never lock out.
  */
 async function readBrainSecret(key: string): Promise<string | null> {
-  const svc = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const svc = tryGetSupabaseServiceKey();
   if (!svc) return null;
   try {
     const { createSupabaseClient } = await import('./supabase.mjs');
