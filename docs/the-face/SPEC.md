@@ -1,7 +1,7 @@
 # THE FACE — AXON mission-control UI
 
-**Status:** steps 1 and 2 built. THE FACE is the Dash **home screen**, not a tab. The orb and
-the dashboard around it are live; the voice bar (step 3) and the agent trail (step 4) are not.
+**Status:** steps 1, 2 and 3 built. THE FACE is the Dash **home screen**, not a tab. The orb,
+the dashboard around it and the voice panel are live; the agent trail (step 4) is not.
 The top micro-bar still reads **Preview**.
 **Repo:** `AXON` · lives in the `(axon-v0)` Dash · **not** mirrored to the NI portal yet.
 **Source plan:** nv-vault `_Command Center/Build Plans/Build Plan B — THE FACE (AXON mission-control UI).md`
@@ -56,11 +56,36 @@ biggest thing on it; the dashboard is arranged around it:
 On a screen narrower than 900px the orb is still first and the cards flow underneath it.
 The activity rail is deliberately **not** here — it arrives with the agent trail in step 4.
 
-### 2.3 Voice (step 3)
+### 2.3 Voice (step 3 — built)
 
-A bar pinned to the bottom of the hero: a microphone control, a thinking timer, and a live
-transcript that scrolls up. Answering an instruction changes exactly one panel, and that
-panel flashes its border once so you can see which one moved.
+A panel docked bottom-centre of the hero, under the orb: a hold-to-talk control with a mic
+glyph drawn in CSS and inline SVG, a level meter, a thinking timer, a Mute micro-toggle and a
+live transcript. Answering an instruction changes exactly one panel — the module list's slot
+under the hero — and that panel carries a **Back** micro-label home.
+
+Three states, each written as well as drawn:
+
+| State | What is on screen |
+|---|---|
+| **Idle** | The mic glyph, dim, and one quiet `HOLD TO TALK` micro-label |
+| **Listening** | The glyph lit cyan and a level meter whose bars are driven by the microphone's own `AnalyserNode` |
+| **Thinking** | A monospaced timer counting `0.0s…` while the read is out; the orb pulses |
+
+**Push-to-talk, never always-on.** Hold the button with a pointer, or focus it and hold
+Space. On release, on unmount and on any failure every media track is stopped and the audio
+context is closed, so the browser's recording indicator goes out — a screen that sits on a
+wall must never be quietly listening.
+
+**No dead UI.** Transcription uses the browser's own `SpeechRecognition` /
+`webkitSpeechRecognition`, feature-detected. A browser without it (Firefox, or any page not
+on a secure origin) gets a typed input **in the same panel, in the same styling**, running
+the identical parser. A refused microphone says so in one sentence and leaves the typed
+input working.
+
+**Spoken reply.** `speechSynthesis`, feature-detected, reads one line saying what the panel
+now shows. It is silent under `prefers-reduced-motion` and whenever the **Mute** micro-toggle
+is on. Everything spoken is also on screen: the transcript carries `aria-live`, so nothing
+is audio-only.
 
 ### 2.4 Agent trail (step 4)
 
@@ -168,17 +193,46 @@ says out loud what it did.
 > **"Show me today's plan."**
 > The activity rail is replaced by the day plan. AXON reads back the first three items.
 
-The rest of the starting set:
+**What step 3 actually shipped — three commands, all read-only:**
+
+| You say | What happens | Where it reads from |
+|---|---|---|
+| "Show me today's plan" | The day plan replaces the module list | `GET /api/axon-v0/face/plan` — EXEC's own daily post (see 5.1) |
+| "What needs me" | Everything parked on your approval, in one list, no job codes | `GET /api/axon-v0/face/needs-me` — the queue: anything in the waiting-on-JB status or flagged for approval and not closed out |
+| "Show agents" / "Back" | Back to the module list | Nothing — no request is made |
+| Anything else | The transcript shows what was heard and the panel says **"I can't do that from here yet."**, naming the two nearest commands | Nothing. **No free-form speech reaches a model in step 3** — that is a later step and has to be grounded first |
+
+Wording is normalised before matching: lower-cased, punctuation and curly apostrophes
+stripped, an optional wake word ("axon", "hey axon") and leading filler ("please", "can you")
+removed. So "Axon, please show me today's plan!" and "day plan" are the same instruction. The
+grammar is pure and lives in `lib/axon-v0/face-commands.mjs`, tested offline in
+`tests/face-commands.test.mjs`.
+
+**Still to come, unchanged from the original set:**
 
 | You say | What happens |
 |---|---|
-| "Show me today's plan" | Day plan replaces the activity rail |
 | "What's running right now?" | Module list filters to live agents; the orb goes to agents-working if any are |
 | "How many leads do we have?" | Pipeline card enlarges and is read out |
-| "What needs me?" | Anything waiting on your approval, in one list |
 | "What broke?" | Errors only, newest first, in plain English |
 | "Stop" / "Cancel" | Cancels the current spoken answer immediately |
-| "Go quiet" | Turns the voice replies off; the screen keeps working silently |
+| "Go quiet" | Turns the voice replies off; the screen keeps working silently — the **Mute** micro-toggle already does this by hand |
+
+### 5.1 Where the day plan comes from
+
+**EXEC's own daily post on the agent bus.** The Executive agent writes one row a night to
+`agent_bus`, addressed to everyone, subject `AXON-EXEC-AGENT-NIGHTLY-<date>`, with a JSON
+body carrying a written `plain_english_summary` — one bullet per line, in EXEC's words. The
+panel shows those lines, unedited: nothing is re-worded, summarised or padded here.
+
+- **Fallback:** if there is no post for today, EXEC's own `session_notes_apartment` row for
+  the same date is used instead, and the panel says which of the two it read.
+- **Neither:** the panel says **"No plan posted yet today"** — a designed empty state for an
+  empty day, not an error.
+- **Unreadable:** if the sources could not be read at all, the panel says **"Not answering"**.
+  That is deliberately a different sentence: an empty list would read as "nothing to do",
+  which is a claim nobody checked.
+- **Nothing is ever generated.** There is no third fallback and no model in this path.
 
 Rules:
 
@@ -262,7 +316,40 @@ hidden tab and on unmount, resizes are throttled, and the pixel ratio is capped 
 - Whether revenue stays a designed empty card or waits for Finance to be connected.
 - Whether these are the right first cards, and whether the orb's size and beat read right.
 
-## 10. What step 3 needs before it starts
+## 10. What step 3 actually ships
 
-- The voice bar's placement now the cards are in — it was specified as pinned to the bottom
-  of the hero, which is where the state readout and the deck link now sit.
+- The voice panel, docked bottom-centre of the hero under the orb (the placement question
+  left open at the end of step 2 — it sits between the state readout and the deck link, and
+  neither moved).
+- Three states — Idle, Listening with a real microphone level meter, Thinking with a
+  monospaced timer — plus a live transcript carrying interim and final text.
+- Push-to-talk on pointer hold or Space, real button semantics, a visible focus ring, and
+  `aria-live` on the transcript. Never always-on; every track is stopped on release and on
+  unmount.
+- A typed input fallback in the same panel with identical styling for any browser without
+  speech recognition, running the identical parser.
+- Three read-only commands — today's plan, what needs you, show agents — each replacing
+  exactly one panel, with a **Back** micro-label home. Anything else gets one plain sentence.
+- A spoken one-line reply through `speechSynthesis`, muted under reduced motion or the Mute
+  micro-toggle.
+- Two new read-only server routes: `GET /api/axon-v0/face/plan` and
+  `GET /api/axon-v0/face/needs-me`, both behind the dashboard session gate, both always
+  answering 200 with a complete shape.
+- The orb goes to Thinking while a command is pending — a transient override; the live
+  working signal stays authoritative the moment the answer lands.
+- Screenshots at 1440×900: `step3-idle.png` (the panel idle, hold-to-talk showing) and
+  `step3-plan.png` (the day-plan panel open, driven through the typed fallback with the
+  speech API removed so both controls are on the record). Both taken with **no database
+  credentials**, so every card shows its empty state; the plan lines in the second image are
+  EXEC's real post for 2026-09-06, replayed into the route so the panel could be shown.
+
+**Still open, and still JB's call:**
+
+- Whether the remaining commands in section 5 are the right next ones.
+- Whether free-form speech ever reaches a model, and what it has to be grounded against
+  first. Step 3 deliberately sends nothing.
+
+## 11. What step 4 needs before it starts
+
+- The agent trail's own feed (`GET /api/axon-v0/comms-feed`) and whether it replaces the
+  presence count as the orb's pulse source, per 4.3.
