@@ -446,3 +446,266 @@
   border-color: rgba(226, 240, 252, 0.16);
   color: rgba(226, 240, 252, 0.4);
 }
+
+/* --- voice panel (step 3) ------------------------------------------------------------
+   Docked bottom-centre of the hero, under the orb. Same glass language as the stat cards:
+   thin cyan border, dark glass, corner brackets, monospaced all-caps micro-labels. Cyan
+   and grey only — no green, no amber, in any of the three states. */
+.face-voicebar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  padding: 0 24px 44px;
+}
+
+.face-voice {
+  position: relative;
+  width: min(46rem, 100%);
+  padding: 12px 16px 11px;
+  border: 1px solid rgba(0, 212, 255, 0.22);
+  border-radius: 10px;
+  background: linear-gradient(160deg, rgba(10, 22, 40, 0.86) 0%, rgba(7, 8, 12, 0.9) 100%);
+  backdrop-filter: blur(8px);
+}
+
+/* Listening and thinking both raise the panel — a border change, never colour alone, and
+   each carries its own written micro-label. */
+.face-voice[data-state='listening'] {
+  border-color: rgba(0, 212, 255, 0.62);
+  box-shadow: 0 0 26px rgba(0, 212, 255, 0.16);
+}
+
+.face-voice[data-state='thinking'] {
+  border-color: rgba(0, 212, 255, 0.42);
+}
+
+.face-voice-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.face-voice-mic {
+  flex: none;
+  color: rgba(226, 240, 252, 0.45);
+}
+
+.face-voice-mic[data-live='true'] {
+  color: #00d4ff;
+}
+
+.face-voice-hold,
+.face-voice-send,
+.face-voice-mute,
+.face-command-back {
+  cursor: pointer;
+  background: none;
+}
+
+/* Push-to-talk. Hold it with a pointer, or focus it and hold Space. */
+.face-voice-hold {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  padding: 7px 14px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(10, 22, 40, 0.6);
+  color: rgba(0, 212, 255, 0.72);
+  touch-action: none;
+  user-select: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.face-voice-hold[data-live='true'] {
+  border-color: rgba(0, 212, 255, 0.7);
+  color: #dff6ff;
+}
+
+.face-voice-hold:focus-visible,
+.face-voice-send:focus-visible,
+.face-voice-mute:focus-visible,
+.face-voice-input:focus-visible,
+.face-command-back:focus-visible {
+  outline: 2px solid #00d4ff;
+  outline-offset: 2px;
+}
+
+/* No dead UI: a browser that cannot transcribe gets this, in the same styling, running the
+   same parser. */
+.face-voice-typed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.face-voice-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 12px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(7, 8, 12, 0.72);
+  color: #dff6ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.face-voice-input::placeholder {
+  color: rgba(226, 240, 252, 0.32);
+}
+
+.face-voice-send,
+.face-voice-mute {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 999px;
+  color: rgba(0, 212, 255, 0.72);
+}
+
+.face-voice-mute[aria-pressed='true'] {
+  border-color: rgba(226, 240, 252, 0.2);
+  color: rgba(226, 240, 252, 0.45);
+}
+
+.face-voice-mute {
+  margin-left: auto;
+}
+
+/* Level meter — every bar is the microphone's own level, read off an AnalyserNode. */
+.face-voice-meter {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  height: 22px;
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
+}
+
+.face-voice-meter[data-listening='true'] {
+  opacity: 1;
+}
+
+.face-voice-bar {
+  width: 3px;
+  height: 22px;
+  border-radius: 2px;
+  background: #00d4ff;
+  transform-origin: center;
+  transform: scaleY(0.08);
+}
+
+/* Reduced motion: static bars, and the written label carries the state instead. */
+.face-voice-meter[data-static='true'] .face-voice-bar {
+  transform: scaleY(0.34) !important;
+}
+
+.face-voice-timer {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: #9fe8ff;
+}
+
+.face-voice-transcript {
+  margin-top: 9px;
+  min-height: 2.4em;
+}
+
+.face-voice-interim {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(226, 240, 252, 0.5);
+}
+
+.face-voice-heard {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(226, 240, 252, 0.86);
+}
+
+.face-voice-reply {
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #9fe8ff;
+}
+
+.face-voice-hint {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(226, 240, 252, 0.42);
+}
+
+@media (max-width: 900px) {
+  .face-voicebar {
+    padding: 0 16px 40px;
+  }
+  .face-voice-controls {
+    flex-wrap: wrap;
+  }
+}
+
+/* --- the panel a command puts in the module list's place ----------------------------- */
+.face-command-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.face-command-back {
+  padding: 4px 10px;
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  border-radius: 999px;
+  color: rgba(0, 212, 255, 0.72);
+}
+
+.face-command-back:hover {
+  color: #dff6ff;
+  border-color: rgba(0, 212, 255, 0.6);
+}
+
+.face-command-caption {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.face-command-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.face-command-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.07);
+}
+
+.face-command-item:last-child {
+  border-bottom: 0;
+}
+
+.face-command-index {
+  flex: none;
+  color: rgba(0, 212, 255, 0.5);
+}
+
+.face-command-text {
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(226, 240, 252, 0.86);
+}
+
+.face-command-owner {
+  color: rgba(226, 240, 252, 0.45);
+}
