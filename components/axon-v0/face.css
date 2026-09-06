@@ -1,9 +1,18 @@
 /* THE FACE — hero chrome. Palette locked: ground #07080C, cyan #00D4FF, navy #0A1628. */
 
+/* The whole home screen: the hero (orb + rails) and the lower band under it. */
+.face-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .face-hero {
   position: relative;
   isolation: isolate;
-  min-height: calc(100vh - 6rem);
+  min-height: calc(100vh - 8rem);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(0, 212, 255, 0.14);
   border-radius: 14px;
@@ -26,10 +35,59 @@
   z-index: 0;
 }
 
+/* --- layout: two cards left, the orb, two cards right ------------------------------ */
+.face-grid {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) minmax(0, 15rem);
+  gap: 20px;
+  align-items: center;
+  padding: 68px 24px 56px;
+}
+
+.face-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.face-centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* The orb keeps the middle of the screen and stays the biggest thing on it. */
 .face-orb-wrap {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
+  position: relative;
+  width: 100%;
+  min-height: 44vh;
+  flex: 1;
+}
+
+/* Narrow screens: the orb is still first, the cards flow underneath it. */
+@media (max-width: 900px) {
+  .face-grid {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 62px 16px 52px;
+  }
+  .face-centre {
+    order: -1;
+  }
+  .face-rail {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .face-rail > * {
+    flex: 1 1 12rem;
+  }
+  .face-orb-wrap {
+    min-height: 46vh;
+  }
 }
 
 .face-orb-stage {
@@ -124,7 +182,6 @@
 }
 
 .face-topbar,
-.face-readout,
 .face-footbar {
   position: absolute;
   left: 0;
@@ -138,10 +195,17 @@
 .face-topbar {
   top: 26px;
   gap: 18px;
+  flex-wrap: wrap;
+  padding: 0 60px;
+}
+
+/* Signal: live / demo — dimmed when the screen is running on the test signal. */
+.face-topbar .face-micro[data-live='false'] {
+  color: rgba(226, 240, 252, 0.38);
 }
 
 .face-readout {
-  bottom: 34px;
+  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
@@ -149,7 +213,7 @@
   text-align: center;
 }
 
-/* The one quiet way off the hero until step 2 folds the deck's cards around the orb. */
+/* The one quiet way through to the deck until its remaining cards fold into the hero. */
 .face-footbar {
   bottom: 12px;
   gap: 18px;
@@ -227,4 +291,158 @@
   .face-state[data-working='true'] .face-state-dot {
     animation: none;
   }
+}
+
+/* --- glass stat cards --------------------------------------------------------------- */
+.face-card {
+  position: relative;
+  padding: 16px 18px 15px;
+  border: 1px solid rgba(0, 212, 255, 0.22);
+  border-radius: 10px;
+  background: linear-gradient(160deg, rgba(10, 22, 40, 0.82) 0%, rgba(7, 8, 12, 0.86) 100%);
+  backdrop-filter: blur(8px);
+}
+
+/* A card with nothing to show sits back rather than shouting an absence. */
+.face-card[data-empty='true'] {
+  border-color: rgba(0, 212, 255, 0.12);
+}
+
+/* Corner-bracket reticle, same language as the four on the hero. */
+.face-card-bracket {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0, 212, 255, 0.5);
+  pointer-events: none;
+}
+.face-card-bracket--tl {
+  top: 6px;
+  left: 6px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.face-card-bracket--br {
+  bottom: 6px;
+  right: 6px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.face-card-label {
+  margin-bottom: 10px;
+}
+
+.face-card-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 34px;
+  line-height: 1.05;
+  color: #dff6ff;
+}
+
+.face-card-empty {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 15px;
+  line-height: 1.3;
+  color: rgba(226, 240, 252, 0.42);
+}
+
+.face-card-caption {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(226, 240, 252, 0.55);
+}
+
+/* --- lower band: revenue + the module list ------------------------------------------ */
+.face-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .face-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.face-modules {
+  padding-bottom: 18px;
+}
+
+.face-module-group + .face-module-group {
+  margin-top: 16px;
+}
+
+.face-module-heading {
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.14);
+  color: rgba(0, 212, 255, 0.55);
+}
+
+.face-module-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.face-module {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.07);
+}
+
+.face-module:last-child {
+  border-bottom: 0;
+}
+
+.face-module-name {
+  font-size: 13px;
+  color: rgba(226, 240, 252, 0.86);
+}
+
+/* --- state pills. Palette is locked: cyan or grey only, never green, never amber. ---- */
+.face-pill {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Running and well — filled cyan. */
+.face-pill--ontrack {
+  border-color: rgba(0, 212, 255, 0.55);
+  background: rgba(0, 212, 255, 0.16);
+  color: #9fe8ff;
+}
+
+/* Alive but not heard from — dim cyan, no fill. */
+.face-pill--quiet {
+  border-color: rgba(0, 212, 255, 0.24);
+  color: rgba(159, 232, 255, 0.62);
+}
+
+/* Needs a look. A hollow cyan pill with a brighter edge does the work amber would
+   normally do — the spec allows no amber and no green anywhere on this screen. */
+.face-pill--attention {
+  border-color: #00d4ff;
+  color: #dff6ff;
+  box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.25), 0 0 12px rgba(0, 212, 255, 0.22);
+}
+
+/* Dormant on purpose — muted grey, out of the cyan conversation entirely. */
+.face-pill--off {
+  border-color: rgba(226, 240, 252, 0.16);
+  color: rgba(226, 240, 252, 0.4);
 }
