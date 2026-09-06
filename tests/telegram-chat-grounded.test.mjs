@@ -21,7 +21,8 @@ import {
   asksWhatNeedsJb,
   buildJbChatContext,
 } from '../lib/axon-jb-chat-context.mjs';
-import { buildDispatchRow, classifyJbMessage, pickOwner } from '../lib/axon-jb-instruction.mjs';
+import { buildDispatchRow, classifyJbMessage, freeCode, pickOwner } from '../lib/axon-jb-instruction.mjs';
+import { usableHistory } from '../lib/axon-telegram-chat.mjs';
 import { answerJbChatMessage } from '../lib/axon-jb-chat.mjs';
 import { telegramSend } from '../lib/telegram.mjs';
 
@@ -255,4 +256,89 @@ test('JB\'s chat hears AXON plainly — the outreach tag is gone from his replie
   assert.equal(sent[0].text, 'Nothing is waiting on you right now.');
   assert.doesNotMatch(sent[0].text, /\[AXON/);
   assert.equal(sent[1].text, '[AXON — Outreach] Three drafts are waiting.', 'other senders keep their tag');
+});
+
+test('a block that could not be read never renders as an empty one', async () => {
+  const sbSelect = stubSelect({
+    session_notes_apartment: () => { throw new Error('read failed'); },
+  });
+  const facts = await buildJbChatContext(sbSelect, {
+    now: NOW,
+    pipelineContext: '',
+    pipelineFailed: true,
+  });
+  const closeOutBlock = facts.text.split('\n\n').find((b) => b.startsWith('LAST CLOSE-OUT'));
+  const pipelineBlock = facts.text.split('\n\n').find((b) => b.startsWith('OUTREACH PIPELINE'));
+  assert.match(closeOutBlock, /could not be read this time/);
+  assert.doesNotMatch(closeOutBlock, /\(nothing\)/);
+  assert.match(pipelineBlock, /could not be read this time/);
+  assert.doesNotMatch(pipelineBlock, /\(nothing\)/);
+  assert.equal(facts.failed.closeOut, true);
+  assert.equal(facts.failed.pipeline, true);
+});
+
+test('a half-read list says so, even when the other half has items', async () => {
+  const sbSelect = stubSelect({
+    agent_dispatch: [{
+      code: 'X-1',
+      title: 'Council decisions never reach you',
+      owner: 'BUILD',
+      status: 'needs_jb',
+      created_at: '2026-09-04T10:00:00Z',
+    }],
+    axon_telegram_messages: () => { throw new Error('read failed'); },
+  });
+  const out = await answerJbChatMessage(CFG, { sbSelect, sbInsert: stubInsert() }, {
+    userMessage: 'what needs me',
+    now: NOW,
+    generate: stubGenerate('unused'),
+  });
+  assert.match(out.reply, /Council decisions never reach you/);
+  assert.match(out.reply, /I could not read the approvals this time, so this may be incomplete\./);
+});
+
+test('two instructions on one day get two different jobs, not one lost one', async () => {
+  const existing = new Set(['TG-20260906-fix-the-cron-tab-so']);
+  const sbSelect = stubSelect({
+    agent_dispatch: (filter) => {
+      const asked = decodeURIComponent((filter.match(/code=eq\.([^&]+)/) || [])[1] || '');
+      return existing.has(asked) ? [{ code: asked }] : [];
+    },
+  });
+  const sbInsert = stubInsert();
+  const out = await answerJbChatMessage(CFG, { sbSelect, sbInsert }, {
+    userMessage: 'Fix the cron tab so it stops the Mac mini jobs too',
+    now: NOW,
+    generate: stubGenerate('unused'),
+  });
+  assert.equal(sbInsert.rows.length, 1);
+  assert.equal(sbInsert.rows[0].row.code, 'TG-20260906-fix-the-cron-tab-so-2');
+  assert.match(out.reply, /^Filed for BUILD\./);
+  assert.equal(await freeCode(sbSelect, 'TG-20260906-something-else'), 'TG-20260906-something-else');
+});
+
+test('the invented replies from the incident can never be quoted back', () => {
+  const history = [
+    { role: 'user', content: 'What needs me? Please ask', created_at: '2026-09-06T22:27:00Z' },
+    { role: 'assistant', content: 'The cursor text issue — root cause identified.', created_at: '2026-09-06T22:28:00Z' },
+    { role: 'assistant', content: 'Fresh, real answer.', created_at: '2026-09-08T09:00:00Z' },
+  ];
+  const kept = usableHistory(history);
+  assert.equal(kept.length, 2);
+  assert.ok(!kept.some((m) => /root cause identified/.test(m.content)), 'the invented turn is dropped');
+  assert.ok(kept.some((m) => m.content === 'Fresh, real answer.'));
+  const long = Array.from({ length: 20 }, (_, i) => ({ role: 'user', content: `m${i}` }));
+  assert.equal(usableHistory(long).length, 6, 'only the last few turns travel');
+});
+
+test('history is not treated as evidence in the system prompt', async () => {
+  const generate = stubGenerate('ok');
+  await answerJbChatMessage(CFG, EMPTY_SB, {
+    userMessage: 'how is the fleet doing',
+    now: NOW,
+    generate,
+  });
+  const system = generate.calls[0].opts.messages[0].content;
+  assert.match(system, /Earlier messages in this chat are NOT evidence/);
+  assert.match(system, /Answer ONLY from the CONTEXT section\./);
 });
