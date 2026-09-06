@@ -1,7 +1,7 @@
 # THE FACE — AXON mission-control UI
 
-**Status:** steps 1, 2 and 3 built. THE FACE is the Dash **home screen**, not a tab. The orb,
-the dashboard around it and the voice panel are live; the agent trail (step 4) is not.
+**Status:** steps 1, 2, 3 and 4 built. THE FACE is the Dash **home screen**, not a tab. The
+orb, the dashboard around it, the voice panel and the agent activity trail are all live.
 The top micro-bar still reads **Preview**.
 **Repo:** `AXON` · lives in the `(axon-v0)` Dash · **not** mirrored to the NI portal yet.
 **Source plan:** nv-vault `_Command Center/Build Plans/Build Plan B — THE FACE (AXON mission-control UI).md`
@@ -87,10 +87,35 @@ now shows. It is silent under `prefers-reduced-motion` and whenever the **Mute**
 is on. Everything spoken is also on screen: the transcript carries `aria-live`, so nothing
 is audio-only.
 
-### 2.4 Agent trail (step 4)
+### 2.4 Agent trail (step 4 — built)
 
-Each line of agent traffic draws a short cyan filament from the orb toward the module that
-produced it, then fades. Bus traffic drives the orb's pulse instead of the mock signal.
+A glass card, right of the module list on a wide screen and below everything else on a
+narrow one (see `.face-lower` in `face.css`): a monospaced all-caps `AGENT ACTIVITY` label
+over a list of the last 30 minutes of `agent_bus` traffic, newest first. Each row is a small
+dot, an agent name, a plain-English verb read off the subject, and a relative time
+("2 min ago"). The dot brightens for anything under two minutes old — colour is never the
+only signal, the relative time says the same thing in words.
+
+**The trail never shows raw table names, ids or codes.** A subject like
+`AXON-EXEC-AGENT-NIGHTLY-2026-09-06` never reaches the screen; `subjectToVerb` in
+`lib/axon-v0/face-activity.mjs` turns it into a sentence fragment first ("posted the nightly
+plan"). Unrecognised subjects fall back to "sent a message" rather than showing the raw
+text. Empty state: **"No agent activity in the last 30 minutes"**. Unreadable: **"Not
+answering"** — a genuinely quiet 30 minutes and a failed read are different sentences, same
+as everywhere else on this screen.
+
+Same 15-second poll cadence as the rest of the screen (`lib/axon-v0/use-face-activity.ts`,
+same hidden-tab/in-flight/unmount discipline as `use-face-summary.ts`). The list carries
+`aria-live="polite"` so new activity is announced without interrupting anything else being
+read.
+
+**Orb reaction.** A new bus row since the previous poll triggers one visible ~600ms
+ring-brighten burst on the orb — implemented as a transient, non-React-state ref
+(`burstSignal` prop on `FaceOrbScene`) so it never forces a scene rebuild. Under
+`prefers-reduced-motion` there is no burst at all; only the trail's own dot brightens.
+
+**Bus traffic now also drives the orb's pulse**, alongside the existing presence signal —
+see 4.3.
 
 ---
 
@@ -169,10 +194,13 @@ roster cannot be read the panel says so in one sentence and nothing else on the 
 - **When neither source answers,** the orb falls back to the step-1 mock swing so it never
   sits dead behind a failed read. The top micro-bar says which is running: **Signal: live**
   or **Signal: demo**. A 200 with nothing readable behind it counts as demo, not live.
-- **Step 4 (still to come):** `GET /api/axon-v0/comms-feed` (NI-Brain view
-  `v_agent_comms_feed`) takes over the count — any row inside the last 90 seconds is work in
-  progress — and sets the beat rate from how many distinct agents posted, capped at four so
-  it never strobes. The hook's shape does not change when it does.
+- **Step 4 (built):** `GET /api/axon-v0/face/activity` adds a second, independent working
+  signal: a presence heartbeat within ten minutes (unchanged) OR an `agent_bus` row within
+  the last two minutes. Either source saying "working" beats the orb — see
+  `resolveActivityWorking` in `lib/axon-v0/face-activity.mjs` and the combined precedence
+  in `use-agent-working.ts`'s `useAgentWorkingSignal`. A fresh bus row also triggers the
+  one-off burst described in 2.4. The hook's outward shape does not change: callers still
+  get `{ working, source }`, `source` still reads `'forced' | 'live' | 'mock'`.
 
 ### 4.4 Fire gate
 
@@ -349,7 +377,37 @@ hidden tab and on unmount, resizes are throttled, and the pixel ratio is capped 
 - Whether free-form speech ever reaches a model, and what it has to be grounded against
   first. Step 3 deliberately sends nothing.
 
-## 11. What step 4 needs before it starts
+## 11. What step 4 actually ships
 
-- The agent trail's own feed (`GET /api/axon-v0/comms-feed`) and whether it replaces the
-  presence count as the orb's pulse source, per 4.3.
+- The agent activity trail (2.4): a glass card listing the last 30 minutes of `agent_bus`
+  traffic, newest first, capped at 30 rows, each with a plain-English verb, a relative
+  time and a dot that brightens under two minutes old. Empty and unreadable states written
+  out, never a blank list standing in for either.
+- One new route, `GET /api/axon-v0/face/activity` (`app/api/axon-v0/face/activity/route.ts`),
+  reading `agent_bus` and `nvg_agent_presence` (with `agent_dispatch` as the same in-flight
+  fallback `face-reads.ts` already uses), behind the dashboard session gate, always
+  answering 200 with a complete shape.
+- A pure shaping layer, `lib/axon-v0/face-activity.mjs` — the subject-to-verb map, relative
+  time, trail shaping and the working-signal precedence — tested offline with no database
+  credentials in `tests/face-activity.test.mjs`.
+- The orb's working signal now takes this feed as a second, independent source alongside
+  the existing presence/tickets count (4.3), and reacts to a new bus row with one visible
+  ~600ms ring-brighten burst, skipped under reduced motion.
+- A poll on the same 15-second cadence as the rest of the screen
+  (`lib/axon-v0/use-face-activity.ts`), same hidden-tab/in-flight/unmount discipline as
+  `use-face-summary.ts`.
+- A screenshot at a 1440×900 viewport (`docs/the-face/step4-trail-SAMPLE-DATA.png`, full
+  page — the trail sits in the lower band, below the first 900px) with the activity route
+  stubbed to **made-up sample rows** so the trail, the dots and a working orb can be seen.
+  Every other route ran with no database credentials, so the stat cards and module list show
+  their real empty states in the same shot. Nothing in that image is a live figure — it is a
+  layout proof, not a reading of the business.
+
+**Still open, and still JB's call:**
+
+- Whether the beat rate should scale with how many distinct agents posted recently (the
+  original step-4 sketch in 4.3 mentioned this, capped at four so it never strobes) — step 4
+  as built keeps the beat binary (working / resting) and layers the burst on top instead.
+- Whether the trail should eventually draw the cyan filament from the orb toward the
+  module that produced each row, as the original sketch in 2.4 described, rather than
+  living in its own card.
