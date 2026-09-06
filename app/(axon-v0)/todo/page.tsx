@@ -43,6 +43,13 @@ function shortTask(description: string): string {
   return head.length < text.length ? `${head.trim()}…` : head.trim();
 }
 
+// Repeating table has no separate Cadence column (locked columns are exactly
+// # · Task · Description · Venture · Status) — folded into the Task label instead,
+// e.g. "Daily · Check inbox" / "Weekly · Mon · Content slot".
+function repeatingTaskLabel(row: RollingTaskRow): string {
+  return `${cadenceLabel(row)} · ${shortTask(row.description)}`;
+}
+
 function cadenceLabel(row: RollingTaskRow): string {
   if (row.cadence === 'daily') return 'Daily';
   if (row.cadence === 'weekly') return `Weekly · ${DAY_NAMES[row.day_of_week || 0] || ''}`.trim();
@@ -83,7 +90,6 @@ function RepeatingTable({ rows }: { rows: RollingTaskRow[] }) {
             <th>Task</th>
             <th>Description</th>
             <th>Venture</th>
-            <th>Cadence</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -91,10 +97,9 @@ function RepeatingTable({ rows }: { rows: RollingTaskRow[] }) {
           {rows.map((r, i) => (
             <tr key={r.id} className={r.done ? 'td-row-done' : ''}>
               <td>{i + 1}</td>
-              <td className="td-task">{shortTask(r.description)}</td>
+              <td className="td-task">{repeatingTaskLabel(r)}</td>
               <td className="td-desc">{r.description}</td>
               <td>{r.venture}</td>
-              <td>{cadenceLabel(r)}</td>
               <td>
                 <StatusChip status={r.status} done={r.done} />
               </td>
@@ -181,12 +186,16 @@ export default function TodoPage() {
         const res = await fetch(apiUrl('/api/axon-v0/todo'));
         const body = await res.json();
         if (!cancelled) {
-          setData({
-            repeating: Array.isArray(body?.repeating) ? body.repeating : [],
-            nonRepeating: Array.isArray(body?.nonRepeating) ? body.nonRepeating : [],
-            queue: Array.isArray(body?.queue) ? body.queue : [],
-          });
-          setError(false);
+          if (body?.ok === false) {
+            setError(true);
+          } else {
+            setData({
+              repeating: Array.isArray(body?.repeating) ? body.repeating : [],
+              nonRepeating: Array.isArray(body?.nonRepeating) ? body.nonRepeating : [],
+              queue: Array.isArray(body?.queue) ? body.queue : [],
+            });
+            setError(false);
+          }
         }
       } catch {
         if (!cancelled) setError(true);
@@ -214,7 +223,7 @@ export default function TodoPage() {
       {loading && <div className="td-empty mt-6">Loading the list…</div>}
 
       {!loading && error && (
-        <div className="td-empty mt-6">Could not reach the to-do list. Try again shortly.</div>
+        <div className="td-empty mt-6">Couldn&apos;t load the list right now.</div>
       )}
 
       {!loading && !error && data && (

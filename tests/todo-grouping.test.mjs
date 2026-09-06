@@ -16,29 +16,34 @@ import {
 
 const ROWS = [
   { id: 'd1', task_type: 'recurring', cadence: 'daily', venture: 'Match Fit', description: 'Approve today\'s posts.', status: 'urgent', done: false },
-  { id: 'w-mon', task_type: 'recurring', cadence: 'weekly', day_of_week: 1, venture: 'NCC', description: 'Monday content slot.', status: 'non_urgent', done: false },
   { id: 'w-thu', task_type: 'recurring', cadence: 'weekly', day_of_week: 4, venture: 'NCC', description: 'Thursday content slot.', status: 'non_urgent', done: false },
+  { id: 'w-mon', task_type: 'recurring', cadence: 'weekly', day_of_week: 1, venture: 'NCC', description: 'Monday content slot.', status: 'non_urgent', done: false },
+  { id: 'w-fri', task_type: 'recurring', cadence: 'weekly', day_of_week: 5, venture: 'Match Fit', description: 'Friday revenue recap.', status: 'semi_urgent', done: false },
+  { id: 'w-sun', task_type: 'recurring', cadence: 'weekly', day_of_week: 7, venture: 'NVG', description: 'Sunday row that should never show.', status: 'non_urgent', done: false },
   { id: 'm1', task_type: 'recurring', cadence: 'monthly', day_of_month: 15, venture: 'NI', description: 'Monthly billing check.', status: 'semi_urgent', done: false },
   { id: 'nr-open', task_type: 'non_repeating', venture: 'NVG', description: 'Board item still open.', status: 'urgent', done: false },
   { id: 'nr-done', task_type: 'non_repeating', venture: 'AXON', description: 'Closed item.', status: 'semi_urgent', done: true },
   { id: 'q1', task_type: 'agentic_question', venture: 'NI', description: 'Should not appear anywhere.', status: 'semi_urgent', done: false },
 ];
 
-test('groupRollingTasks: daily block comes before weekly, in that order', () => {
+test('groupRollingTasks: daily block first, then the whole Mon-Fri week in weekday order', () => {
   const { repeating } = groupRollingTasks(ROWS, { dayOfWeek: 1, dayOfMonth: 1 });
   assert.deepEqual(
     repeating.map((r) => r.id),
-    ['d1', 'w-mon']
+    ['d1', 'w-mon', 'w-thu', 'w-fri']
   );
 });
 
-test('groupRollingTasks: weekly rows only show on their own weekday', () => {
+test('groupRollingTasks: weekly grouping is not limited to today, but excludes weekends', () => {
+  // Same input regardless of which weekday "today" is — the whole week always shows.
   const monday = groupRollingTasks(ROWS, { dayOfWeek: 1, dayOfMonth: 1 }).repeating;
   const thursday = groupRollingTasks(ROWS, { dayOfWeek: 4, dayOfMonth: 1 }).repeating;
   assert.ok(monday.some((r) => r.id === 'w-mon'));
-  assert.ok(!monday.some((r) => r.id === 'w-thu'));
+  assert.ok(monday.some((r) => r.id === 'w-thu'));
+  assert.ok(thursday.some((r) => r.id === 'w-mon'));
   assert.ok(thursday.some((r) => r.id === 'w-thu'));
-  assert.ok(!thursday.some((r) => r.id === 'w-mon'));
+  assert.ok(!monday.some((r) => r.id === 'w-sun'));
+  assert.ok(!thursday.some((r) => r.id === 'w-sun'));
 });
 
 test('groupRollingTasks: non-repeating includes open, monthly-due-today, and completed', () => {
