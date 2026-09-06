@@ -116,7 +116,7 @@ AXON_DRY_RUN=1 npm run research
 
 ### View state
 
-Query NI-Brain directly (`axon_jspace_state`, `axon_research_runs`) — the `GET /api/axon/jspace` route was removed in #178 (no in-repo caller).
+Query NI-Brain directly (`axon_jspace_state`, `axon_research_runs`) — the jspace GET route was removed in #178 (no in-repo caller).
 
 ## Files
 
