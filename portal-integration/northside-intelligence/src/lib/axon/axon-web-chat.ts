@@ -1,4 +1,3 @@
-import { HAIKU_MODEL } from './constants.mjs';
 import { loadConfig } from './config.mjs';
 import {
   buildToneInstructions,
@@ -19,25 +18,24 @@ import {
 } from './axon-workspace';
 import type { ChatMessage, TonePreset } from './axon-types';
 import { createSupabaseClient } from './supabase.mjs';
+import { routeChat } from './axon-router';
 
-async function callHaiku(apiKey: string, system: string, messages: { role: string; content: string }[]) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: HAIKU_MODEL,
-      max_tokens: 900,
-      system,
-      messages,
-    }),
+/** Routes through the one locked chain (local -> RunPod -> OpenRouter -> Gemini -> Anthropic) instead of hardcoding Anthropic. */
+async function callChatModel(
+  supabaseKey: string,
+  system: string,
+  messages: { role: string; content: string }[],
+  opts: { jsonMode?: boolean } = {},
+): Promise<string> {
+  const routed = await routeChat(supabaseKey ?? '', {
+    messages: [{ role: 'system', content: system }, ...messages],
+    mode: 'auto',
+    hasMini: true,
+    maxTokens: 900,
+    jsonMode: opts.jsonMode ?? false,
   });
-  if (!r.ok) throw new Error(`Anthropic HTTP ${r.status}: ${await r.text()}`);
-  const data = await r.json();
-  return data.content?.map((c: { text?: string }) => c.text || '').join('').trim();
+  if (!routed?.reply) throw new Error('the router returned no reply');
+  return routed.reply;
 }
 
 function extractJson(text: string) {
@@ -89,7 +87,7 @@ Brand: Northside Intelligence — standard title case (use NORTHSIDE only in int
     content: m.content,
   }));
 
-  const reply = await callHaiku(cfg.anthropicKey, system, [
+  const reply = await callChatModel(cfg.supabaseKey, system, [
     ...recent,
     { role: 'user', content: userMessage },
   ]);
@@ -116,7 +114,7 @@ Brand: Northside Intelligence — standard title case (use NORTHSIDE only in int
   try {
     updatedWorkspace =
       (await analyzeAndLearn(
-        cfg.anthropicKey,
+        cfg.supabaseKey,
         userMessage,
         reply,
         profile.tone_preset,
@@ -131,7 +129,7 @@ Brand: Northside Intelligence — standard title case (use NORTHSIDE only in int
 }
 
 async function analyzeAndLearn(
-  apiKey: string,
+  supabaseKey: string,
   userMessage: string,
   assistantReply: string,
   currentPreset: TonePreset,
@@ -181,7 +179,7 @@ Return JSON:
 
   let parsed;
   try {
-    const text = await callHaiku(apiKey, system, [{ role: 'user', content: user }]);
+    const text = await callChatModel(supabaseKey, system, [{ role: 'user', content: user }], { jsonMode: true });
     parsed = extractJson(text);
   } catch {
     return currentWorkspace;
@@ -272,7 +270,7 @@ export async function refreshTonePresetFromSignals() {
   const user = `Signals:\n${JSON.stringify(signals.slice(0, 10), null, 2)}\nCurrent:\n${JSON.stringify(profile.tone_preset)}\n\nReturn: { "style", "warmth", "directness", "formality", "humor", "summary", "learned_patterns", "preferred_phrases", "avoid_phrases" }`;
 
   try {
-    const text = await callHaiku(cfg.anthropicKey, system, [{ role: 'user', content: user }]);
+    const text = await callChatModel(cfg.supabaseKey, system, [{ role: 'user', content: user }], { jsonMode: true });
     const next = extractJson(text) as TonePreset;
     await updateOperatorProfile('default', { tone_preset: next });
     return next;
