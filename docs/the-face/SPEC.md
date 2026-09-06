@@ -1,7 +1,8 @@
 # THE FACE — AXON mission-control UI
 
-**Status:** step 1 built. THE FACE is the Dash **home screen**, not a tab. Nothing beyond the
-brain-orb hero exists yet.
+**Status:** steps 1 and 2 built. THE FACE is the Dash **home screen**, not a tab. The orb and
+the dashboard around it are live; the voice bar (step 3) and the agent trail (step 4) are not.
+The top micro-bar still reads **Preview**.
 **Repo:** `AXON` · lives in the `(axon-v0)` Dash · **not** mirrored to the NI portal yet.
 **Source plan:** nv-vault `_Command Center/Build Plans/Build Plan B — THE FACE (AXON mission-control UI).md`
 
@@ -42,13 +43,18 @@ Full-bleed dark scene, the orb centred, corner-bracket reticles at the four corn
 viewport, one monospaced all-caps micro-label under the orb reading the current state, and a
 single line of plain-English status. Nothing else competes with the orb.
 
-### 2.2 Mission control (step 2)
+### 2.2 Mission control (step 2 — built)
 
-The hero shrinks to the upper third. Below it, three regions:
+The orb does **not** shrink to a strip. It keeps the middle of the screen and stays the
+biggest thing on it; the dashboard is arranged around it:
 
-- **Left rail — Modules.** Every agent, marked LIVE or PLANNED.
-- **Centre — Numbers.** Four to six stat cards.
-- **Right rail — Activity.** The newest lines of agent traffic, newest at the top.
+- **Left of the orb** — Agents live, Working now.
+- **Right of the orb** — Open tickets, Leads this week.
+- **Under the hero** — the Revenue card (a designed empty state) and the module list,
+  every agent grouped LIVE / PLANNED with a plain-word state pill.
+
+On a screen narrower than 900px the orb is still first and the cards flow underneath it.
+The activity rail is deliberately **not** here — it arrives with the agent trail in step 4.
 
 ### 2.3 Voice (step 3)
 
@@ -87,42 +93,61 @@ Rules that hold across all five:
 
 ## 4. Where every number comes from
 
-Everything below is already reachable in this repo. No new backend is needed for step 2.
+**One route feeds the whole screen.** Step 2 added `GET /api/axon-v0/face/summary`
+(`app/api/axon-v0/face/summary/route.ts`), which reads all four NI-Brain tables server-side
+and returns a single JSON object. The screen polls it every 15 seconds — one request, not
+five. Reads live in `lib/axon-v0/face-reads.ts`; all the counting and grouping is pure and
+lives in `lib/axon-v0/face-summary.mjs`, tested offline in `tests/face-summary.test.mjs`.
 
-### 4.1 Stat cards
+### 4.1 Stat cards (built)
 
-| Card | Reads from | Route in this repo |
+| Card | The number | Table read | Empty state |
+|---|---|---|---|
+| Agents live | Roster rows that are switched on and not archived or retired | `nvg_agent_routines` | "No data yet" |
+| Working now | Heartbeats inside the last 10 minutes on a row that is not idle | `nvg_agent_presence` (`last_seen_at`) | "No data yet" |
+| Open tickets | Queue rows that are not done, rejected or skipped | `agent_dispatch` | "No data yet" |
+| Leads this week | Leads created in the last 7 days | `ni_brain_outreach` (`source=axon_ni_services`) | "No data yet" |
+| Revenue | **None.** The finance agent is dormant | — | "Not wired", said in a written sentence |
+
+**`skipped` counts as closed** alongside done and rejected: a skipped ticket was deliberately
+closed out without being run, so counting it as open would put a much larger, misleading
+number on the home screen.
+
+**The house rule, in code:** a source that could not be read comes back as `null`, never `0`.
+`null` is what draws the written empty state. A zero on this screen is always a real zero.
+
+### 4.2 Module LIVE / PLANNED list (built)
+
+One row per row of `nvg_agent_routines`, through the same summary route.
+
+- **LIVE** — switched on, not retired, not archived.
+- **PLANNED** — switched off, retired, or archived.
+
+Health is a plain-word state pill, never a status code:
+
+| Stored health | On screen | Pill |
 |---|---|---|
-| Agents live now | NI-Brain view `v_fleet_live_status` | `GET /api/axon-v0/fleet-status` |
-| Agents on the roster | NI-Brain `nvg_agent_routines` | `GET /api/axon-v0/roster` |
-| Leads in the pipeline | NI-Brain `ni_brain_outreach` (`source=axon_ni_services`) | **No route today.** See the note below |
-| Model spend runway | NI-Brain view `v_usage_runway` | `GET /api/axon-v0/usage` |
-| Jobs waiting on you | NI-Brain notifications | `GET /api/axon-v0/notifications` |
-| Revenue | **Not wired.** Finance is not connected yet | Ships as a designed PLANNED card, never a fake number |
+| `healthy` / `ok` | On track | Filled cyan |
+| `stale`, or anything unrecognised on a live row | Quiet | Dim cyan outline |
+| `degraded`, `down`, `error`, `failing`, `critical` | Needs attention | Hollow cyan, brighter edge |
+| `archived` / retired / switched off | Off | Muted grey |
 
-**Leads has no endpoint right now.** The old `/api/stats` route was deleted when the leads
-dashboard was cleaned up, and nothing replaced it. The counting logic itself survives in
-`lib/leads.ts` (`fetchPipelineStats`), so a small read-only route has to be added under
-`/api/axon-v0/` — matching the pattern of the other panels here, which all fail soft and
-always return a 200 — **before step 2 builds this card**. Until that route exists the card
-ships as a designed empty state, never a hardcoded number.
-
-### 4.2 Module LIVE / PLANNED list
-
-One row per row of `nvg_agent_routines`, through `GET /api/axon-v0/roster`.
-
-- **LIVE** — the routine is not retired and has run inside its own expected window.
-- **PLANNED** — the row exists but has never run, or is marked retired.
-
-The list never hardcodes agent names. If the roster is empty the panel says so in one sentence.
+The list never hardcodes agent names — they are the roster's own, exactly as stored. If the
+roster cannot be read the panel says so in one sentence and nothing else on the screen moves.
 
 ### 4.3 Orb pulse
 
-- **Step 1 (now):** a mock signal in `lib/axon-v0/use-agent-working.ts` that swings between
-  resting and working every few seconds, plus `?working=1` / `?working=0` to pin it.
-- **Step 4 (real):** `GET /api/axon-v0/comms-feed`, which reads NI-Brain view
-  `v_agent_comms_feed`. Any new row inside the last 90 seconds counts as work in progress.
-  The beat rate follows how many distinct agents posted, capped at four so it never strobes.
+- **Step 2 (now):** the same **Working now** count above beats the orb — presence heartbeats
+  inside the last ten minutes. If `nvg_agent_presence` cannot be read, the count falls back
+  to `agent_dispatch` rows in an in-flight status touched in the same window, and the route
+  says which of the two it used. `?working=1` / `?working=0` still pin the orb.
+- **When neither source answers,** the orb falls back to the step-1 mock swing so it never
+  sits dead behind a failed read. The top micro-bar says which is running: **Signal: live**
+  or **Signal: demo**. A 200 with nothing readable behind it counts as demo, not live.
+- **Step 4 (still to come):** `GET /api/axon-v0/comms-feed` (NI-Brain view
+  `v_agent_comms_feed`) takes over the count — any row inside the last 90 seconds is work in
+  progress — and sets the beat rate from how many distinct agents posted, capped at four so
+  it never strobes. The hook's shape does not change when it does.
 
 ### 4.4 Fire gate
 
@@ -214,8 +239,29 @@ The orb also survives the things a long-lived canvas actually meets: losing the 
 context swaps in the still bloom and getting it back rebuilds the scene, the loop stops on a
 hidden tab and on unmount, resizes are throttled, and the pixel ratio is capped at 2.
 
-## 9. What step 2 needs before it starts
+## 9. What step 2 actually ships
 
-- JB's reaction to the orb — size, brightness, beat speed, and whether the rings read right.
-- A decision on whether revenue stays a planned card or waits for Finance to be connected.
-- Confirmation that the six stat cards in section 4.1 are the six he wants first.
+- Five glass stat cards around the orb — thin cyan border, dark glass, corner-bracket
+  reticle, monospaced all-caps micro-label, big tabular number — each with its own written
+  loading and empty state.
+- The module list: every roster agent, grouped Live / Planned, health as a plain-word pill.
+- One new server route, `GET /api/axon-v0/face/summary`, reading four NI-Brain tables and
+  always answering 200 with a complete shape, so one bad source darkens one card only.
+- A real working signal driving the orb, with the mock kept as the fallback and the
+  micro-bar saying which is running.
+- The orb unmoved: still centre, still the biggest thing on the screen, cards flowing under
+  it on narrow screens. Reticles, the top micro-bar and the OPEN DECK link all kept.
+- Screenshots of the built screen: `step2-wide.png` (1440×900) and `step2-narrow.png`
+  (390×844), both taken with no database credentials so they show the empty states, plus
+  `step2-wide-with-data.png` — the same screen with roster-shaped rows, showing the numbers,
+  the pills and the working orb.
+
+**Still open, and still JB's call:**
+
+- Whether revenue stays a designed empty card or waits for Finance to be connected.
+- Whether these are the right first cards, and whether the orb's size and beat read right.
+
+## 10. What step 3 needs before it starts
+
+- The voice bar's placement now the cards are in — it was specified as pinned to the bottom
+  of the hero, which is where the state readout and the deck link now sit.
