@@ -45,7 +45,17 @@ interface FaceOrbSceneProps {
   reducedMotion: boolean;
   /** Spoken label for screen readers. */
   ariaLabel: string;
+  /**
+   * Step 4: bump this by one every time a new bus row arrives (see
+   * lib/axon-v0/use-face-activity.ts) to trigger one visible ~600ms ring-brighten burst.
+   * Ignored under reduced motion — that mode brightens only the trail's own dot, never
+   * the orb.
+   */
+  burstSignal?: number;
 }
+
+/** How long the burst brightening lasts, in milliseconds. */
+const BURST_DURATION_MS = 600;
 
 /** Soft radial dot used as the sprite for every point and for the core halo. */
 function makeGlowTexture(): THREE.Texture {
@@ -107,7 +117,12 @@ function buildFilamentPositions(points: Float32Array): Float32Array {
   return new Float32Array(segments);
 }
 
-export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: FaceOrbSceneProps) {
+export default function FaceOrbScene({
+  working,
+  reducedMotion,
+  ariaLabel,
+  burstSignal,
+}: FaceOrbSceneProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
   /** Bumped when a lost WebGL context comes back, which rebuilds the whole scene. */
@@ -118,6 +133,24 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
   const reducedRef = useRef(reducedMotion);
   workingRef.current = working;
   reducedRef.current = reducedMotion;
+
+  /**
+   * When the burst last started, in `performance.now()` time. `-Infinity` means no burst is
+   * active. Read every frame by the animation loop, written only by the effect below —
+   * never by React state, so a burst never forces a re-render or a scene rebuild.
+   */
+  const burstStartRef = useRef(-Infinity);
+  const lastBurstSignalRef = useRef<number | undefined>(burstSignal);
+
+  useEffect(() => {
+    // Skip the very first value so mounting with a non-zero starting token never fires a
+    // burst nobody asked for, and skip entirely under reduced motion — that mode brightens
+    // only the trail's own dot, never the orb.
+    const changed = burstSignal !== undefined && burstSignal !== lastBurstSignalRef.current;
+    lastBurstSignalRef.current = burstSignal;
+    if (!changed || reducedMotion) return;
+    burstStartRef.current = performance.now();
+  }, [burstSignal, reducedMotion]);
 
   /**
    * Handle onto the running scene. The motion preference is read from a media query, so it
@@ -270,7 +303,7 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
     let startedAt = performance.now();
     let lastAt = startedAt;
 
-    const drawFrame = (elapsed: number, delta: number) => {
+    const drawFrame = (elapsed: number, delta: number, nowMs: number) => {
       const target = workingRef.current ? 1 : 0;
       energy += (target - energy) * Math.min(1, delta * 2.4);
 
@@ -278,16 +311,22 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
       const pulse = 0.5 + 0.5 * beat;
       const amplitude = 0.02 + energy * 0.13;
 
+      // Step 4: one transient ring-brighten burst when a new bus row lands (skipped entirely
+      // under reduced motion — burstStartRef is only ever set when motion is allowed). Eases
+      // out over BURST_DURATION_MS rather than snapping off, so it reads as a pulse, not a flash.
+      const sinceBurst = nowMs - burstStartRef.current;
+      const burstT = sinceBurst >= 0 && sinceBurst < BURST_DURATION_MS ? 1 - sinceBurst / BURST_DURATION_MS : 0;
+
       const scale = 1 + pulse * amplitude;
       burst.scale.setScalar(scale);
       filaments.scale.setScalar(scale);
 
       core.scale.setScalar(1 + pulse * (0.05 + energy * 0.22));
-      coreMaterial.opacity = 0.72 + pulse * (0.1 + energy * 0.18);
-      haloMaterial.opacity = 0.4 + pulse * (0.1 + energy * 0.34);
-      halo.scale.setScalar(2.0 + pulse * (0.15 + energy * 0.7));
-      innerBloomMaterial.opacity = 0.55 + pulse * (0.12 + energy * 0.28);
-      innerBloom.scale.setScalar(0.8 + pulse * (0.08 + energy * 0.3));
+      coreMaterial.opacity = Math.min(1, 0.72 + pulse * (0.1 + energy * 0.18) + burstT * 0.18);
+      haloMaterial.opacity = Math.min(1, 0.4 + pulse * (0.1 + energy * 0.34) + burstT * 0.4);
+      halo.scale.setScalar(2.0 + pulse * (0.15 + energy * 0.7) + burstT * 0.5);
+      innerBloomMaterial.opacity = Math.min(1, 0.55 + pulse * (0.12 + energy * 0.28) + burstT * 0.3);
+      innerBloom.scale.setScalar(0.8 + pulse * (0.08 + energy * 0.3) + burstT * 0.25);
 
       burstMaterial.opacity = 0.6 + energy * 0.22 + pulse * 0.08;
       burstMaterial.size = 0.05 + energy * 0.014;
@@ -298,7 +337,10 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
 
       for (const ring of rings) {
         ring.mesh.rotation.z += delta * ring.spec.spin * (0.4 + energy * 1.5);
-        ring.material.opacity = ring.spec.opacity * (0.7 + energy * 0.5 + pulse * 0.12);
+        ring.material.opacity = Math.min(
+          1,
+          ring.spec.opacity * (0.7 + energy * 0.5 + pulse * 0.12) + burstT * 0.5
+        );
       }
 
       renderer.render(scene, camera);
@@ -309,13 +351,14 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
       const now = performance.now();
       const delta = clampFrameDelta(now, lastAt);
       lastAt = now;
-      drawFrame((now - startedAt) / 1000, delta);
+      drawFrame((now - startedAt) / 1000, delta, now);
     };
 
     // Under reduced motion the loop is stopped and one representative frame is drawn instead.
+    // No burst ever reaches here — burstStartRef is only set when reducedMotion is false.
     const renderStill = () => {
       energy = workingRef.current ? 1 : 0;
-      drawFrame(1.15, 0);
+      drawFrame(1.15, 0, performance.now());
     };
 
     const stopLoop = () => {

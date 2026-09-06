@@ -18,18 +18,25 @@
  * Step 3 adds the voice panel under the orb: hold to talk, a level meter driven by the real
  * microphone, a thinking timer, a live transcript, and a spoken one-line reply. Three
  * read-only commands — today's plan, what needs you, show agents — each of which replaces
- * exactly one panel. Nothing is sent to a model and nothing acts on the world. The agent
- * trail (step 4) is still to come.
+ * exactly one panel. Nothing is sent to a model and nothing acts on the world.
+ *
+ * Step 4 adds the agent activity trail: the last 30 minutes of `agent_bus` traffic, newest
+ * first, right of the module list on a wide screen and below everything on a narrow one.
+ * Its own working signal (a presence heartbeat within ten minutes OR a bus row within the
+ * last two) ORs into the orb's pulse alongside the summary route's count, and a new row
+ * since the last poll triggers one visible burst on the orb.
  *
  * `?working=1` pins the orb working, `?working=0` pins it resting.
  */
 import { useCallback, useRef, useState } from 'react';
 import Link from 'next/link';
+import FaceActivityTrail from '@/components/axon-v0/face-activity-trail';
 import FaceCommandPanel from '@/components/axon-v0/face-command-panel';
 import FaceOrbScene from '@/components/axon-v0/face-orb-scene';
 import { FaceModuleList, FaceStatCard } from '@/components/axon-v0/face-stat-card';
 import FaceVoicePanel from '@/components/axon-v0/face-voice-panel';
 import { useAgentWorkingSignal, usePrefersReducedMotion } from '@/lib/axon-v0/use-agent-working';
+import { useFaceActivity } from '@/lib/axon-v0/use-face-activity';
 import { useFaceCommands } from '@/lib/axon-v0/use-face-commands';
 import { useFaceSummary } from '@/lib/axon-v0/use-face-summary';
 import { useFaceVoice } from '@/lib/axon-v0/use-face-voice';
@@ -37,6 +44,7 @@ import '@/components/axon-v0/face.css';
 
 export function FaceHero() {
   const { summary, loading, live } = useFaceSummary();
+  const { activity, loading: activityLoading, live: activityLive, burstToken } = useFaceActivity();
 
   // The signal is only "live" when the route answered AND a real working source was
   // readable. A 200 with nothing behind it is not a live signal, and saying so would be a
@@ -45,6 +53,7 @@ export function FaceHero() {
   const { working, source } = useAgentWorkingSignal({
     live: signalLive,
     count: summary ? summary.agentsWorking : null,
+    activityWorking: activityLive ? (activity?.workingNow ?? null) : null,
   });
   const reducedMotion = usePrefersReducedMotion();
 
@@ -131,6 +140,7 @@ export function FaceHero() {
                 working={orbWorking}
                 reducedMotion={reducedMotion}
                 ariaLabel={`AXON — ${stateLabel}`}
+                burstSignal={burstToken}
               />
             </div>
 
@@ -219,6 +229,12 @@ export function FaceHero() {
             onBack={commands.back}
           />
         )}
+
+        <FaceActivityTrail
+          items={activity?.trail.items ?? []}
+          readable={activity ? activity.trail.readable : true}
+          loading={activityLoading}
+        />
       </div>
     </section>
   );
