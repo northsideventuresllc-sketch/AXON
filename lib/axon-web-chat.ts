@@ -40,6 +40,7 @@ async function callChatModel(
   keys: { supabaseKey?: string },
   system: string,
   messages: { role: string; content: string }[],
+  opts: { maxTokens?: number; jsonMode?: boolean } = {},
 ): Promise<string> {
   // Same operator power-bar lock as app/api/axon-v0/agent-chat/route.ts — Telegram/voice
   // share the one operator, so their live routing respects the same manual lock.
@@ -50,6 +51,8 @@ async function callChatModel(
     mode: 'auto',
     hasMini: true, // these surfaces run where the mini relay is reachable
     costTierFloor,
+    maxTokens: opts.maxTokens ?? 900,
+    jsonMode: opts.jsonMode ?? false,
   });
   if (!routed?.reply) throw new Error('the router returned no reply');
   return routed.reply;
@@ -212,7 +215,7 @@ Return JSON:
 
   let parsed;
   try {
-    const text = await callChatModel(cfg, system, [{ role: 'user', content: user }]);
+    const text = await callChatModel(cfg, system, [{ role: 'user', content: user }], { jsonMode: true });
     parsed = extractJson(text);
   } catch {
     return currentWorkspace;
@@ -298,7 +301,7 @@ export async function refreshTonePresetFromSignals() {
   const user = `Signals:\n${JSON.stringify(signals.slice(0, 10), null, 2)}\nCurrent:\n${JSON.stringify(profile.tone_preset)}\n\nReturn: { "style", "warmth", "directness", "formality", "humor", "summary", "learned_patterns", "preferred_phrases", "avoid_phrases" }`;
 
   try {
-    const text = await callChatModel(cfg, system, [{ role: 'user', content: user }]);
+    const text = await callChatModel(cfg, system, [{ role: 'user', content: user }], { jsonMode: true });
     const next = extractJson(text) as TonePreset;
     await updateOperatorProfile('default', { tone_preset: next });
     return next;
