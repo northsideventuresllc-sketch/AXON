@@ -2,7 +2,9 @@
 
 **Status:** steps 1, 2, 3 and 4 built. THE FACE is the Dash **home screen**, not a tab. The
 orb, the dashboard around it, the voice panel and the agent activity trail are all live.
-The top micro-bar still reads **Preview**.
+The top micro-bar still reads **Preview**. Step 5 (portal mirror check + marketing hero
+export) is done — see section 12; the portal mirror itself stays off (no page in
+northside-intelligence to mount it on yet).
 **Repo:** `AXON` · lives in the `(axon-v0)` Dash · **not** mirrored to the NI portal yet.
 **Source plan:** nv-vault `_Command Center/Build Plans/Build Plan B — THE FACE (AXON mission-control UI).md`
 
@@ -411,3 +413,42 @@ hidden tab and on unmount, resizes are throttled, and the pixel ratio is capped 
 - Whether the trail should eventually draw the cyan filament from the orb toward the
   module that produced each row, as the original sketch in 2.4 described, rather than
   living in its own card.
+
+## 12. What step 5 actually ships (portal mirror + marketing hero export)
+
+Step 5 is a plumbing-and-asset step, not a Face feature — nothing under `components/axon-v0`,
+`lib/axon-v0`, `use-agent-working.ts`, or `app/(axon-v0)`/`app/api/axon-v0/face` changed.
+
+**Portal mirror — checked, not enabled.** `scripts/sync-portal-ui.mjs`'s `V0_COMPONENT_FILES`
+/ `V0_LIB_FILES` / `V0_API_FILES` lists were brought up to date with every current Face file
+(main plus the step 4 branch, `activity-trail`/`use-agent-working` included) so the lists are
+correct and ready. They stay inside the existing `void V0_*` no-op, so **nothing Face-related
+is written to the portal by this step**:
+
+- northside-intelligence's `main` has no `src/app/(axon-v0)` route group and no page anywhere
+  that mounts an axon-v0 screen — confirmed against the live repo. The only axon-v0 work
+  there lives on two unmerged branches (`claude/axon-v0-setup-vsog4h`,
+  `claude/axon-v0-migration-plan-sfv8o3`); neither reached `main`. There is no existing
+  "how an axon-v0 page lands in the portal" pattern to copy, so per this step's own
+  instruction ("if no pattern exists, STOP that half and report"), no portal page wiring was
+  invented here. Even if a page existed, the v0 API's `generateAxonReply` signature still
+  doesn't match the portal's copy (the documented 2026-08-26 incident reason the whole v0
+  harness stays un-synced) — that fix is separate work, out of scope for a mirror-list update.
+- Verified: `node scripts/sync-portal-ui.mjs <scratch-copy-of-northside-intelligence> --check`
+  → 186 writes planned, **0 breaking removals** (the axon-ui/axon-lib mirror this script
+  actually performs is untouched by the Face-list update). `npm test` (167/167, including
+  `tests/portal-sync-drift.test.mjs`) and `npx tsc --noEmit` both pass clean.
+- **What real portal-hosting of Face would still need:** a `src/app/(axon-v0)` route group
+  in northside-intelligence (or an equivalent page shell) that mounts the Face home, a
+  portal-side `generateAxonReply` compatible with the v0 API signature, and then the
+  `void V0_*` no-op replaced with real write loops (mirroring the pattern the flat
+  `COMPONENT_FILES`/`LIB_FILES`/`API_FILES` loops already use) — none of which exists yet.
+
+**Marketing hero export — shipped.** `scripts/face-hero-export.mjs` drives a real
+`/?working=0` → `/?working=1` pass through the running dev server with Playwright
+(`recordVideo`, 1920×1080), logging in through `POST /api/auth/login` first (no login
+screen in the recording). Output: `docs/the-face/hero-export/orb-hero-1080p.webm` (resting
+~4s, then working ~8s) and a still, `orb-hero-1080p.png`, taken mid-working. Usage and the
+resting/working loop + palette notes: `docs/the-face/hero-export/README.md`. No new
+dependency — the script resolves the Playwright package that is already installed globally
+in this environment rather than adding it to `package.json`.
