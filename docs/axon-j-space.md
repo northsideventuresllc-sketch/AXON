@@ -102,7 +102,7 @@ Every live research job writes a lab-log row (AX-RESEARCH-RUNS):
 | `skipped` | Weekly cap already reached (still audited) |
 | `failed` | Exception during gather/synthesize/persist |
 
-`GET /api/axon/jspace` returns `researchRuns` alongside `jspace` and `findings`. Rate limit counts only `status=completed` rows in the last 7 days.
+`researchRuns`, `jspace`, and `findings` are read directly from NI-Brain (`axon_research_runs`, `axon_jspace_state`) — no HTTP route exposes them (removed #178, zero in-repo callers). Rate limit counts only `status=completed` rows in the last 7 days.
 
 ### Manual run
 
@@ -112,14 +112,11 @@ npm run research
 AXON_DRY_RUN=1 npm run research
 
 # GitHub Actions → AXON Self-Research → workflow_dispatch
-# API: POST /api/axon/research/run { "lane": "open_source", "force": true }
 ```
 
 ### View state
 
-```bash
-# GET /api/axon/jspace
-```
+Query NI-Brain directly (`axon_jspace_state`, `axon_research_runs`) — the `GET /api/axon/jspace` route was removed in #178 (no in-repo caller).
 
 ## Files
 

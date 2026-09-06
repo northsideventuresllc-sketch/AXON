@@ -66,8 +66,6 @@ npm run test:comm-skill
 `POST /api/axon/comm-skill` — run background adapt (same path as script).  
 `GET /api/axon/comm-skill` — preview current prompt block + technique weights.
 
-Also reachable via existing `POST /api/axon/learning/refresh` (tone preset re-synthesis still available).
-
 ---
 
 ## Env
