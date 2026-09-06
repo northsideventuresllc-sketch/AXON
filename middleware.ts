@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE } from '@/lib/auth';
 import { getBasePath, stripBasePath } from '@/lib/paths';
+import { tryGetDashboardSecret } from '@/lib/axon-secrets.mjs';
+import { evaluateDashboardAuth } from '@/lib/axon-dashboard-gate.mjs';
+
+// Logged once per server instance — a missing AXON_DASHBOARD_SECRET is a deploy
+// misconfiguration, not a per-request event worth spamming the log for.
+let loggedMissingDashboardSecret = false;
 
 const PUBLIC_PATHS = [
   '/login',
@@ -31,11 +37,26 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const secret =
-    process.env.AXON_DASHBOARD_SECRET || process.env.SUPABASE_SERVICE_KEY?.slice(0, 32);
+  const secret = tryGetDashboardSecret();
   const session = request.cookies.get(SESSION_COOKIE)?.value;
+  const decision = evaluateDashboardAuth({ secret, sessionCookie: session });
 
-  if (!secret || session !== secret) {
+  if (decision.outcome === 'secret_not_configured') {
+    // Never derive a login secret from the Supabase service key (AX-DASHBOARD-SECRET-OWN-0906)
+    // — refuse outright rather than boot with a fallback nobody explicitly set.
+    if (!loggedMissingDashboardSecret) {
+      loggedMissingDashboardSecret = true;
+      console.error(
+        '[axon-middleware] AXON_DASHBOARD_SECRET is not configured — refusing all dashboard access until it is set.',
+      );
+    }
+    return new NextResponse('Dashboard secret is not configured', {
+      status: 503,
+      headers: { 'content-type': 'text/plain' },
+    });
+  }
+
+  if (decision.outcome === 'unauthenticated') {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

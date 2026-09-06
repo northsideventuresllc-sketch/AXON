@@ -17,11 +17,10 @@ import { createHash } from 'crypto';
 export const dynamic = 'force-dynamic';
 
 function legacyToken(email: string): string {
+  // AX-DASHBOARD-SECRET-OWN-0906: never derive this from a slice of the Supabase
+  // service key — MF_ADMIN_SECRET / AXON_DASHBOARD_SECRET or an explicit dev fallback only.
   const secret =
-    process.env.MF_ADMIN_SECRET ||
-    process.env.AXON_DASHBOARD_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 32) ||
-    'dev-fallback';
+    process.env.MF_ADMIN_SECRET || process.env.AXON_DASHBOARD_SECRET || 'dev-fallback';
   return createHash('sha256').update(`mf:${email}:${secret}`).digest('hex');
 }
 
