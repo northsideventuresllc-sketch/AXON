@@ -32,7 +32,6 @@ export async function POST(req: Request) {
       message.trim(),
       channel,
       history,
-      operatorId,
       sessionId
     );
 
