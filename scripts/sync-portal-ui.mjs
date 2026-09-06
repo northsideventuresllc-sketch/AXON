@@ -186,6 +186,13 @@ export const LIB_FILES = [
   'axon-cron-parser-core.mjs',
   'axon-cron-catalog-core.mjs',
   'axon-generate.mjs',
+
+  // Added after merging main again (2026-09-06): #177 added axon-secrets.mjs
+  // (imported by axon-fire-gate-core.mjs, already on this list) and slack-post.mjs
+  // (imported by axon-router-core.mjs, already on this list). Both found by
+  // scripts/check-portal-sync-imports.mjs against the merged tree.
+  'axon-secrets.mjs',
+  'slack-post.mjs',
 ];
 
 /**

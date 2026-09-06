@@ -15,9 +15,14 @@ audit record the ticket asked for.
   PR #179's `axon-generate.mjs`), which added 3 more required `LIB_FILES` entries
   (`axon-cron-parser-core.mjs`, `axon-cron-catalog-core.mjs`, `axon-generate.mjs`) —
   found by `scripts/check-portal-sync-imports.mjs` against the merged tree.
+- Re-verified again at `089410b` after merging `main` a second time (PR #176's To-Do
+  page — not mirrored, no LIB_FILES impact — and PR #177's `axon-secrets.mjs` /
+  `slack-post.mjs`), which added those 2 more required `LIB_FILES` entries
+  (`axon-secrets.mjs`, imported by the already-mirrored `axon-fire-gate-core.mjs`;
+  `slack-post.mjs`, imported by the already-mirrored `axon-router-core.mjs`).
 - `--check` first, against the real (shared, read-only) checkout, at commit
-  `b47f340`: `Plan checked: 184 write(s), 0 breaking removals.`
-- Real run, against the disposable copy: same result, 184 files written, 0 breaking
+  `089410b`: `Plan checked: 186 write(s), 0 breaking removals.`
+- Real run, against the disposable copy: same result, 186 files written, 0 breaking
   removals, manifest above.
 - `manifest.json` here is a copy of what the run wrote to
   `<niRoot>/src/lib/axon/.axon-sync-manifest.json` — proof of which AXON commit was
