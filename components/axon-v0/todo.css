@@ -1,0 +1,162 @@
+/* Dash → To-Do page. Classes prefixed td- to stay clear of shared globals.css. */
+
+.td-section {
+  position: relative;
+}
+
+.td-micro {
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  color: #6fd8ff;
+}
+
+.td-panel {
+  position: relative;
+  border-radius: 0.9rem;
+  padding: 1.1rem 1.1rem 1.25rem;
+}
+
+/* Corner-bracket chrome, matching the Dash's holographic frame language. */
+.td-panel::before,
+.td-panel::after,
+.td-corners span {
+  content: '';
+}
+.td-corners {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.td-corners span {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid rgba(0, 212, 255, 0.55);
+}
+.td-corners span:nth-child(1) {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+.td-corners span:nth-child(2) {
+  top: -1px;
+  right: -1px;
+  border-left: none;
+  border-bottom: none;
+}
+.td-corners span:nth-child(3) {
+  bottom: -1px;
+  left: -1px;
+  border-right: none;
+  border-top: none;
+}
+.td-corners span:nth-child(4) {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+}
+
+.td-table-wrap {
+  overflow-x: auto;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(0, 212, 255, 0.12);
+}
+
+.td-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.td-table th {
+  text-align: left;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  color: #9adfff;
+  background: rgba(0, 212, 255, 0.06);
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.16);
+  white-space: nowrap;
+}
+
+.td-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  color: #e2f6ff;
+  vertical-align: top;
+}
+
+.td-table tr:last-child td {
+  border-bottom: none;
+}
+
+.td-table tr:hover td {
+  background: rgba(0, 212, 255, 0.03);
+}
+
+.td-desc {
+  color: #a9c4d6;
+}
+
+.td-row-done td {
+  opacity: 0.55;
+}
+.td-row-done .td-task {
+  text-decoration: line-through;
+  text-decoration-color: rgba(148, 163, 184, 0.5);
+}
+
+.td-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.td-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.td-dot-urgent {
+  background: #ff5c7a;
+  box-shadow: 0 0 6px 1px rgba(255, 92, 122, 0.55);
+}
+.td-dot-high {
+  background: #ffb454;
+  box-shadow: 0 0 6px 1px rgba(255, 180, 84, 0.5);
+}
+.td-dot-open {
+  background: #6fd8ff;
+  box-shadow: 0 0 6px 1px rgba(111, 216, 255, 0.5);
+}
+.td-dot-done {
+  background: #46e39a;
+  box-shadow: 0 0 6px 1px rgba(70, 227, 154, 0.5);
+}
+
+.td-empty {
+  padding: 1.6rem 1rem;
+  text-align: center;
+  color: #6b7a8c;
+  font-size: 0.82rem;
+}
+
+.td-group-head td {
+  background: rgba(0, 212, 255, 0.04);
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  color: #6fd8ff;
+  padding: 0.4rem 0.75rem;
+}

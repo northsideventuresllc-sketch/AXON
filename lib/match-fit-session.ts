@@ -11,12 +11,9 @@ const SUPABASE_URL =
   'https://kxijunwgbrlfzvgkhklo.supabase.co';
 
 function sessionSecret(): string {
-  return (
-    process.env.MF_ADMIN_SECRET ||
-    process.env.AXON_DASHBOARD_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 32) ||
-    'dev-fallback'
-  );
+  // AX-DASHBOARD-SECRET-OWN-0906: never derive this from a slice of the Supabase
+  // service key — MF_ADMIN_SECRET / AXON_DASHBOARD_SECRET or an explicit dev fallback only.
+  return process.env.MF_ADMIN_SECRET || process.env.AXON_DASHBOARD_SECRET || 'dev-fallback';
 }
 
 /** Session token for access-code auth (no email in cookie). */

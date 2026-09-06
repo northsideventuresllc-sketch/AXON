@@ -11,6 +11,7 @@ interface LedgerRow {
   model: string | null;
   tier: string | null;
   executor: string | null;
+  provider: string | null;
   cost_usd: number | null;
   called_at: string;
 }
@@ -36,11 +37,16 @@ export async function GET() {
     const since = new Date();
     since.setDate(since.getDate() - 370);
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/axon_cost_ledger?select=venture,model,tier,executor,cost_usd,called_at&called_at=gte.${since.toISOString()}`,
+      `${SUPABASE_URL}/rest/v1/axon_cost_ledger?select=venture,model,tier,executor,provider,cost_usd,called_at&called_at=gte.${since.toISOString()}`,
       { headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json' } },
     );
     if (!r.ok) throw new Error(`ledger fetch failed: ${r.status}`);
-    const rows = (await r.json()) as LedgerRow[];
+    const allRows = (await r.json()) as LedgerRow[];
+    // AX-ROUTER-LOG-FAILURES-0906: axonGenerate/routeChat now write a failure-marker row
+    // (provider:'none') when every lane failed, purely so the failure is auditable from the
+    // ledger. It has no real model/spend and must never render as a phantom $0 "unknown
+    // model" usage tile here.
+    const rows = allRows.filter((row) => row.provider !== 'none');
 
     const now = Date.now();
     const DAY = 24 * 60 * 60 * 1000;

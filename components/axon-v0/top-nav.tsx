@@ -14,6 +14,7 @@ const NAV: Array<{ href: string; label: string; external?: boolean }> = [
   { href: '/agents', label: 'Agents' },
   { href: '/skills', label: 'Skills & MCP' },
   { href: '/toolkit', label: 'AXON Toolkit' },
+  { href: '/todo', label: 'To-Do' },
   { href: '/models', label: 'Settings' },
   { href: NI_PORTAL_URL, label: 'NI Portal', external: true },
   { href: NI_TOOLS_URL, label: 'Intelligence Tools', external: true },
