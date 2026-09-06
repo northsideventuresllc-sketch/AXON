@@ -11,12 +11,12 @@
  * The URL wins over the timer: `?working=1` pins it working, `?working=0` pins it resting.
  * Read straight off `window.location` rather than through the router hook so the page needs
  * no Suspense boundary and still renders identically on the server.
+ *
+ * The pin parsing and the swing timing live in lib/axon-v0/face-signal.mjs so they can be
+ * tested offline (tests/face-signal.test.mjs) without React or a browser.
  */
 import { useEffect, useState } from 'react';
-
-/** Milliseconds the mock signal stays resting, then working, before repeating. */
-const REST_MS = 5200;
-const WORK_MS = 4200;
+import { nextSwingDelay, resolveForcedWorking, REST_MS } from '@/lib/axon-v0/face-signal.mjs';
 
 export interface AgentWorkingSignal {
   /** True while agents are (mock) working. */
@@ -25,11 +25,10 @@ export interface AgentWorkingSignal {
   source: 'mock' | 'forced';
 }
 
+/** Reads the pin off the live URL. Returns null on the server, where there is no URL. */
 function readForced(): boolean | null {
   if (typeof window === 'undefined') return null;
-  const raw = new URLSearchParams(window.location.search).get('working');
-  if (raw === null) return null;
-  return raw !== '0' && raw !== 'false';
+  return resolveForcedWorking(window.location.search);
 }
 
 export function useAgentWorkingSignal(): AgentWorkingSignal {
@@ -50,7 +49,7 @@ export function useAgentWorkingSignal(): AgentWorkingSignal {
     const swing = (next: boolean) => {
       if (cancelled) return;
       setWorking(next);
-      timer = setTimeout(() => swing(!next), next ? WORK_MS : REST_MS);
+      timer = setTimeout(() => swing(!next), nextSwingDelay(next));
     };
 
     timer = setTimeout(() => swing(true), REST_MS);
@@ -69,12 +68,19 @@ export function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReduced(query.matches);
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
+    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches);
+
+    // Safari below 14 only has the deprecated listener pair. Use whichever exists, and
+    // always remove the same one on cleanup so the listener is never left attached.
+    if (typeof query.addEventListener === 'function') {
+      query.addEventListener('change', onChange);
+      return () => query.removeEventListener('change', onChange);
+    }
+    query.addListener(onChange);
+    return () => query.removeListener(onChange);
   }, []);
 
   return reduced;

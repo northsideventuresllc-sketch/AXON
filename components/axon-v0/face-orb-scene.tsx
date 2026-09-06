@@ -12,13 +12,23 @@
  *   · one LineSegments filament web built once
  *   · three thin torus rings, low segment counts
  *   · no post-processing, no shadows, no per-frame allocation
- *   · device pixel ratio capped at 1.75
+ *   · device pixel ratio capped (lib/axon-v0/face-signal.mjs, MAX_PIXEL_RATIO)
+ *   · the loop stops on a hidden tab and on unmount, and never integrates more than one
+ *     twentieth of a second in a single frame
  *
  * Reduced motion: no animation loop at all. One frame is drawn and the container does a
  * slow opacity breathe in CSS instead.
+ *
+ * WebGL can be taken away at any moment (driver reset, tab evicted from the GPU). Losing
+ * the context swaps in the still cyan bloom; getting it back rebuilds the scene.
  */
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import {
+  RESIZE_THROTTLE_MS,
+  cappedPixelRatio,
+  clampFrameDelta,
+} from '@/lib/axon-v0/face-signal.mjs';
 
 /** Locked palette — ground #07080C, cyan #00D4FF, navy #0A1628. No green. */
 const CYAN = 0x00d4ff;
@@ -100,6 +110,8 @@ function buildFilamentPositions(points: Float32Array): Float32Array {
 export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: FaceOrbSceneProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
+  /** Bumped when a lost WebGL context comes back, which rebuilds the whole scene. */
+  const [generation, setGeneration] = useState(0);
 
   // Latest props read by the animation loop without rebuilding the scene.
   const workingRef = useRef(working);
@@ -132,7 +144,7 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
 
     const width = mount.clientWidth || 640;
     const height = mount.clientHeight || 480;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    renderer.setPixelRatio(cappedPixelRatio(window.devicePixelRatio));
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
     mount.appendChild(renderer.domElement);
@@ -295,7 +307,7 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
     const loop = () => {
       raf = requestAnimationFrame(loop);
       const now = performance.now();
-      const delta = Math.min((now - lastAt) / 1000, 0.05);
+      const delta = clampFrameDelta(now, lastAt);
       lastAt = now;
       drawFrame((now - startedAt) / 1000, delta);
     };
@@ -323,7 +335,9 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
 
     controlRef.current = { startLoop, stopLoop, renderStill };
 
-    if (reducedRef.current) {
+    // A tab that is already hidden on mount never starts the loop — one still frame is
+    // enough to have something on screen the moment it is looked at.
+    if (reducedRef.current || document.hidden) {
       renderStill();
     } else {
       raf = requestAnimationFrame(loop);
@@ -335,11 +349,40 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
       const h = mount.clientHeight || height;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      renderer.setPixelRatio(cappedPixelRatio(window.devicePixelRatio));
       renderer.setSize(w, h);
-      if (reducedRef.current) renderStill();
+      if (reducedRef.current || document.hidden) renderStill();
     };
-    const observer = new ResizeObserver(resize);
+
+    // Dragging a window edge fires resize dozens of times a second; reallocating the draw
+    // buffer that often is what makes a canvas stutter. Collapse the burst into one resize.
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    const throttledResize = () => {
+      if (resizeTimer) return;
+      resizeTimer = setTimeout(() => {
+        resizeTimer = null;
+        resize();
+      }, RESIZE_THROTTLE_MS);
+    };
+    const observer = new ResizeObserver(throttledResize);
     observer.observe(mount);
+    window.addEventListener('resize', throttledResize);
+
+    // --- WebGL context loss -------------------------------------------------------------
+    // preventDefault() on the loss is what makes the browser promise a restore event.
+    const canvas = renderer.domElement;
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      stopLoop();
+      setFailed(true);
+    };
+    const onContextRestored = () => {
+      setFailed(false);
+      // Every GPU object died with the old context, so rebuild rather than resume.
+      setGeneration((n) => n + 1);
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost);
+    canvas.addEventListener('webglcontextrestored', onContextRestored);
 
     // Stop burning frames when the tab is hidden. A hidden tab always stops, whatever the
     // motion preference; coming back only restarts the loop when motion is allowed.
@@ -357,7 +400,12 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
     return () => {
       controlRef.current = null;
       cancelAnimationFrame(raf);
+      raf = 0;
+      if (resizeTimer) clearTimeout(resizeTimer);
       observer.disconnect();
+      window.removeEventListener('resize', throttledResize);
+      canvas.removeEventListener('webglcontextlost', onContextLost);
+      canvas.removeEventListener('webglcontextrestored', onContextRestored);
       document.removeEventListener('visibilitychange', onVisibility);
       burstGeometry.dispose();
       burstMaterial.dispose();
@@ -375,11 +423,12 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
       }
       glow.dispose();
       renderer.dispose();
-      if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
+      if (canvas.parentNode === mount) mount.removeChild(canvas);
     };
-    // Built once. State changes are read through refs so the scene is never torn down.
+    // Built once per context. State changes are read through refs so the scene is never
+    // torn down; only a restored WebGL context (generation) rebuilds it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [generation]);
 
   /**
    * The motion preference and the working state both arrive after the scene is built, so this
@@ -398,24 +447,27 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
     }
   }, [reducedMotion, working]);
 
-  if (failed) {
-    return (
-      <div
-        className="face-orb-fallback"
-        role="img"
-        aria-label={ariaLabel}
-        data-working={working ? 'true' : 'false'}
-      />
-    );
-  }
-
+  // The mount stays in the tree even while the fallback is showing: a lost WebGL context is
+  // only ever restored on the same canvas, so removing it would make the loss permanent.
   return (
-    <div
-      ref={mountRef}
-      className="face-orb-canvas"
-      role="img"
-      aria-label={ariaLabel}
-      data-reduced={reducedMotion ? 'true' : 'false'}
-    />
+    <div className="face-orb-stage">
+      <div
+        ref={mountRef}
+        className="face-orb-canvas"
+        role={failed ? undefined : 'img'}
+        aria-label={failed ? undefined : ariaLabel}
+        aria-hidden={failed ? true : undefined}
+        data-failed={failed ? 'true' : 'false'}
+        data-reduced={reducedMotion ? 'true' : 'false'}
+      />
+      {failed ? (
+        <div
+          className="face-orb-fallback"
+          role="img"
+          aria-label={ariaLabel}
+          data-working={working ? 'true' : 'false'}
+        />
+      ) : null}
+    </div>
   );
 }

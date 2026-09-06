@@ -1,6 +1,7 @@
 # THE FACE — AXON mission-control UI
 
-**Status:** step 1 draft, for JB to react to. Nothing here is built beyond the brain-orb hero.
+**Status:** step 1 built. THE FACE is the Dash **home screen**, not a tab. Nothing beyond the
+brain-orb hero exists yet.
 **Repo:** `AXON` · lives in the `(axon-v0)` Dash · **not** mirrored to the NI portal yet.
 **Source plan:** nv-vault `_Command Center/Build Plans/Build Plan B — THE FACE (AXON mission-control UI).md`
 
@@ -14,6 +15,22 @@ In the middle sits a living brain orb — rings around a glowing burst of light.
 sit glass cards with the numbers that matter, a list of which agents are live and which are
 still planned, and a voice panel you can talk to. You ask for something, one panel changes,
 and you can watch the agents work while they answer.
+
+---
+
+## 1a. Where it lives (JB, 2026-09-06 — "The Face shouldn't be a tab")
+
+THE FACE **is** the Dash home screen. Opening the Dash lands on the orb; there is no Face
+tab to find, and the logo in the top bar is the way back to it.
+
+| Route | What is there |
+|---|---|
+| `/` | THE FACE. The hero, full-bleed. `app/(axon-v0)/page.tsx` → `components/axon-v0/face-hero.tsx`. |
+| `/deck` | The old home deck, visually unchanged, until step 2 folds its cards around the orb. One quiet `OPEN DECK` micro-label at the bottom of the hero is the way in. |
+| `/face` | Permanently redirects to `/`. Kept only so an old bookmark still lands somewhere real. |
+
+The top nav carries no Face entry. When step 2 folds the deck's cards into the hero, `/deck`
+and that micro-label both retire.
 
 ---
 
@@ -186,11 +203,16 @@ Rules:
 ## 8. What step 1 actually ships
 
 - This document.
-- A working brain orb at `/face` in the Dash, drawn with Three.js: a glowing neural burst,
-  three rings, corner reticles, a state label, driven by a mock working signal with
-  `?working=1` to force it, and a still frame under reduced motion.
-- A nav entry so the page is reachable.
+- A working brain orb on the Dash home screen (`/`), drawn with Three.js: a glowing neural
+  burst, three rings, corner reticles, a state label, driven by a mock working signal with
+  `?working=1` to force it, and a still frame plus a slow opacity breathe under reduced motion.
+- The old home deck kept whole at `/deck`, reachable from one quiet label on the hero.
+- `/face` left as a permanent redirect to `/`. No Face entry in the nav.
 - Nothing added to the portal mirror.
+
+The orb also survives the things a long-lived canvas actually meets: losing the WebGL
+context swaps in the still bloom and getting it back rebuilds the scene, the loop stops on a
+hidden tab and on unmount, resizes are throttled, and the pixel ratio is capped at 2.
 
 ## 9. What step 2 needs before it starts
 
