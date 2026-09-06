@@ -23,6 +23,7 @@
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { SUPABASE_URL } from '../lib/constants.mjs';
 import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
+import { AGENT } from '../lib/agent-names.mjs';
 import {
   WISDOM_ITEMS_TABLE,
   WISDOM_RUNS_TABLE,
@@ -271,8 +272,11 @@ async function main() {
     loopNotes.push(`Slack post: ${slackResult.ok ? 'ok' : `FAILED (${slackResult.error || slackResult.status})`}`);
 
     await postToAgentBus(sbInsert, {
-      to_agent: 'SENSEI',
-      subject: `AXON-EXEC-AGENT-NIGHTLY-${today}`,
+      to_agent: AGENT.SENSEI,
+      // Matches the axon-executive-sensei-handoff skill's Section 2 pattern + Section 3
+      // fallback check (`AXON-EXEC-DAILY-REPORT-*`) — a mismatched prefix here makes the
+      // fallback think the handoff never fired even when it did.
+      subject: `AXON-EXEC-DAILY-REPORT-${today}`,
       body: {
         kind: 'executive_agent_nightly_summary',
         date: today,

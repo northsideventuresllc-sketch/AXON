@@ -27,6 +27,9 @@ export const runtime = 'nodejs';
 
 const WEBHOOK_SECRET_HEADER = 'x-match-fit-webhook-secret';
 
+/** Cap per-call Telegram sends so one oversized batch can't run the route past its time budget. */
+const MAX_LEADS_PER_CALL = 20;
+
 function checkWebhookSecret(req: Request): boolean {
   const secret = process.env.MATCH_FIT_WEBHOOK_SECRET;
   if (!secret) return false;
@@ -65,21 +68,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'Telegram not configured' }, { status: 503 });
     }
 
+    const leadsToPush = leads.slice(0, MAX_LEADS_PER_CALL);
+    const leadsSkipped = leads.length - leadsToPush.length;
+
     let pushed = 0;
-    for (const lead of leads) {
-      const text = buildLeadMessage(eventType, lead, meta ?? {});
-      const keyboard = buildLeadKeyboard(lead);
-      await telegramSendWithKeyboard(
-        cfg.telegramToken,
-        cfg.telegramChatId,
-        text,
-        keyboard,
-        cfg.dryRun,
-      );
-      pushed += 1;
+    let failed = 0;
+    for (const lead of leadsToPush) {
+      try {
+        const text = buildLeadMessage(eventType, lead, meta ?? {});
+        const keyboard = buildLeadKeyboard(lead);
+        await telegramSendWithKeyboard(
+          cfg.telegramToken,
+          cfg.telegramChatId,
+          text,
+          keyboard,
+          cfg.dryRun,
+        );
+        pushed += 1;
+      } catch (err) {
+        // One lead's Telegram send failing must not lose the progress already made on the
+        // rest of the batch, or turn a partial success into a bare 500.
+        failed += 1;
+        console.error('Match Fit outreach-event: failed to push lead to Telegram:', err);
+      }
     }
 
-    return NextResponse.json({ ok: true, eventType, leadsPushed: pushed });
+    return NextResponse.json({ ok: true, eventType, leadsPushed: pushed, leadsFailed: failed, leadsSkipped });
   } catch (err) {
     console.error('Match Fit outreach-event webhook failed:', err);
     return NextResponse.json(

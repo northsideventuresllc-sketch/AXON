@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import {
   buildLeadKeyboard,
   buildLeadMessage,
+  isDuplicateApprove,
   parseOutreachCallback,
   parseRewriteCommand,
   rewriteCommandTemplate,
@@ -175,6 +176,17 @@ import {
   assert.deepEqual(rw, { platform: 'instagram', leadId: 'Lead_AbC', text: 'Here is my new DM copy' });
   assert.equal(parseRewriteCommand('/mf_rewrite ig:Lead_AbC'), null); // no text
   assert.equal(parseRewriteCommand('/mf_rewrite bogus'), null);
+}
+
+// A repeat Approve tap for the same lead within the dedup window is flagged duplicate
+// (Telegram replays a callback update until the webhook answers 2xx); a different lead,
+// or the same lead outside the window, is not.
+{
+  const t0 = 1_000_000;
+  assert.equal(isDuplicateApprove('instagram', 'dedupe_lead_1', t0), false);
+  assert.equal(isDuplicateApprove('instagram', 'dedupe_lead_1', t0 + 500), true);
+  assert.equal(isDuplicateApprove('instagram', 'dedupe_lead_2', t0 + 500), false);
+  assert.equal(isDuplicateApprove('instagram', 'dedupe_lead_1', t0 + 60_000), false);
 }
 
 console.log('match-fit-outreach-event.test.mjs: all assertions passed');
