@@ -108,15 +108,25 @@ test('the Telegram assistant replies through the router, prompt and trim intact'
   assert.equal(gen.calls.length, 1);
   const msgs = gen.calls[0].opts.messages;
   assert.equal(msgs[0].role, 'system');
-  assert.match(msgs[0].content, /Outreach Assistant/, 'the assistant keeps its own system prompt');
+  assert.match(msgs[0].content, /You are AXON/, 'the assistant keeps its own system prompt');
   assert.match(msgs.at(-1).content, /Total leads: 4/, 'pipeline snapshot still reaches the model');
 });
 
-test('the Telegram fleet-ops redirect still answers without any model call', async () => {
-  const gen = stubGenerate('should not be used');
-  const reply = await axonChatReply(CFG, { userMessage: 'is ARCEUS running?', generate: gen });
-  assert.equal(gen.calls.length, 0, 'the deterministic redirect never reaches the router');
-  assert.match(reply, /outside what I can see from here/);
+// GROUNDED (2026-09-06): the old blanket fleet-ops redirect is gone — JB's chat
+// is AXON's own voice now and fleet health is read live into the context, so a
+// question about another agent is answered from that snapshot instead of being
+// turned away. Grounding is enforced by the system prompt plus the deterministic
+// routes in lib/axon-jb-chat.mjs (tests/telegram-chat-grounded.test.mjs).
+test('a fleet question reaches the router with the grounding rules attached', async () => {
+  const gen = stubGenerate('SENSEI is the only one flagged.');
+  const reply = await axonChatReply(CFG, {
+    userMessage: 'is ARCEUS running?',
+    context: 'FLEET HEALTH — agents not reporting healthy:\n(nothing)',
+    generate: gen,
+  });
+  assert.equal(reply, 'SENSEI is the only one flagged.');
+  assert.equal(gen.calls.length, 1);
+  assert.match(gen.calls[0].opts.messages[0].content, /I don't have that in front of me/);
 });
 
 test('content research synthesis routes, and keeps its raw-results fallback', async () => {
