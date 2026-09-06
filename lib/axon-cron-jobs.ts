@@ -1,22 +1,53 @@
 /**
  * AXON cron job catalog — definitions for Droid Space + Repo Manager Cron tab.
- * Runtime state (enabled, last/next run) lives in NI-Brain `axon_cron_jobs`.
+ *
+ * ── A3: THE CATALOG NO LONGER INVENTS SCHEDULES ────────────────────────────────
+ * This file used to hardcode `cronUtc` per job. Several of those values had drifted
+ * from what actually runs: `hermes-agent-dispatch` claimed `0 6,14,22 * * *` (3×/day)
+ * while the live NI-Brain roster (`nvg_agent_routines`, harness='mac_mini') has run it
+ * twice daily (`30 12 * * *`, `30 16 * * *`) since 2026-07-21; `axon-executive-agent`
+ * claimed no schedule (`cronUtc: null`) while the roster shows it fires nightly at
+ * `20 3 * * *`. Two jobs that run AXON's own scripts on the mini
+ * (axon-social-media-research, axon-seo-tracker) were not in this catalog at all, so
+ * the Cron tab had no toggle for them.
+ *
+ * The fix: the STATIC identity/UI metadata (id, title, description, which
+ * workflow/venture/droid it maps to) plus the pure schedule-derivation functions now
+ * live in lib/axon-cron-catalog-core.mjs (plain .mjs, no TS) so
+ * tests/axon-cron-catalog-roster.test.mjs can load it directly under Node 20 — the CI
+ * pin in .github/workflows/axon-tests.yml, which cannot load a .ts file without a
+ * loader. This file re-exports everything from there with types attached, and (per
+ * #178's A9 extraction) re-exports the pure cron-math from axon-cron-parser-core.mjs
+ * the same way. Schedule truth (`cronUtc`, `scheduleLabel`, whether it's actually
+ * scheduled) is derived at request time from the live roster row in NI-Brain
+ * `nvg_agent_routines` — see `deriveScheduleFromWakeConfig` / `mergeCatalogWithRoster`
+ * (pure, no I/O; the live Supabase read lives in lib/axon-cron-service.ts).
+ *
+ * When a roster row has no schedule this reads (no matching row, a dormant job, an
+ * always-on poller/listener, or a wake_config.cron value that isn't real 5-field cron
+ * syntax — e.g. "9:30pm ET Mac mini" is a note, not a cron expression AXON can quote),
+ * the job shows "not scheduled" rather than a fabricated time.
  */
-import { estimateNextRunUtc } from './axon-cron-parser-core.mjs';
+import { estimateNextRunUtc, estimateNextRunUtcMulti } from './axon-cron-parser-core.mjs';
+import {
+  AXON_CRON_CATALOG_CORE,
+  deriveScheduleFromWakeConfig as deriveScheduleFromWakeConfigCore,
+  mergeCatalogWithRoster as mergeCatalogWithRosterCore,
+} from './axon-cron-catalog-core.mjs';
 
-// A9: re-exported unchanged so every existing `import { estimateNextRunUtc }
-// from '@/lib/axon-cron-jobs'` keeps working — the pure parser itself now
-// lives in axon-cron-parser-core.mjs so it can be unit-tested without a TS loader.
-export { estimateNextRunUtc };
+// A9 (#178) + A3-merge: re-exported unchanged so every existing
+// `import { estimateNextRunUtc } from '@/lib/axon-cron-jobs'` keeps working — the pure
+// cron-math itself lives in axon-cron-parser-core.mjs so it can be unit-tested
+// without a TS loader.
+export { estimateNextRunUtc, estimateNextRunUtcMulti };
 
 export type DroidFaceShape = 'circle' | 'square' | 'triangle' | 'hex' | 'diamond';
 
 export type AxonCronJobDef = {
   id: string;
+  /** nvg_agent_routines.routine_id to look this job's schedule up by, when it differs from id. */
+  rosterRoutineId?: string;
   title: string;
-  scheduleLabel: string;
-  /** Standard 5-field cron (UTC). Empty when schedule is disabled in workflow YAML. */
-  cronUtc: string | null;
   workflowFile: string;
   workflowRepo: string;
   venture: string;
@@ -29,128 +60,72 @@ export type AxonCronJobDef = {
   defaultEnabled: boolean;
 };
 
-export const AXON_CRON_CATALOG: AxonCronJobDef[] = [
-  {
-    id: 'axon-self-research',
-    title: 'Autonomous Research',
-    scheduleLabel: 'Mon / Wed / Fri / Sat · 6:00 AM EST',
-    cronUtc: '0 11 * * 1,3,5,6',
-    workflowFile: 'axon-self-research.yml',
-    workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'AXON',
-    droidRole: 'Research',
-    faceShape: 'circle',
-    axonTools: ['NI Outreach HQ', 'Briefing Panel'],
-    description:
-      'Scans AI models, open-source repos, and neuroscience gaps — feeds your daily AXON brief.',
-    howItWorks:
-      'GitHub Actions fires on schedule, runs research lanes (Haiku + SERP), writes findings + axon_research_runs lab log to NI-Brain, and surfaces highlights in briefing.',
-    whyImportant:
-      'Keeps JB ahead of model releases and OSS tooling without manual RSS hunting — autonomous intelligence loop.',
-    defaultEnabled: true,
-  },
-  {
-    id: 'hermes-agent-dispatch',
-    title: 'Hermes Dispatch Seed',
-    scheduleLabel: '3× daily (nv-vault)',
-    cronUtc: '0 6,14,22 * * *',
-    workflowFile: 'hermes-agent-dispatch.yml',
-    workflowRepo: 'northsideventuresllc-sketch/nv-vault',
-    venture: 'nv-vault',
-    droidRole: 'Dispatch',
-    faceShape: 'hex',
-    axonTools: ['Repo Manager Agent Dispatch', 'NI Marketing HQ'],
-    description: 'Seeds agent_dispatch queue from Job Code Registry and fires manager workflows.',
-    howItWorks:
-      'Hermes workflow seeds NI-Brain queue, optionally fires GitHub relay workflows, Telegram summary to JB.',
-    whyImportant: 'Feeds the Repo Manager queue — without this droid the dispatch board stays empty.',
-    defaultEnabled: true,
-  },
-  {
-    id: 'axon-mf-ad-tracker',
-    title: 'Match Fit Ad Tracker Sync',
-    scheduleLabel: 'Dormant (Agentic OS audit 2026-09-05, Decision #1767) — was every 6 hours',
-    cronUtc: null,
-    workflowFile: 'axon-mf-ad-tracker.yml',
-    workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'Match Fit',
-    droidRole: 'Ads',
-    faceShape: 'square',
-    axonTools: ['Match Fit Admin', 'AXON Management-Match Fit'],
-    description:
-      'Pulls live Meta + TikTok daily snapshots (AX-AD) into NI-Brain for Match Fit Ad Tracking.',
-    howItWorks:
-      'GitHub Actions loads Ads API keys from secrets/ni_platform_secrets, writes mf_ad_platform_daily_snapshots, Telegram cues only if keys missing.',
-    whyImportant:
-      'July $50 MF tests need spend/click truth so August winners are locked from real ROAS — not gut feel.',
-    defaultEnabled: false,
-  },
-  {
-    id: 'axon-local-model-daily',
-    title: 'Local Daily Model Build',
-    scheduleLabel: 'Mac cron · daily 7:00 AM local',
-    cronUtc: null,
-    workflowFile: 'axon-local-model-daily.mjs',
-    workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'AXON',
-    droidRole: 'Model',
-    faceShape: 'circle',
-    axonTools: ['NI Outreach HQ', 'Follow-Up Engine'],
-    description:
-      'AX-MODEL-DAILY — Ollama (or heuristic) scoring loop that calibrates Phase 1 outreach without burning paid API quota.',
-    howItWorks:
-      'Mac cron runs npm run model:daily, probes Ollama, scores recent leads, writes axon_local_model_runs. HQ Phase 1 strip can trigger the same path.',
-    whyImportant:
-      'Moves daily score/follow-up interactivity into AXON so JB spends less on cloud LLM subscriptions for routine calibration.',
-    defaultEnabled: true,
-  },
-  {
-    id: 'axon-comm-skill',
-    title: 'Communication Skill Practice',
-    scheduleLabel: 'On learning refresh / manual',
-    cronUtc: null,
-    workflowFile: 'axon-comm-skill.mjs',
-    workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'AXON',
-    droidRole: 'Comms',
-    faceShape: 'diamond',
-    axonTools: ['Test Mode', 'Repo Manager Agent Dispatch'],
-    description:
-      'AX-COMM-SKILL — heuristic technique weight practice from communication signals; writes axon_comm_skill_runs (AX-COMM-TELEMETRY).',
-    howItWorks:
-      'npm run comm:skill (or POST /api/axon/comm-skill / learning refresh) scans axon_communication_profile + signals, bumps weights, inserts an audit row into axon_comm_skill_runs.',
-    whyImportant:
-      'Without run telemetry JB cannot see whether the communication adaptation skill is practicing — this closes the Post-Comm gap.',
-    defaultEnabled: true,
-  },
-  {
-    id: 'axon-executive-agent',
-    title: 'AXON Executive Agent',
-    scheduleLabel: 'Mac cron · daily 6:30 AM local',
-    cronUtc: null,
-    workflowFile: 'axon-executive-agent.mjs',
-    workflowRepo: 'northsideventuresllc-sketch/AXON',
-    venture: 'AXON',
-    droidRole: 'Learning',
-    faceShape: 'hex',
-    axonTools: ['Briefing Panel', 'NI Outreach HQ'],
-    description:
-      'AXON Executive Agent — rebuilt from AX-WISDOM-LOOP (2026-08-26): watch→digest→enhance absorb of ND corpus, research, Learnings, and signals into durable wisdom, plus durable Decisions/Learnings ingest, cross-repo git history, training-bundle merge, RunPod manifest sync, and the agent_bus/Slack/Telegram bridge.',
-    howItWorks:
-      'Mac cron runs npm run wisdom (scripts/axon-wisdom-loop.mjs, now a thin forwarding shim) which invokes scripts/axon-executive-agent.mjs — ranks multi-source wisdom, enhances J-space, upserts axon_wisdom_items + axon_wisdom_runs, and bridges to agent_bus/Slack/Telegram.',
-    whyImportant:
-      'Slow Takeover / Mac ON path — AXON keeps JB corrections and verified ND principles without re-deriving them every session. Catalog id matches CRON_JOB_ID used by the script itself so the dashboard enabled-toggle actually reaches this job (the old axon-wisdom-loop id was orphaned after the 2026-08-26 rebuild).',
-    defaultEnabled: true,
-  },
-];
+/**
+ * Static catalog data lives in axon-cron-catalog-core.mjs — typed here, defined there.
+ * Cast at the boundary: TS infers loose shapes (e.g. `faceShape: string`) from a plain
+ * .mjs with no JSDoc types, since this project doesn't enable `checkJs`.
+ */
+export const AXON_CRON_CATALOG: AxonCronJobDef[] = AXON_CRON_CATALOG_CORE as AxonCronJobDef[];
 
 export function getCronJobDef(id: string): AxonCronJobDef | undefined {
   return AXON_CRON_CATALOG.find((j) => j.id === id);
 }
 
+// ── Live-schedule derivation (pure — no I/O; implementation in axon-cron-catalog-core.mjs) ──
+
+/** The shape this file needs from a `nvg_agent_routines` row. */
+export type RosterRoutineRow = {
+  routine_id: string;
+  active: boolean | null;
+  wake_type: string | null;
+  wake_config: Record<string, unknown> | null;
+  retired_at: string | null;
+};
+
+export type DerivedSchedule = {
+  /** Every real 5-field cron string this routine's wake_config actually carries. */
+  cronUtc: string[];
+  /** Human label — never invents a time; says "not scheduled" when it can't derive one. */
+  scheduleLabel: string;
+};
+
+/**
+ * Read whatever schedule truth is actually present in a roster row's `wake_config`.
+ * Never fabricates a cron string — a value that isn't real 5-field cron syntax (a
+ * plain-English note like "9:30pm ET Mac mini", a `run_mode` note, a missing field)
+ * is reported as unscheduled/undetermined instead of guessed at.
+ */
+export function deriveScheduleFromWakeConfig(
+  row: Pick<RosterRoutineRow, 'active' | 'wake_config' | 'retired_at'> | null | undefined,
+): DerivedSchedule {
+  return deriveScheduleFromWakeConfigCore(row);
+}
+
+export type CatalogRosterMerge = AxonCronJobDef & {
+  rosterMatched: boolean;
+  rosterActive: boolean | null;
+  cronUtc: string[];
+  scheduleLabel: string;
+};
+
+/**
+ * PURE merge: catalog identity metadata + live roster schedule truth, no network and
+ * no defaults invented for a job the roster doesn't (or no longer) know about.
+ * `rosterRows` should already be filtered to `harness='mac_mini'` by the caller.
+ */
+export function mergeCatalogWithRoster(
+  defs: AxonCronJobDef[],
+  rosterRows: RosterRoutineRow[],
+): CatalogRosterMerge[] {
+  return mergeCatalogWithRosterCore(defs, rosterRows) as CatalogRosterMerge[];
+}
+
 export type AxonCronJobView = AxonCronJobDef & {
   enabled: boolean;
   scheduled: boolean;
+  cronUtc: string[];
+  scheduleLabel: string;
+  rosterMatched: boolean;
   running: boolean;
   lastRunAt: string | null;
   lastRunStatus: string | null;

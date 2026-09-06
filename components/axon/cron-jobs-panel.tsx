@@ -93,7 +93,7 @@ export function CronJobsPanel() {
                 </button>
                 <button
                   type="button"
-                  disabled={toggling === job.id || !job.cronUtc}
+                  disabled={toggling === job.id || job.cronUtc.length === 0}
                   onClick={() => toggleJob(job)}
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
                     job.enabled

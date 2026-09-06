@@ -6,8 +6,10 @@ import { resolveGithubPat } from './github-pat.mjs';
 import {
   AXON_CRON_CATALOG,
   type AxonCronJobView,
-  estimateNextRunUtc,
+  type RosterRoutineRow,
+  estimateNextRunUtcMulti,
   getCronJobDef,
+  mergeCatalogWithRoster,
 } from './axon-cron-jobs';
 
 const SUPABASE_URL =
@@ -119,15 +121,30 @@ export async function fetchCronJobRows(): Promise<Map<string, CronRow>> {
   return map;
 }
 
+/**
+ * A3 — the roster IS the schedule truth. Reads `nvg_agent_routines` filtered to
+ * `harness='mac_mini'` (read-only; nothing in this module ever writes that table).
+ */
+export async function fetchMacMiniRosterRows(): Promise<RosterRoutineRow[]> {
+  const sb = serviceClient();
+  const { data, error } = await sb
+    .from('nvg_agent_routines')
+    .select('routine_id, active, wake_type, wake_config, retired_at')
+    .eq('harness', 'mac_mini');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as RosterRoutineRow[];
+}
+
 export async function listCronJobs(): Promise<AxonCronJobView[]> {
-  const rows = await fetchCronJobRows();
+  const [rows, rosterRows] = await Promise.all([fetchCronJobRows(), fetchMacMiniRosterRows()]);
   const token = await resolveGithubPat();
+  const merged = mergeCatalogWithRoster(AXON_CRON_CATALOG, rosterRows);
 
   const views = await Promise.all(
-    AXON_CRON_CATALOG.map(async (def) => {
+    merged.map(async (def) => {
       const row = rows.get(def.id);
       const enabled = row?.enabled ?? def.defaultEnabled;
-      const scheduled = Boolean(def.cronUtc) && enabled;
+      const scheduled = def.cronUtc.length > 0 && enabled && def.rosterActive !== false;
 
       let ghMeta = {
         lastRunAt: row?.last_run_at ?? null,
@@ -147,10 +164,14 @@ export async function listCronJobs(): Promise<AxonCronJobView[]> {
       }
 
       const warnings = [...(row?.warnings ?? [])];
-      if (!def.cronUtc) warnings.push('No active schedule in workflow — manual dispatch only.');
+      if (!def.rosterMatched) {
+        warnings.push('No matching NI-Brain roster row (nvg_agent_routines, harness=mac_mini) — schedule cannot be verified.');
+      } else if (def.cronUtc.length === 0) {
+        warnings.push('No active schedule in the roster — manual dispatch only.');
+      }
       if (!token) warnings.push('GitHub PAT missing — live run status unavailable.');
 
-      const nextEstimate = estimateNextRunUtc(def.cronUtc);
+      const nextEstimate = estimateNextRunUtcMulti(def.cronUtc);
       const nextRunAt =
         scheduled && nextEstimate
           ? nextEstimate.toISOString()
@@ -180,15 +201,19 @@ export async function toggleCronJob(id: string, enabled: boolean): Promise<AxonC
   const token = await resolveGithubPat();
   const warnings: string[] = [];
 
-  if (token && def.cronUtc) {
+  const rosterRows = await fetchMacMiniRosterRows();
+  const [merged] = mergeCatalogWithRoster([def], rosterRows);
+  const hasSchedule = merged.cronUtc.length > 0;
+
+  if (token && hasSchedule) {
     const ghErr = await setGithubWorkflowEnabled(def.workflowRepo, def.workflowFile, enabled, token);
     if (ghErr) warnings.push(ghErr);
-  } else if (def.cronUtc && !token) {
+  } else if (hasSchedule && !token) {
     warnings.push('GitHub PAT missing — saved preference only; workflow schedule not toggled on GitHub.');
   }
 
   const sb = serviceClient();
-  const nextRun = enabled ? estimateNextRunUtc(def.cronUtc) : null;
+  const nextRun = enabled ? estimateNextRunUtcMulti(merged.cronUtc) : null;
   const { error } = await sb.from('axon_cron_jobs').upsert({
     id,
     enabled,
