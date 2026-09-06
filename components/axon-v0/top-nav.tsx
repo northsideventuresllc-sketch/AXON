@@ -9,8 +9,9 @@ import { apiUrl } from '@/lib/api-base';
 const NI_PORTAL_URL = 'https://northsideintelligence.com';
 const NI_TOOLS_URL = 'https://northsideintelligence.com/tools';
 
+// THE FACE is deliberately absent: it is the home screen, so the logo below is how you
+// reach it (JB, 2026-09-06 — "The Face shouldn't be a tab"). /face redirects to /.
 const NAV: Array<{ href: string; label: string; external?: boolean }> = [
-  { href: '/face', label: 'The Face' },
   { href: '/brain', label: 'Brain' },
   { href: '/agents', label: 'Agents' },
   { href: '/skills', label: 'Skills & MCP' },
@@ -37,7 +38,14 @@ export function TopNav() {
 
   return (
     <nav className="v0-topnav sticky top-0 z-30 px-3 py-1.5">
-      <Link href="/" className="flex items-center gap-2 pr-3" aria-label="AXON home">
+      {/* The home link is THE FACE. It carries the active state no nav entry does now. */}
+      <Link
+        href="/"
+        data-active={pathname === '/'}
+        aria-current={pathname === '/' ? 'page' : undefined}
+        className="v0-homelink flex items-center gap-2 pr-3"
+        aria-label="AXON home"
+      >
         <span className="v0-logomark" />
         <span className="hidden text-[10px] tracking-[0.28em] text-cyan-300/80 sm:inline">
           Northside Intelligence

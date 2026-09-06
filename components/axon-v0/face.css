@@ -32,19 +32,34 @@
   z-index: 1;
 }
 
+.face-orb-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 .face-orb-canvas {
   width: 100%;
   height: 100%;
 }
 
+/* Reduced motion keeps the slow opacity breathe — a 9s fade is the one movement the spec
+   allows in that mode, and it is what stops the orb reading as a dead image. */
 .face-orb-canvas[data-reduced='true'] {
   animation: face-breathe 9s ease-in-out infinite;
 }
 
-/* Used only if WebGL is unavailable — a still cyan bloom, never a broken box. */
+/* The WebGL context is gone (lost, or never available). Hide the dead canvas, show the
+   bloom. The canvas itself stays in the tree so a restored context can rebuild into it. */
+.face-orb-canvas[data-failed='true'] {
+  visibility: hidden;
+}
+
+/* Used when WebGL is unavailable or the context was lost — a still cyan bloom, never a
+   broken box. */
 .face-orb-fallback {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   background: radial-gradient(
     circle at 50% 48%,
     rgba(223, 246, 255, 0.9) 0%,
@@ -109,7 +124,8 @@
 }
 
 .face-topbar,
-.face-readout {
+.face-readout,
+.face-footbar {
   position: absolute;
   left: 0;
   right: 0;
@@ -131,6 +147,26 @@
   gap: 10px;
   padding: 0 20px;
   text-align: center;
+}
+
+/* The one quiet way off the hero until step 2 folds the deck's cards around the orb. */
+.face-footbar {
+  bottom: 12px;
+  gap: 18px;
+}
+
+.face-deck-link {
+  pointer-events: auto;
+  padding: 4px 10px;
+  border-bottom: 1px solid transparent;
+  color: rgba(0, 212, 255, 0.45);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.face-deck-link:hover,
+.face-deck-link:focus-visible {
+  color: rgba(0, 212, 255, 0.95);
+  border-bottom-color: rgba(0, 212, 255, 0.6);
 }
 
 .face-state {
@@ -184,10 +220,11 @@
   color: rgba(226, 240, 252, 0.42);
 }
 
+/* Reduced motion stops everything that moves. The 9s opacity breathe on the orb and the
+   fallback deliberately stays — the spec calls for a static frame plus that slow breathe,
+   and it is well under the flash threshold. */
 @media (prefers-reduced-motion: reduce) {
-  .face-state[data-working='true'] .face-state-dot,
-  .face-orb-canvas[data-reduced='true'],
-  .face-orb-fallback {
+  .face-state[data-working='true'] .face-state-dot {
     animation: none;
   }
 }

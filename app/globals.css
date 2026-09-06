@@ -1282,6 +1282,13 @@
 .v0-navlink:hover { color: #cfe9ff; }
 .v0-navlink[data-active="true"] { color: #eafbff; border-bottom-color: rgba(0,212,255,.7); }
 
+/* The logo is the link to THE FACE (the home screen), so it carries the active state too. */
+.v0-homelink {
+  padding-bottom: .5rem; border-bottom: 2px solid transparent;
+  transition: border-color .15s ease;
+}
+.v0-homelink[data-active="true"] { border-bottom-color: rgba(0,212,255,.7); }
+
 /* Logo mark button (CSS-drawn — no asset in repo) */
 .v0-logomark {
   width: 26px; height: 26px; border-radius: 7px; position: relative;
