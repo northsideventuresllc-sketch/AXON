@@ -107,11 +107,16 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
   workingRef.current = working;
   reducedRef.current = reducedMotion;
 
-  // Redraw the still frame when the state changes while motion is reduced.
-  const renderOnceRef = useRef<(() => void) | null>(null);
-  useEffect(() => {
-    if (reducedMotion) renderOnceRef.current?.();
-  }, [reducedMotion, working]);
+  /**
+   * Handle onto the running scene. The motion preference is read from a media query, so it
+   * is still `false` on the very first render — the scene therefore always starts its loop
+   * and this handle is what stops it again the moment the real preference arrives.
+   */
+  const controlRef = useRef<{
+    startLoop: () => void;
+    stopLoop: () => void;
+    renderStill: () => void;
+  } | null>(null);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -295,12 +300,28 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
       drawFrame((now - startedAt) / 1000, delta);
     };
 
-    // Under reduced motion the loop never starts; one representative frame is drawn instead.
+    // Under reduced motion the loop is stopped and one representative frame is drawn instead.
     const renderStill = () => {
       energy = workingRef.current ? 1 : 0;
       drawFrame(1.15, 0);
     };
-    renderOnceRef.current = renderStill;
+
+    const stopLoop = () => {
+      if (!raf) return;
+      cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    const startLoop = () => {
+      if (raf) return;
+      // Skip the paused stretch so the orb resumes mid-beat instead of jumping.
+      const now = performance.now();
+      startedAt += now - lastAt;
+      lastAt = now;
+      raf = requestAnimationFrame(loop);
+    };
+
+    controlRef.current = { startLoop, stopLoop, renderStill };
 
     if (reducedRef.current) {
       renderStill();
@@ -320,24 +341,21 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
     const observer = new ResizeObserver(resize);
     observer.observe(mount);
 
-    // Stop burning frames when the tab is hidden.
+    // Stop burning frames when the tab is hidden. A hidden tab always stops, whatever the
+    // motion preference; coming back only restarts the loop when motion is allowed.
     const onVisibility = () => {
-      if (reducedRef.current) return;
       if (document.hidden) {
-        cancelAnimationFrame(raf);
-        raf = 0;
-      } else if (!raf) {
-        // Skip the hidden stretch so the orb resumes mid-beat instead of jumping.
-        const now = performance.now();
-        startedAt += now - lastAt;
-        lastAt = now;
-        raf = requestAnimationFrame(loop);
+        stopLoop();
+      } else if (reducedRef.current) {
+        renderStill();
+      } else {
+        startLoop();
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
-      renderOnceRef.current = null;
+      controlRef.current = null;
       cancelAnimationFrame(raf);
       observer.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
@@ -362,6 +380,23 @@ export default function FaceOrbScene({ working, reducedMotion, ariaLabel }: Face
     // Built once. State changes are read through refs so the scene is never torn down.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * The motion preference and the working state both arrive after the scene is built, so this
+   * is what actually enforces them. Turning reduced motion on stops the loop dead and leaves a
+   * single frame on screen; turning it off starts the loop again. While motion is reduced, a
+   * change of state just redraws that one frame.
+   */
+  useEffect(() => {
+    const control = controlRef.current;
+    if (!control) return;
+    if (reducedMotion) {
+      control.stopLoop();
+      control.renderStill();
+    } else if (!document.hidden) {
+      control.startLoop();
+    }
+  }, [reducedMotion, working]);
 
   if (failed) {
     return (

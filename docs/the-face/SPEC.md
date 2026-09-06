@@ -78,10 +78,17 @@ Everything below is already reachable in this repo. No new backend is needed for
 |---|---|---|
 | Agents live now | NI-Brain view `v_fleet_live_status` | `GET /api/axon-v0/fleet-status` |
 | Agents on the roster | NI-Brain `nvg_agent_routines` | `GET /api/axon-v0/roster` |
-| Leads in the pipeline | NI-Brain `ni_brain_outreach` (`source=axon_ni_services`) | `GET /api/stats` |
+| Leads in the pipeline | NI-Brain `ni_brain_outreach` (`source=axon_ni_services`) | **No route today.** See the note below |
 | Model spend runway | NI-Brain view `v_usage_runway` | `GET /api/axon-v0/usage` |
 | Jobs waiting on you | NI-Brain notifications | `GET /api/axon-v0/notifications` |
 | Revenue | **Not wired.** Finance is not connected yet | Ships as a designed PLANNED card, never a fake number |
+
+**Leads has no endpoint right now.** The old `/api/stats` route was deleted when the leads
+dashboard was cleaned up, and nothing replaced it. The counting logic itself survives in
+`lib/leads.ts` (`fetchPipelineStats`), so a small read-only route has to be added under
+`/api/axon-v0/` — matching the pattern of the other panels here, which all fail soft and
+always return a 200 — **before step 2 builds this card**. Until that route exists the card
+ships as a designed empty state, never a hardcoded number.
 
 ### 4.2 Module LIVE / PLANNED list
 
