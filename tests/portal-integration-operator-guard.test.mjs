@@ -31,9 +31,13 @@
  * the overlay route and the overlay helper to each other so neither can be matched
  * against the base copy by mistake.
  *
- * KNOWN GAPS (listed, not hidden): four overlay routes carry no operator check
- * today. They are recorded here so the list can only shrink — adding a new
- * unguarded route fails this test.
+ * KNOWN GAPS: none remain (closed 2026-09-06, SEC-PORTAL-OVERLAY-UNGUARDED-
+ * ENDPOINTS-0906). The four routes that used to be listed here — axon/outreach/run,
+ * axon/outreach/settings, leads/[id]/send, leads/bulk — are all called only from
+ * this repo's own 'use client' components via same-origin fetch(apiUrl(...)); no
+ * machine-to-machine caller was found in this repo, nv-vault, or matchfit, so each
+ * got the standard `await requireAxonOperatorId()` guard rather than a shared-secret
+ * alternative. The allow-list below stays empty on purpose — it must only shrink.
  *
  * Offline: reads files only. No network, no env secrets.
  *
@@ -46,13 +50,8 @@ import { join } from 'node:path';
 
 const OVERLAY_API = 'portal-integration/northside-intelligence/src/app/api';
 
-/** Overlay routes with no operator check as of 2026-09-06. This list may shrink, never grow. */
-const KNOWN_UNGUARDED = new Set([
-  'axon/outreach/run/route.ts',
-  'axon/outreach/settings/route.ts',
-  'leads/[id]/send/route.ts',
-  'leads/bulk/route.ts',
-]);
+/** Overlay routes with no operator check. Empty on purpose — this set may shrink, never grow. */
+const KNOWN_UNGUARDED = new Set([]);
 
 function routeFiles(dir, prefix = '') {
   const out = [];

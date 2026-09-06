@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { bulkUpdateLeads } from '@/lib/axon/leads';
+import { requireAxonOperatorId } from '@/lib/axon/operator';
 
 export async function POST(req: Request) {
   try {
+    await requireAxonOperatorId();
     const body = await req.json();
     const ids = Array.isArray(body.ids) ? (body.ids as string[]) : [];
     if (!ids.length) {
@@ -31,9 +33,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Bulk update failed' },
-      { status: 500 }
-    );
+    const message = err instanceof Error ? err.message : 'Bulk update failed';
+    const status = message === 'AXON access denied' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

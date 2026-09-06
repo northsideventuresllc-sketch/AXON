@@ -1,21 +1,23 @@
 import { NextResponse } from 'next/server';
 import { getOutreachRunStatus, triggerOutreachRun } from '@/lib/axon/outreach-run';
 import { assertFireAllowed, FireHoldError } from '@/lib/axon/axon-fire-gate';
+import { requireAxonOperatorId } from '@/lib/axon/operator';
 
 export async function GET() {
   try {
+    await requireAxonOperatorId();
     const status = await getOutreachRunStatus();
     return NextResponse.json(status);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Status failed' },
-      { status: 500 }
-    );
+    const message = err instanceof Error ? err.message : 'Status failed';
+    const status = message === 'AXON access denied' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function POST(req: Request) {
   try {
+    await requireAxonOperatorId();
     let max = 3;
     try {
       const body = await req.json();
@@ -39,9 +41,8 @@ export async function POST(req: Request) {
         { status: 423 }
       );
     }
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Run failed' },
-      { status: 500 }
-    );
+    const message = err instanceof Error ? err.message : 'Run failed';
+    const status = message === 'AXON access denied' ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
