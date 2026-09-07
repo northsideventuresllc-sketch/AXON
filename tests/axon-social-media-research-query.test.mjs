@@ -6,7 +6,7 @@
 // the dedicated SERPAPI_API_KEY_AXON before the shared SERPAPI_API_KEY.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSocialQueries } from '../scripts/axon-social-media-research.mjs';
+import { buildSocialQueries } from '../lib/axon-social-query-build.mjs';
 import { loadScaffoldConfig } from '../lib/axon-content-scaffold-shared.mjs';
 
 test('buildSocialQueries: established brand with a value prop gets one generic niche query plus a site-anchored fallback', () => {
@@ -52,6 +52,19 @@ test('buildSocialQueries: brand name only (no distinct value-prop keyword) does 
   assert.equal(queries[0].includes(' OR ('), false);
 });
 
+// loadScaffoldConfig resolves several unrelated secrets (Telegram, Gemini,
+// Anthropic) via the same secret() fallback — a permissive spy that answers
+// "no row" for anything not under test, so these tests isolate the SerpApi
+// key resolution without asserting on those other calls.
+function permissiveSbSelect() {
+  const calls = [];
+  const sbSelect = async (table, qs) => {
+    calls.push(qs);
+    return [];
+  };
+  return { sbSelect, calls };
+}
+
 test('loadScaffoldConfig: dedicated SERPAPI_API_KEY_AXON wins over the shared SERPAPI_API_KEY', async () => {
   const prevAxon = process.env.SERPAPI_API_KEY_AXON;
   const prevShared = process.env.SERPAPI_API_KEY;
@@ -60,9 +73,10 @@ test('loadScaffoldConfig: dedicated SERPAPI_API_KEY_AXON wins over the shared SE
   process.env.SERPAPI_API_KEY = 'shared-key';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb-key';
   try {
-    const sbSelect = async () => { throw new Error('sbSelect should not be called when env vars are set'); };
+    const { sbSelect, calls } = permissiveSbSelect();
     const cfg = await loadScaffoldConfig(sbSelect);
     assert.equal(cfg.serpApiKey, 'dedicated-axon-key');
+    assert.ok(!calls.some((q) => q.includes('SERPAPI')), 'env var set — secrets table should not be queried for either SerpApi key');
   } finally {
     if (prevAxon === undefined) delete process.env.SERPAPI_API_KEY_AXON; else process.env.SERPAPI_API_KEY_AXON = prevAxon;
     if (prevShared === undefined) delete process.env.SERPAPI_API_KEY; else process.env.SERPAPI_API_KEY = prevShared;
@@ -78,9 +92,10 @@ test('loadScaffoldConfig: falls back to the shared SERPAPI_API_KEY (env or secre
   process.env.SERPAPI_API_KEY = 'shared-key-only';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb-key';
   try {
-    const sbSelect = async () => { throw new Error('sbSelect should not be called when SERPAPI_API_KEY env var is set'); };
+    const { sbSelect, calls } = permissiveSbSelect();
     const cfg = await loadScaffoldConfig(sbSelect);
     assert.equal(cfg.serpApiKey, 'shared-key-only');
+    assert.ok(calls.some((q) => q.includes('SERPAPI_API_KEY_AXON')), 'dedicated key env var unset — secrets table should be checked for it');
   } finally {
     if (prevAxon === undefined) delete process.env.SERPAPI_API_KEY_AXON; else process.env.SERPAPI_API_KEY_AXON = prevAxon;
     if (prevShared === undefined) delete process.env.SERPAPI_API_KEY; else process.env.SERPAPI_API_KEY = prevShared;
