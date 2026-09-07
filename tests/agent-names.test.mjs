@@ -5,10 +5,11 @@ import { AGENT } from '../lib/agent-names.mjs';
 
 const expected = {
   SEO_TRACKER: 'AXON-SEO-Tracker',
-  SOCIAL_MEDIA_RESEARCH: 'AXON Content Research',
-  TRAINING_INGEST: 'AXON Training Librarian',
-  SELF_RESEARCH: 'AXON Research',
+  SOCIAL_MEDIA_RESEARCH: 'AXON-Social-Media-Research',
+  TRAINING_INGEST: 'AXON-Training-Ingest',
+  SELF_RESEARCH: 'AXON-Self-Research',
   COMPETITOR_SCAN: 'AXON-Competitor-Scan',
+  ARCEUS_REGISTRY_CHECK: 'AXON-ARCEUS Registry Check',
 
   EXECUTIVE_AGENT: 'AXON Executive',
 };
