@@ -10,8 +10,8 @@
  * synthesized into one usable plain-English finding per venture via Gemini
  * (fallback Anthropic Haiku). First-party analytics (JB's own account
  * engagement/follower data) stays a clearly marked extension point —
- * getFirstPartyAnalytics() in lib/axon-content-scaffold-shared.mjs — that
- * gets ADDED later once JB wires in NVG's own social accounts, never a
+ * getFirstPartyAnalytics() in lib/axon-content-scaffold-shared.mjs —
+ * that gets ADDED later once JB wires in NVG's own social accounts, never a
  * prerequisite for this job to do real work today.
  *
  * NEVER simulate fake engagement numbers, fake follower counts, or fake
@@ -20,6 +20,15 @@
  *
  * Ventures come from content_machine_brand_profiles (verified live table;
  * no venture_offering_dpmo table/view exists in this project).
+ *
+ * RESEARCH-6of6-QUERY-BUILD-0907: small/pre-launch products (e.g. BridgeAI,
+ * GapScan — brand-new NI Marketing toolkit entries with no social footprint
+ * yet) were coming back SEARCH_FAILED/NO_RESULTS from the single generic
+ * query below, because a short, ambiguous brand name with nothing to anchor
+ * to returns noise or nothing. buildSocialQueries() (lib/axon-social-query-
+ * build.mjs) adds a second, site-anchored query built from the venture's own
+ * live URL as a fallback when the generic query is empty — still fully
+ * data-driven per venture, nothing hardcoded.
  */
 import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import {
@@ -34,18 +43,13 @@ import {
   loadVentureList,
   getFirstPartyAnalytics,
 } from '../lib/axon-content-scaffold-shared.mjs';
+import { buildSocialQueries } from '../lib/axon-social-query-build.mjs';
 import { externalSearch, synthesizeFinding } from '../lib/axon-research-synthesis.mjs';
 import { researchAiSearchAngle } from '../lib/axon-ai-search-research.mjs';
 import { AGENT } from '../lib/agent-names.mjs';
 
 const JOB_ID = 'axon-social-media-research';
 const PLATFORMS = ['Instagram', 'TikTok', 'X (Twitter)', 'LinkedIn'];
-
-/** Build the niche/keyword string this venture's search should target, from real brand data — never hardcoded per-venture copy. */
-function nicheKeyword(brand) {
-  const vp = brand?.skeleton?.value_props?.[0]?.text;
-  return vp ? `${brand.name} (${vp})` : brand.name;
-}
 
 /**
  * Product truths a venture's public copy must respect. Prefer the live brand-profile field
@@ -61,19 +65,28 @@ export function brandProductTruths(brand) {
   return '';
 }
 
-/** One real external research pass for one venture: SerpApi -> synthesis. */
+/** One real external research pass for one venture: SerpApi -> synthesis, retrying with a site-anchored query when the generic one is empty. */
 async function researchVenture(cfg, brand) {
-  const keyword = nicheKeyword(brand);
-  const query = `"${brand.name}" OR (${keyword}) social media trends competitors 2026`;
+  const queries = buildSocialQueries(brand);
 
   let results = [];
   let searchError = null;
+  let queryUsed = queries[0];
   if (cfg.serpApiKey) {
-    try {
-      results = await externalSearch(cfg.serpApiKey, query, 6);
-    } catch (err) {
-      searchError = err.message;
-      console.warn(`SerpApi search failed for ${brand.slug}: ${err.message}`);
+    for (const query of queries) {
+      try {
+        const rows = await externalSearch(cfg.serpApiKey, query, 6);
+        if (rows.length) {
+          results = rows;
+          queryUsed = query;
+          break;
+        }
+        queryUsed = query; // keep the last-tried query for status/prompt text even on empty
+      } catch (err) {
+        searchError = err.message;
+        queryUsed = query;
+        console.warn(`SerpApi search failed for ${brand.slug} ("${query}"): ${err.message}`);
+      }
     }
   }
 
@@ -94,7 +107,7 @@ async function researchVenture(cfg, brand) {
       venture: brand.venture,
       brand: brand.name,
       slug: brand.slug,
-      status: searchError ? `SEARCH_FAILED: ${searchError}` : 'NO_RESULTS: SerpApi returned nothing for this query',
+      status: searchError ? `SEARCH_FAILED: ${searchError}` : `NO_RESULTS: SerpApi returned nothing for ${queries.length} quer${queries.length === 1 ? 'y' : 'ies'} tried`,
       finding: null,
       firstParty,
     };
@@ -112,7 +125,7 @@ competitor that isn't there.`;
   const prompt = `Venture: ${brand.name} (${brand.venture})
 What this venture does: ${brand?.skeleton?.value_props?.[0]?.text || 'not specified'}
 ${truths ? `Product truths (any copy you suggest MUST respect these): ${truths}\n` : ''}
-Raw Google search results for "${query}":
+Raw Google search results for "${queryUsed}":
 ${JSON.stringify(results.map((r) => ({ title: r.title, snippet: r.snippet, link: r.link, source: r.source })), null, 2)}`;
 
   const synthesis = await synthesizeFinding(cfg, { system, prompt, rawResults: results });
@@ -125,6 +138,7 @@ ${JSON.stringify(results.map((r) => ({ title: r.title, snippet: r.snippet, link:
     finding: synthesis.text,
     findingSource: synthesis.source,
     resultCount: results.length,
+    queryUsed,
     firstParty,
   };
 }
