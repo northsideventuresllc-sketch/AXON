@@ -19,6 +19,7 @@ import {
   isCompetitorLaneDay,
   pickCompetitorVenture,
   buildCompetitorArea,
+  buildCompetitorSkipResult,
   runThreeAreaResearch,
   COMPETITOR_LANE_ID,
 } from '../lib/axon-self-research-build-plans.mjs';
@@ -205,6 +206,68 @@ test('competitor lane on a lane day with no ventures skips honestly instead of i
 
   assert.equal(results.length, 3);
   assert.match(summary, /no ventures found/);
+});
+
+test('buildCompetitorSkipResult shapes an honest skip row, never a plan', () => {
+  const skip = buildCompetitorSkipResult('no sources');
+  assert.equal(skip.area, COMPETITOR_LANE_ID);
+  assert.equal(skip.skipped, true);
+  assert.equal(skip.reason, 'no sources');
+  assert.equal(skip.build_plan, null);
+});
+
+test('BPA-FOLLOWUP-COMPETITOR-LANE-NO-SOURCE-0906: competitor area with empty sources skips synthesis entirely — no model call, honest skip row recorded', async () => {
+  const sb = fakeSb(VENTURES);
+  const gen = stubGenerate(
+    JSON.stringify({
+      finding: 'should never be produced for the competitor area this run',
+      equivalent_or_signal: 's',
+      build_plan: { what_to_build: 'b', steps: [], effort: 'small', priority: 'low' },
+      plain_english: 'p',
+      source_urls: [],
+    }),
+    'gemini'
+  );
+  // Every area gets real sources EXCEPT the competitor query — that comes back empty,
+  // which is the exact condition that must skip synthesis instead of reasoning from
+  // "well-known patterns" (the fabricated-competitor risk this ticket closes).
+  const search = async (serpApiKey, query) => {
+    if (/competitor alternative/.test(query)) return [];
+    return [{ title: 'Source', link: 'https://example.test/s', snippet: 'signal' }];
+  };
+
+  const { results } = await runThreeAreaResearch({
+    sbSelect: sb.sbSelect,
+    sbInsert: sb.sbInsert,
+    sbPatch: sb.sbPatch,
+    supabaseKey: 'k',
+    serpApiKey: null,
+    dryRun: false,
+    generate: gen,
+    search,
+    now: new Date('2026-09-07T12:00:00Z'), // Monday — lane day
+  });
+
+  assert.equal(results.length, 4); // 3 base areas + competitor, all still counted
+  // No model call was made for the competitor area — only the 3 base areas synthesize.
+  assert.equal(gen.calls.length, 3);
+
+  const competitorResult = results.find((r) => r.area.id === COMPETITOR_LANE_ID);
+  assert.ok(competitorResult, 'competitor area result present');
+  assert.equal(competitorResult.result.skipped, true);
+  assert.equal(competitorResult.result.reason, 'no sources');
+  assert.equal(competitorResult.result.build_plan, null);
+  assert.equal(competitorResult.result._provider, 'skipped');
+
+  const competitorRow = sb.inserted.find(
+    (r) => r.table === 'axon_research_findings' && r.row.research_lane === COMPETITOR_LANE_ID
+  );
+  assert.ok(competitorRow, 'competitor skip recorded to axon_research_findings');
+  assert.equal(competitorRow.row.status, 'skipped');
+  assert.equal(competitorRow.row.implementation_hint, null);
+  assert.equal(competitorRow.row.meta.skipped, true);
+  assert.equal(competitorRow.row.meta.skip_reason, 'no sources');
+  assert.equal(competitorRow.row.meta.build_plan, null);
 });
 
 // ---------------------------------------------------------------------------

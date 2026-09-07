@@ -213,7 +213,7 @@ async function main() {
 
   const busBody = plainEnglish([
     `Social Media Research run — ${new Date().toISOString().slice(0, 10)}.`,
-    `Checked ${results.length} of ${ventures.length} venture(s). Real external research via SerpApi + Gemini/Anthropic synthesis — ${ok.length} finding(s), ${results.length - ok.length} blocked/empty.`,
+    `Checked ${results.length} of ${ventures.length} venture(s). Real external research via web search with fallback + Gemini/Anthropic synthesis — ${ok.length} finding(s), ${results.length - ok.length} blocked/empty.`,
     `AI-search-optimization lane (what people ask assistants, not keywords) — ${aiSearchOk.length}/${aiSearchResults.length} real finding(s).`,
     `First-party account analytics (JB's own social accounts) still NEEDS_CREDENTIALS — that stays a separate add-on, not a blocker for this run.`,
     '',
