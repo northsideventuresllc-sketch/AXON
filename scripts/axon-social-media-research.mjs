@@ -25,10 +25,10 @@
  * GapScan — brand-new NI Marketing toolkit entries with no social footprint
  * yet) were coming back SEARCH_FAILED/NO_RESULTS from the single generic
  * query below, because a short, ambiguous brand name with nothing to anchor
- * to returns noise or nothing. buildSocialQueries() adds a second,
- * site-anchored query built from the venture's own live URL as a fallback
- * when the generic query is empty — still fully data-driven per venture,
- * nothing hardcoded.
+ * to returns noise or nothing. buildSocialQueries() (lib/axon-social-query-
+ * build.mjs) adds a second, site-anchored query built from the venture's own
+ * live URL as a fallback when the generic query is empty — still fully
+ * data-driven per venture, nothing hardcoded.
  */
 import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
 import {
@@ -41,21 +41,15 @@ import {
   writeDecision,
   plainEnglish,
   loadVentureList,
-  deriveDomain,
   getFirstPartyAnalytics,
 } from '../lib/axon-content-scaffold-shared.mjs';
+import { buildSocialQueries } from '../lib/axon-social-query-build.mjs';
 import { externalSearch, synthesizeFinding } from '../lib/axon-research-synthesis.mjs';
 import { researchAiSearchAngle } from '../lib/axon-ai-search-research.mjs';
 import { AGENT } from '../lib/agent-names.mjs';
 
 const JOB_ID = 'axon-social-media-research';
 const PLATFORMS = ['Instagram', 'TikTok', 'X (Twitter)', 'LinkedIn'];
-
-/** Build the niche/keyword string this venture's search should target, from real brand data — never hardcoded per-venture copy. */
-function nicheKeyword(brand) {
-  const vp = brand?.skeleton?.value_props?.[0]?.text;
-  return vp ? `${brand.name} (${vp})` : brand.name;
-}
 
 /**
  * Product truths a venture's public copy must respect. Prefer the live brand-profile field
@@ -69,31 +63,6 @@ export function brandProductTruths(brand) {
     return 'Match Fit is WORLDWIDE — never say "nationwide" or name a place. In public/social copy lead with trending, widely-understood words ("coach", "trainer", "personal trainer"); "Fitness Pro" is our internal brand term, so use it sparingly and never lead with it while the brand is still being established.';
   }
   return '';
-}
-
-/**
- * This venture's SerpApi query variants, in the order to try them.
- *
- * 1. Generic niche query (brand name + value-prop keyword) — works well for
- *    established brands with real search volume.
- * 2. Site-anchored fallback (brand name + its own live domain, via
- *    deriveDomain from cta_paths) — for a small/pre-launch product whose
- *    bare name is too short/ambiguous to return anything useful on its own,
- *    anchoring to the venture's real URL still returns real, relevant
- *    results instead of an empty/noisy set.
- *
- * Built entirely from the live brand row — nothing hardcoded per venture.
- */
-export function buildSocialQueries(brand) {
-  const keyword = nicheKeyword(brand);
-  const domain = deriveDomain(brand);
-  const queries = [
-    `"${brand.name}"${keyword && keyword !== brand.name ? ` OR (${keyword})` : ''} social media trends competitors 2026`,
-  ];
-  if (domain?.hostname) {
-    queries.push(`"${brand.name}" (site:${domain.hostname} OR "${domain.hostname}") 2026`);
-  }
-  return queries;
 }
 
 /** One real external research pass for one venture: SerpApi -> synthesis, retrying with a site-anchored query when the generic one is empty. */
