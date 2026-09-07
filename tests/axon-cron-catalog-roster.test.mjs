@@ -92,6 +92,41 @@ const MOCK_ROSTER = [
     wake_config: { run_mode: 'persistent polling loop, not cron' },
     retired_at: null,
   },
+  // ── BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906: the four mini jobs ──────────────────
+  {
+    routine_id: 'axon-spend-guard',
+    platform: 'nvg_mini',
+    active: true,
+    wake_type: 'local_only',
+    wake_config: { cmds: ['node scripts/axon-weekly-spend-guard.mjs'], cron: ['0 4 * * *'], repo: 'nv-vault' },
+    retired_at: null,
+  },
+  {
+    routine_id: 'axon-training-ingest',
+    platform: 'nvg_mini',
+    active: true,
+    wake_type: 'local_only',
+    wake_config: { cmds: ['node .github/scripts/axon-training-ingest.mjs'], cron: ['15 7 * * *'], repo: 'nv-vault' },
+    retired_at: null,
+  },
+  {
+    // Retired 2026-09-05 (Decision #1767) — active=false, no catalog entry at all.
+    routine_id: 'axon-competitor-scan',
+    platform: 'nvg_mini',
+    active: false,
+    wake_type: 'local_only',
+    wake_config: { cmds: ['node .github/scripts/axon-competitor-scan.mjs'], cron: ['0 8 * * 1,3,5'], repo: 'nv-vault' },
+    retired_at: null,
+  },
+  {
+    // Retired 2026-09-06 — active=false, no catalog entry at all.
+    routine_id: 'axon-model-heal',
+    platform: 'nvg_mini',
+    active: false,
+    wake_type: 'local_only',
+    wake_config: { cmds: ['node scripts/test-axon-local-model-runs.mjs'], cron: ['45 7 * * *'], repo: 'nv-vault' },
+    retired_at: null,
+  },
 ];
 
 // ── 1 + 2: derive schedule per row, never fabricated ─────────────────────────────
@@ -113,7 +148,13 @@ const MOCK_ROSTER = [
 
   const dailyModelBuild = deriveScheduleFromWakeConfig(MOCK_ROSTER[6]);
   assert.deepEqual(dailyModelBuild.cronUtc, [], 'a plain-English note is not cron syntax and must not be surfaced as one');
-  assert.equal(dailyModelBuild.scheduleLabel, 'not scheduled');
+  // BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906 item 3: an unparseable human schedule
+  // note must not be silently discarded down to a bare "not scheduled" — it is
+  // shown as an explicitly non-authoritative note instead.
+  assert.notEqual(dailyModelBuild.scheduleLabel, 'not scheduled', 'a human note must not be discarded to the bare unscheduled label');
+  assert.match(dailyModelBuild.scheduleLabel, /not scheduled/);
+  assert.match(dailyModelBuild.scheduleLabel, /9:30pm ET Mac mini/, 'the raw human note must survive into the label');
+  assert.match(dailyModelBuild.scheduleLabel, /not real cron syntax|unverified/i, 'must flag the note as non-authoritative');
 
   const poller = deriveScheduleFromWakeConfig(MOCK_ROSTER[7]);
   assert.deepEqual(poller.cronUtc, []);
@@ -164,6 +205,25 @@ const MOCK_ROSTER = [
   const exec = byId.get('axon-executive-agent');
   assert.equal(exec.rosterMatched, true);
   assert.deepEqual(exec.cronUtc, ['20 3 * * *']);
+
+  // BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906 item 1: axon-spend-guard and
+  // axon-training-ingest are now catalogued and carry their live roster schedule.
+  const spendGuard = byId.get('axon-spend-guard');
+  assert.ok(spendGuard, 'axon-spend-guard must be a catalog entry');
+  assert.equal(spendGuard.rosterMatched, true);
+  assert.deepEqual(spendGuard.cronUtc, ['0 4 * * *']);
+  assert.equal(spendGuard.rosterPlatform, 'nvg_mini');
+
+  const trainingIngest = byId.get('axon-training-ingest');
+  assert.ok(trainingIngest, 'axon-training-ingest must be a catalog entry');
+  assert.equal(trainingIngest.rosterMatched, true);
+  assert.deepEqual(trainingIngest.cronUtc, ['15 7 * * *']);
+  assert.equal(trainingIngest.rosterPlatform, 'nvg_mini');
+
+  // ...and axon-competitor-scan / axon-model-heal (retired 2026-09-05/06) must NOT
+  // be catalog entries at all — pruned, not merely disabled.
+  assert.equal(byId.get('axon-competitor-scan'), undefined, 'retired job must have no catalog entry');
+  assert.equal(byId.get('axon-model-heal'), undefined, 'retired job must have no catalog entry');
 }
 
 // ── 3: every live mac_mini AXON job (repo === 'axon' in wake_config) in the mocked

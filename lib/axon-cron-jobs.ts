@@ -80,6 +80,9 @@ export type RosterRoutineRow = {
   wake_type: string | null;
   wake_config: Record<string, unknown> | null;
   retired_at: string | null;
+  /** `nvg_agent_routines.platform` — 'nvg_mini' means a Mac-mini-native job with
+   *  no GitHub Actions schedule; the roster's own `active` flag is the toggle. */
+  platform?: string | null;
 };
 
 export type DerivedSchedule = {
@@ -104,6 +107,8 @@ export function deriveScheduleFromWakeConfig(
 export type CatalogRosterMerge = AxonCronJobDef & {
   rosterMatched: boolean;
   rosterActive: boolean | null;
+  /** `nvg_agent_routines.platform` for the matched row, or null when unmatched. */
+  rosterPlatform: string | null;
   cronUtc: string[];
   scheduleLabel: string;
 };
@@ -126,10 +131,15 @@ export type AxonCronJobView = AxonCronJobDef & {
   cronUtc: string[];
   scheduleLabel: string;
   rosterMatched: boolean;
+  rosterPlatform: string | null;
   running: boolean;
   lastRunAt: string | null;
   lastRunStatus: string | null;
   lastRunSummary: string | null;
   nextRunAt: string | null;
   warnings: string[];
+  /** Set (via lib/axon-v0/plain-labels.ts) when this job's toggle is driven through
+   *  the NI-Brain roster's `active` flag instead of a GitHub Actions workflow —
+   *  BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906 item 2. Null for everything else. */
+  toggleNote: string | null;
 };

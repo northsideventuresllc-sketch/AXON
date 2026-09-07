@@ -267,4 +267,42 @@ await withFetch(
   );
 }
 
+// --- 7. GEMINI_MODEL secret overrides whatever router_models has on file for the
+// gemini lane (BPA-FOLLOWUP-SYNC-LIST-GEMINI-MODEL-0906 — gemini-first standing rule) ---
+{
+  const calls = [];
+  await withFetch(
+    makeFetch({
+      chainRows: [{ tier: 'gemini', position: 0, enabled: true }],
+      secrets: { GEMINI_API_KEY: 'gemini-platform-key', GEMINI_MODEL: 'gemini-override-model' },
+      providerHandlers: { gemini: okGemini('hello with override model') },
+      calls,
+    }),
+    async () => {
+      const out = await axonGenerate('fake-key', { accountId: 'acct-1', messages: msgs });
+      assert.equal(out.provider, 'gemini');
+      assert.equal(out.model, 'gemini-override-model', 'GEMINI_MODEL secret must win over router_models.model');
+    },
+  );
+  const geminiCall = calls.find((c) => c.url.includes('generativelanguage.googleapis.com'));
+  assert.ok(
+    geminiCall.url.includes('/models/gemini-override-model:generateContent'),
+    `expected the override model in the call URL, got: ${geminiCall.url}`,
+  );
+}
+
+// --- 8. no GEMINI_MODEL secret set — router_models.model (the pre-existing default) wins ---
+await withFetch(
+  makeFetch({
+    chainRows: [{ tier: 'gemini', position: 0, enabled: true }],
+    secrets: { GEMINI_API_KEY: 'gemini-platform-key' },
+    providerHandlers: { gemini: okGemini('hello with default model') },
+    calls: [],
+  }),
+  async () => {
+    const out = await axonGenerate('fake-key', { accountId: 'acct-1', messages: msgs });
+    assert.equal(out.model, MODEL.gemini.model, 'no override set — router_models.model must be used as-is');
+  },
+);
+
 console.log('axon-generate-chain.test.mjs: all assertions passed');

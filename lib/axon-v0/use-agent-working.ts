@@ -8,9 +8,10 @@
  * above zero beats the orb. The mock timer below is now only a fallback — it runs when the
  * route errors or has not answered yet, so the orb never sits dead behind a failed read.
  *
- * Step 4 of Build Plan B swaps the count's own source for the agent traffic feed
- * (`GET /api/axon-v0/comms-feed`), which also sets the beat rate; the hook shape here does
- * not change when it does.
+ * Step 4 of Build Plan B adds a second live source alongside the summary count: the agent
+ * activity feed's own working signal (a presence heartbeat within ten minutes OR a bus row
+ * within the last two — lib/axon-v0/face-activity.mjs, `resolveActivityWorking`). Either
+ * source saying "working" is enough; the hook shape otherwise does not change.
  *
  * The URL still wins over everything: `?working=1` pins it working, `?working=0` pins it resting.
  * Read straight off `window.location` rather than through the router hook so the page needs
@@ -35,6 +36,13 @@ export interface LiveWorkingInput {
   live: boolean;
   /** Agents working right now, or null when that source could not be read. */
   count: number | null;
+  /**
+   * Step 4: the activity feed's own independent working signal — a presence heartbeat
+   * within ten minutes OR a bus row within the last two. `null` when that feed itself has
+   * not answered, which is different from "answered and says nothing is running" (`false`).
+   * Either this or `count` saying working is enough to beat the orb.
+   */
+  activityWorking?: boolean | null;
 }
 
 /** Reads the pin off the live URL. Returns null on the server, where there is no URL. */
@@ -50,7 +58,15 @@ export function useAgentWorkingSignal(input?: LiveWorkingInput): AgentWorkingSig
   // The live count is only usable when the route answered AND that particular source was
   // readable. `live` with a null count means the route is up but presence is not — that is
   // still a real answer of "nothing is running", not a reason to start the mock.
-  const liveWorking = input?.live ? (input.count ?? 0) > 0 : null;
+  const summaryWorking = input?.live ? (input.count ?? 0) > 0 : null;
+  // Step 4's independent signal: null means that feed has not answered, not "not working".
+  const activityWorking = input?.activityWorking ?? null;
+  // Either live source saying "working" is enough. Only fall back to the mock swing when
+  // NEITHER source has answered at all — one real "nothing running" answer beats silence.
+  const liveWorking =
+    summaryWorking === null && activityWorking === null
+      ? null
+      : summaryWorking === true || activityWorking === true;
   const useMock = liveWorking === null;
 
   useEffect(() => {

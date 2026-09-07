@@ -13,20 +13,38 @@
  *
  * All five numbers and the orb's pulse come from one poll of `GET /api/axon-v0/face/summary`
  * every 15 seconds. Nothing on this screen is ever a made-up number: a source that did not
- * answer shows its written empty state. The voice bar (step 3) and the agent trail (step 4)
- * are still to come.
+ * answer shows its written empty state.
+ *
+ * Step 3 adds the voice panel under the orb: hold to talk, a level meter driven by the real
+ * microphone, a thinking timer, a live transcript, and a spoken one-line reply. Three
+ * read-only commands — today's plan, what needs you, show agents — each of which replaces
+ * exactly one panel. Nothing is sent to a model and nothing acts on the world.
+ *
+ * Step 4 adds the agent activity trail: the last 30 minutes of `agent_bus` traffic, newest
+ * first, right of the module list on a wide screen and below everything on a narrow one.
+ * Its own working signal (a presence heartbeat within ten minutes OR a bus row within the
+ * last two) ORs into the orb's pulse alongside the summary route's count, and a new row
+ * since the last poll triggers one visible burst on the orb.
  *
  * `?working=1` pins the orb working, `?working=0` pins it resting.
  */
+import { useCallback, useRef, useState } from 'react';
 import Link from 'next/link';
+import FaceActivityTrail from '@/components/axon-v0/face-activity-trail';
+import FaceCommandPanel from '@/components/axon-v0/face-command-panel';
 import FaceOrbScene from '@/components/axon-v0/face-orb-scene';
 import { FaceModuleList, FaceStatCard } from '@/components/axon-v0/face-stat-card';
+import FaceVoicePanel from '@/components/axon-v0/face-voice-panel';
 import { useAgentWorkingSignal, usePrefersReducedMotion } from '@/lib/axon-v0/use-agent-working';
+import { useFaceActivity } from '@/lib/axon-v0/use-face-activity';
+import { useFaceCommands } from '@/lib/axon-v0/use-face-commands';
 import { useFaceSummary } from '@/lib/axon-v0/use-face-summary';
+import { useFaceVoice } from '@/lib/axon-v0/use-face-voice';
 import '@/components/axon-v0/face.css';
 
 export function FaceHero() {
   const { summary, loading, live } = useFaceSummary();
+  const { activity, loading: activityLoading, live: activityLive, burstToken } = useFaceActivity();
 
   // The signal is only "live" when the route answered AND a real working source was
   // readable. A 200 with nothing behind it is not a live signal, and saying so would be a
@@ -35,13 +53,43 @@ export function FaceHero() {
   const { working, source } = useAgentWorkingSignal({
     live: signalLive,
     count: summary ? summary.agentsWorking : null,
+    activityWorking: activityLive ? (activity?.workingNow ?? null) : null,
   });
   const reducedMotion = usePrefersReducedMotion();
 
-  const stateLabel = working ? 'Agents working' : 'Standby';
-  const sentence = working
-    ? 'Agents are working right now. The orb beats while they run.'
-    : 'Nothing is running. The orb rests until an agent starts work.';
+  // Spoken replies are off under reduced motion, and off whenever the Mute micro-toggle is
+  // on. Everything spoken is on screen anyway, so muting loses nothing.
+  const [muteToggle, setMuteToggle] = useState(false);
+  const muted = muteToggle || reducedMotion;
+
+  // The microphone hands a heard sentence to the command runner, and the command runner
+  // speaks its reply back through the microphone hook. One ref breaks that circle without
+  // either hook having to know about the other.
+  const runRef = useRef<(text: string) => void>(() => {});
+  const onHeard = useCallback((text: string) => runRef.current(text), []);
+  const voice = useFaceVoice({ onHeard, muted });
+  const commands = useFaceCommands({
+    speak: voice.speak,
+    moduleCount: summary ? summary.modules.total : null,
+  });
+  runRef.current = commands.run;
+
+  const toggleMute = useCallback(() => {
+    voice.cancelSpeech();
+    setMuteToggle((was) => !was);
+  }, [voice]);
+
+  // While a command is being worked out the orb goes to Thinking — a transient override on
+  // top of the live signal, which stays authoritative the moment the answer lands.
+  const thinking = commands.pending;
+  const orbWorking = working || thinking;
+
+  const stateLabel = thinking ? 'Thinking' : working ? 'Agents working' : 'Standby';
+  const sentence = thinking
+    ? 'Working out the answer. The orb holds the beat until it lands.'
+    : working
+      ? 'Agents are working right now. The orb beats while they run.'
+      : 'Nothing is running. The orb rests until an agent starts work.';
 
   // What the working number was actually counted from, said in plain English under the card.
   const workingCaption =
@@ -89,16 +137,17 @@ export function FaceHero() {
           <div className="face-centre">
             <div className="face-orb-wrap">
               <FaceOrbScene
-                working={working}
+                working={orbWorking}
                 reducedMotion={reducedMotion}
                 ariaLabel={`AXON — ${stateLabel}`}
+                burstSignal={burstToken}
               />
             </div>
 
             <div className="face-readout">
-              <span className="face-state face-micro" data-working={working ? 'true' : 'false'}>
+              <span className="face-state face-micro" data-working={orbWorking ? 'true' : 'false'}>
                 <span className="face-state-dot" aria-hidden />
-                {working ? 'Agents Working' : 'Standby'}
+                {thinking ? 'Thinking' : working ? 'Agents Working' : 'Standby'}
               </span>
               <p className="face-sentence">{sentence}</p>
               <p className="face-hint">
@@ -128,6 +177,28 @@ export function FaceHero() {
           </div>
         </div>
 
+        {/* Docked bottom-centre of the hero, under the orb. */}
+        <div className="face-voicebar">
+          <FaceVoicePanel
+            listening={voice.listening}
+            pending={commands.pending}
+            elapsed={commands.elapsed}
+            levels={voice.levels}
+            interim={voice.interim}
+            heard={commands.heard}
+            reply={commands.reply}
+            hint={commands.hint}
+            speechSupported={voice.speechSupported}
+            micError={voice.micError}
+            muted={muted}
+            onToggleMute={toggleMute}
+            reducedMotion={reducedMotion}
+            onHoldStart={voice.start}
+            onHoldEnd={voice.stop}
+            onSubmit={commands.run}
+          />
+        </div>
+
         {/* The one way out of the hero until the deck's remaining cards fold in. */}
         <div className="face-footbar">
           <Link href="/deck" className="face-micro face-deck-link">
@@ -143,11 +214,26 @@ export function FaceHero() {
           planned
           caption="The finance agent is dormant, so there is no money figure to show. This card stays blank on purpose rather than showing a number nobody has checked."
         />
-        <FaceModuleList
-          live={summary?.modules.live ?? []}
-          planned={summary?.modules.planned ?? []}
-          readable={summary ? summary.modules.readable : true}
-          loading={loading}
+        {commands.panel === 'modules' ? (
+          <FaceModuleList
+            live={summary?.modules.live ?? []}
+            planned={summary?.modules.planned ?? []}
+            readable={summary ? summary.modules.readable : true}
+            loading={loading}
+          />
+        ) : (
+          <FaceCommandPanel
+            panel={commands.panel}
+            plan={commands.plan}
+            needsMe={commands.needsMe}
+            onBack={commands.back}
+          />
+        )}
+
+        <FaceActivityTrail
+          items={activity?.trail.items ?? []}
+          readable={activity ? activity.trail.readable : true}
+          loading={activityLoading}
         />
       </div>
     </section>
