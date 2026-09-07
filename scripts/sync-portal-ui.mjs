@@ -164,6 +164,7 @@ export const LIB_FILES = [
   'axon-router-core.mjs',
   'axon-agent-bus.mjs',
   'axon-agent-boot.mjs',
+  'axon-boot-wisdom.mjs',
   'nvg-mini-queue.mjs',
   'nvg-mini-risk-gate.mjs',
   'axon-account-keys.mjs',
