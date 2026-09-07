@@ -200,6 +200,11 @@ export const LIB_FILES = [
   // portal mirror drifted from them.
   'ai.mjs',
   'axon-telegram-chat.mjs',
+
+  // BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906: axon-cron-service.ts now imports
+  // plainMiniToggleNote from axon-v0/plain-labels.ts (Mac-mini roster toggle
+  // label). Transitively imported by the mirrored axon-cron-service.ts above.
+  'axon-v0/plain-labels.ts',
 ];
 
 /**

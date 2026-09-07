@@ -1,8 +1,17 @@
 /**
  * AXON cron job service — NI-Brain state + GitHub Actions run metadata.
+ *
+ * BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906 item 4: GitHub Actions *schedules* are
+ * retired org-wide — every workflow this catalog points at (and every live roster
+ * row it merges against) fires via `workflow_dispatch` only, never `on.schedule`.
+ * The enable/disable-workflow toggle this file used to call
+ * (`PUT /actions/workflows/{id}/{enable|disable}`) had nothing left to flip and is
+ * removed. `fetchWorkflowRunMeta` below is unrelated and stays — it only *reads*
+ * recent run history for display, it never toggles anything.
  */
 import { createClient } from '@supabase/supabase-js';
 import { resolveGithubPat } from './github-pat.mjs';
+import { plainMiniToggleNote } from './axon-v0/plain-labels';
 import {
   AXON_CRON_CATALOG,
   type AxonCronJobView,
@@ -89,26 +98,20 @@ async function fetchWorkflowRunMeta(
   }
 }
 
-async function setGithubWorkflowEnabled(
-  repo: string,
-  workflowFile: string,
-  enabled: boolean,
-  token: string,
-): Promise<string | null> {
-  const [owner, name] = repo.split('/');
-  const wfRes = await ghFetch(
-    `/repos/${owner}/${name}/actions/workflows/${encodeURIComponent(workflowFile)}`,
-    token,
-  );
-  if (!wfRes.ok) return `Could not find workflow ${workflowFile} in ${repo}`;
-  const wf = await wfRes.json();
-  const action = enabled ? 'enable' : 'disable';
-  const toggleRes = await ghFetch(
-    `/repos/${owner}/${name}/actions/workflows/${wf.id}/${action}`,
-    token,
-    { method: 'PUT' },
-  );
-  if (!toggleRes.ok) return `GitHub ${action} failed: HTTP ${toggleRes.status}`;
+/**
+ * BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906 item 2 — for a roster row whose
+ * `platform` is `nvg_mini`, the Cron tab toggle drives the roster's own `active`
+ * flag (the thing the Mac mini's local scheduler actually reads) instead of a
+ * GitHub Actions workflow, which that job was never scheduled through. Write-scoped
+ * to exactly one row, one column.
+ */
+async function setRosterRoutineActive(routineId: string, active: boolean): Promise<string | null> {
+  const sb = serviceClient();
+  const { error } = await sb
+    .from('nvg_agent_routines')
+    .update({ active, updated_at: new Date().toISOString() })
+    .eq('routine_id', routineId);
+  if (error) return `Roster update failed: ${error.message}`;
   return null;
 }
 
@@ -129,7 +132,7 @@ export async function fetchMacMiniRosterRows(): Promise<RosterRoutineRow[]> {
   const sb = serviceClient();
   const { data, error } = await sb
     .from('nvg_agent_routines')
-    .select('routine_id, active, wake_type, wake_config, retired_at')
+    .select('routine_id, active, wake_type, wake_config, retired_at, platform')
     .eq('harness', 'mac_mini');
   if (error) throw new Error(error.message);
   return (data ?? []) as RosterRoutineRow[];
@@ -167,7 +170,14 @@ export async function listCronJobs(): Promise<AxonCronJobView[]> {
       if (!def.rosterMatched) {
         warnings.push('No matching NI-Brain roster row (nvg_agent_routines, harness=mac_mini) — schedule cannot be verified.');
       } else if (def.cronUtc.length === 0) {
-        warnings.push('No active schedule in the roster — manual dispatch only.');
+        // BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906 item 3: when the roster carries an
+        // unparseable human schedule note (scheduleLabel says so), surface it as a
+        // non-authoritative note rather than only the generic "no schedule" line.
+        warnings.push(
+          def.scheduleLabel.includes('roster note')
+            ? `No machine-readable schedule in the roster — ${def.scheduleLabel}`
+            : 'No active schedule in the roster — manual dispatch only.',
+        );
       }
       if (!token) warnings.push('GitHub PAT missing — live run status unavailable.');
 
@@ -186,6 +196,7 @@ export async function listCronJobs(): Promise<AxonCronJobView[]> {
         lastRunStatus: ghMeta.lastRunStatus,
         lastRunSummary: ghMeta.lastRunSummary,
         nextRunAt,
+        toggleNote: plainMiniToggleNote(def.rosterPlatform),
         warnings: Array.from(new Set(warnings)),
       } satisfies AxonCronJobView;
     }),
@@ -198,18 +209,27 @@ export async function toggleCronJob(id: string, enabled: boolean): Promise<AxonC
   const def = getCronJobDef(id);
   if (!def) throw new Error('Unknown cron job');
 
-  const token = await resolveGithubPat();
   const warnings: string[] = [];
 
   const rosterRows = await fetchMacMiniRosterRows();
   const [merged] = mergeCatalogWithRoster([def], rosterRows);
   const hasSchedule = merged.cronUtc.length > 0;
+  const isMiniRoster = merged.rosterPlatform === 'nvg_mini';
 
-  if (token && hasSchedule) {
-    const ghErr = await setGithubWorkflowEnabled(def.workflowRepo, def.workflowFile, enabled, token);
-    if (ghErr) warnings.push(ghErr);
-  } else if (hasSchedule && !token) {
-    warnings.push('GitHub PAT missing — saved preference only; workflow schedule not toggled on GitHub.');
+  if (isMiniRoster) {
+    // BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906 item 2: this job is not a GitHub
+    // Actions schedule — it runs on the Mac mini and the roster's own `active`
+    // column is what the mini's local scheduler actually reads. Flip that instead
+    // of a GitHub Actions enable/disable call, which would touch nothing real.
+    const routineId = def.rosterRoutineId ?? def.id;
+    const rosterErr = merged.rosterMatched
+      ? await setRosterRoutineActive(routineId, enabled)
+      : 'No matching roster row — nothing to toggle on the Mac mini.';
+    if (rosterErr) warnings.push(rosterErr);
+  } else if (!merged.rosterMatched) {
+    warnings.push('No matching NI-Brain roster row — saved preference only; nothing was toggled outside AXON.');
+  } else if (!hasSchedule) {
+    warnings.push('No live schedule for this job — saved preference only.');
   }
 
   const sb = serviceClient();

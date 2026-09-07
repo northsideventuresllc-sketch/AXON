@@ -296,6 +296,18 @@ export function todoStatusDotClass(status: string | null | undefined, done?: boo
   return 'td-dot-open';
 }
 
+/**
+ * BPA-FOLLOWUP-CRON-TAB-MINI-TOGGLE-0906 item 2 — a roster row with
+ * `platform='nvg_mini'` runs on the Mac mini directly, not through a GitHub Actions
+ * schedule; toggling it flips `nvg_agent_routines.active`, not a workflow. The Cron
+ * tab shows this label instead of implying a "Start/Stop workflow" action that
+ * would not actually reach the job.
+ */
+export function plainMiniToggleNote(rosterPlatform: string | null | undefined): string | null {
+  if ((rosterPlatform || '').toLowerCase().trim() !== 'nvg_mini') return null;
+  return 'Scheduled on the Mac mini; toggle via roster';
+}
+
 /** Relative "last seen" line — never a raw ISO timestamp dump. */
 export function plainRelativeTime(iso: string | null | undefined): string | undefined {
   if (!iso) return undefined;
