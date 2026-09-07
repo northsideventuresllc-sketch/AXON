@@ -254,33 +254,25 @@ export const API_FILES = [
 /**
  * AXON v0 harness (Jarvis dash). These live in their own subtrees so the flat lists
  * above stay untouched:
- *   components/axon-v0/*  → NOT synced (2026-08-26 incident — see the v0 skip block below)
- *   lib/axon-v0/*         → NOT synced (same)
- *   app/api/axon-v0/*     → NOT synced (same)
- * The ENTIRE v0 harness is un-synced: the vintage V0_* lists below reference newer
- * build-1.5/2 files never synced, and the v0 API targets a generateAxonReply signature
- * the portal does not share, so it does not compile in the portal. Re-enable only once
- * it is portal-compatible.
- * The v0 PAGES (app/(axon-v0)/…) are NOT synced yet — the portal gets its page shells
- * via the portal-integration overlay once JB approves the slice.
+ *   components/axon-v0/*  → mostly NOT synced (2026-08-26 incident — see the v0 skip
+ *                           block below); THE FACE slice is the one exception, see
+ *                           V0_FACE_* below.
+ *   lib/axon-v0/*         → same split.
+ *   app/api/axon-v0/*     → same split.
+ * V0_COMPONENT_FILES / V0_LIB_FILES / V0_API_FILES stay un-synced in full: the
+ * pre-Face entries (orb-home, venture-carousel, venture-room, notifications-board,
+ * quick-links-rail, remotion/axon-boot, omni-router, agent-chat and the rest) are the
+ * ones the 2026-08-26 incident is actually about — the v0 API there targets a
+ * generateAxonReply signature the portal does not share, so it does not compile in the
+ * portal. Re-enable that slice only once it is portal-compatible.
  *
- * THE FACE step 5 (2026-09-06) checked whether this could change for Face specifically:
- *   - northside-intelligence main has NO `src/app/(axon-v0)` route group and no page
- *     anywhere that mounts an axon-v0 screen — confirmed against the live repo, not just
- *     this comment. The only axon-v0 work on that repo lives on two unmerged branches
- *     (`claude/axon-v0-setup-vsog4h`, `claude/axon-v0-migration-plan-sfv8o3`) that never
- *     reached `main`, so there is no existing "how axon-v0 pages land in the portal"
- *     pattern to copy — the instruction that gates this ("if no pattern exists, STOP
- *     that half") applies: no minimal page wiring was added here. Mounting `/face` in
- *     the portal needs real portal-side work (a route + the generateAxonReply
- *     compatibility fix above) that is out of scope for a mirror-list update.
- *   - The Face-specific entries below are added to V0_COMPONENT_FILES / V0_LIB_FILES /
- *     V0_API_FILES so the list is CORRECT and ready (this is "the correct lists" the
- *     step asked for), but they stay inside the `void V0_*` no-op — the write loops
- *     that would actually copy them into the portal are not enabled, because enabling
- *     them would re-open the exact 2026-08-26 incident (portal build breaks on an API
- *     signature it doesn't share) for a page the portal has nowhere to mount. Nothing
- *     Face-related is written to the portal by this change.
+ * FACE-PORTAL-MOUNT-0906 went live for THE FACE specifically. THE FACE's own dependency
+ * chain (face-hero.tsx → face-orb-scene/face-command-panel/face-voice-panel/
+ * face-stat-card/face-activity-trail → lib/axon-v0/face-*.{ts,mjs} → @/lib/supabase.mjs
+ * + @/lib/constants.mjs, already on LIB_FILES) never touches generateAxonReply or any
+ * other v0-only surface — verified by reading every import in that chain, not assumed.
+ * It is split into its own V0_FACE_* lists below and IS written by the sync (see the
+ * write loop in main()); the legacy V0_* lists above are untouched and stay void.
  */
 const V0_COMPONENT_FILES = [
   'remotion/axon-boot.tsx',
@@ -290,7 +282,32 @@ const V0_COMPONENT_FILES = [
   'venture-room.tsx',
   'notifications-board.tsx',
   'quick-links-rail.tsx',
-  // THE FACE (step 5) — see comment above: listed for correctness, not yet synced.
+];
+
+const V0_LIB_FILES = [
+  'types.ts',
+  'store.ts',
+  'omni-router.ts',
+];
+
+const V0_API_FILES = [
+  'ventures/route.ts',
+  'agent-chat/route.ts',
+  'providers/route.ts',
+  'venture-tools/route.ts',
+  'brain-graph/route.ts',
+  'notifications/route.ts',
+];
+
+/**
+ * THE FACE — live mirror (FACE-PORTAL-MOUNT-0906). Source: components/axon-v0/,
+ * lib/axon-v0/, app/api/axon-v0/face/. Destination: components/axon-ui and lib/axon
+ * (same flat folders as the rest of the mirror, via the axon-v0 rewrite rules at the
+ * top of rewriteImports) for components/lib; app/api/axon-v0/face/* keeps its own
+ * subpath so it lands at src/app/api/axon-v0/face/*, matching the client's fetch calls
+ * and the mount at src/app/axon/u/[username]/face/page.tsx.
+ */
+export const V0_FACE_COMPONENT_FILES = [
   'face-hero.tsx',
   'face-orb-scene.tsx',
   'face-command-panel.tsx',
@@ -300,11 +317,7 @@ const V0_COMPONENT_FILES = [
   'face.css',
 ];
 
-const V0_LIB_FILES = [
-  'types.ts',
-  'store.ts',
-  'omni-router.ts',
-  // THE FACE (step 5) — see comment above: listed for correctness, not yet synced.
+export const V0_FACE_LIB_FILES = [
   'face-reads.ts',
   'face-summary.mjs',
   'use-face-summary.ts',
@@ -319,14 +332,7 @@ const V0_LIB_FILES = [
   'use-agent-working.ts',
 ];
 
-const V0_API_FILES = [
-  'ventures/route.ts',
-  'agent-chat/route.ts',
-  'providers/route.ts',
-  'venture-tools/route.ts',
-  'brain-graph/route.ts',
-  'notifications/route.ts',
-  // THE FACE (step 5) — see comment above: listed for correctness, not yet synced.
+export const V0_FACE_API_FILES = [
   'face/summary/route.ts',
   'face/plan/route.ts',
   'face/needs-me/route.ts',
@@ -335,6 +341,18 @@ const V0_API_FILES = [
 
 function rewriteImports(content) {
   return content
+    // THE FACE portal mount (FACE-PORTAL-MOUNT-0906): these two run first and with no
+    // `from '` anchor because face-hero.tsx side-effect-imports its CSS as a bare
+    // `import '@/components/axon-v0/face.css';` with no `from` clause — the generic
+    // rules below all require `from '...'` and would silently miss it. Flat destination:
+    // components/axon-v0/* mirrors into src/components/axon-ui/* (same folder as the
+    // rest of the component mirror) and lib/axon-v0/* into src/lib/axon/* (same folder
+    // as the rest of the lib mirror) — see V0_FACE_COMPONENT_FILES / V0_FACE_LIB_FILES.
+    // Must run BEFORE the generic '@/lib/axon-' rule below, which would otherwise
+    // swallow 'axon-v0/face-reads' as its capture group and produce the wrong
+    // '@/lib/axon/axon-v0/face-reads'.
+    .replace(/@\/components\/axon-v0\//g, '@/components/axon-ui/')
+    .replace(/@\/lib\/axon-v0\//g, '@/lib/axon/')
     .replace(/from '@\/lib\/api-base'/g, "from '@/lib/axon/api-base'")
     .replace(/from '@\/components\/axon\/(?!AxonChangeCodeForm)/g, "from '@/components/axon-ui/")
     .replace(/from '@\/lib\/axon-([^']+)'/g, "from '@/lib/axon/axon-$1'")
@@ -561,18 +579,53 @@ function main() {
     addWrite(join(niRoot, 'src/app/api/axon', file), rewriteImports(readFileSync(src, 'utf8')), `api: ${file}`, 'api');
   }
 
-  // AXON v0 harness (components/axon-v0, lib/axon-v0, app/api/axon-v0) is NOT synced
-  // into the portal. The 2026-08-26 incident: the vintage V0_* file lists reference
-  // newer build-1.5/2 files that were never synced, and the v0 API targets AXON's own
-  // generateAxonReply(options-object) signature the portal's copy does not share — so
-  // the harness does not compile in the portal (build ERROR a84af7b → 0fbf2c4). JB call:
-  // fully un-sync it. We write NOTHING here (and never delete — the workflow's no-delete
-  // guard forbids that; the already-synced files were removed directly in the portal).
-  // Re-enable by restoring the write loops only once the whole v0 harness is made
-  // portal-compatible (complete + correct V0_* lists + a matching portal generateAxonReply).
+  // AXON v0 harness (components/axon-v0, lib/axon-v0, app/api/axon-v0) stays NOT synced
+  // for the legacy V0_* lists above. The 2026-08-26 incident: the vintage V0_* file
+  // lists reference newer build-1.5/2 files that were never synced, and the v0 API
+  // targets AXON's own generateAxonReply(options-object) signature the portal's copy
+  // does not share — so the harness does not compile in the portal (build ERROR
+  // a84af7b → 0fbf2c4). JB call: fully un-sync that slice. We write NOTHING for it here
+  // (and never delete — the workflow's no-delete guard forbids that; the already-synced
+  // files were removed directly in the portal). Re-enable by restoring the write loops
+  // only once the whole legacy v0 harness is made portal-compatible.
   void V0_COMPONENT_FILES;
   void V0_LIB_FILES;
   void V0_API_FILES;
+
+  // THE FACE (FACE-PORTAL-MOUNT-0906) — live, separate from the void above. See the
+  // V0_FACE_* docstring for why this slice is safe: it never touches generateAxonReply
+  // or anything else the legacy v0 harness needed.
+  for (const file of V0_FACE_COMPONENT_FILES) {
+    const src = join(AXON_ROOT, 'components/axon-v0', file);
+    if (!existsSync(src)) {
+      console.warn(`skip missing v0 face component: ${file}`);
+      continue;
+    }
+    addWrite(join(componentDest, file), rewriteImports(readFileSync(src, 'utf8')), `v0 face component: ${file}`, 'component');
+  }
+
+  for (const file of V0_FACE_LIB_FILES) {
+    const src = join(AXON_ROOT, 'lib/axon-v0', file);
+    if (!existsSync(src)) {
+      console.warn(`skip missing v0 face lib: ${file}`);
+      continue;
+    }
+    addWrite(join(libDest, file), rewriteImports(readFileSync(src, 'utf8')), `v0 face lib: ${file}`, 'lib');
+  }
+
+  for (const file of V0_FACE_API_FILES) {
+    const src = join(AXON_ROOT, 'app/api/axon-v0', file);
+    if (!existsSync(src)) {
+      console.warn(`skip missing v0 face api: ${file}`);
+      continue;
+    }
+    addWrite(
+      join(niRoot, 'src/app/api/axon-v0', file),
+      rewriteImports(readFileSync(src, 'utf8')),
+      `v0 face api: ${file}`,
+      'api',
+    );
+  }
 
   for (const entry of planPortalIntegration(niRoot)) plan.push(entry);
 
