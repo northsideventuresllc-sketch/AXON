@@ -193,6 +193,12 @@ export const LIB_FILES = [
   // scripts/check-portal-sync-imports.mjs against the merged tree.
   'axon-secrets.mjs',
   'slack-post.mjs',
+
+  // NI router mirror gap (NI #205, 2026-09-06): both exist in AXON and are transitively
+  // imported by the mirrored sources, but were absent from this list -- that's why the
+  // portal mirror drifted from them.
+  'ai.mjs',
+  'axon-telegram-chat.mjs',
 ];
 
 /**
