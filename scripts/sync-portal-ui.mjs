@@ -488,6 +488,7 @@ function patchPackageJson(niRoot) {
   const pkgPath = join(niRoot, 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
   pkg.dependencies = pkg.dependencies || {};
+  pkg.devDependencies = pkg.devDependencies || {};
   let changed = false;
   for (const [name, version] of Object.entries({
     three: '^0.185.1',
@@ -500,9 +501,22 @@ function patchPackageJson(niRoot) {
       changed = true;
     }
   }
+  // THE FACE (FACE-PORTAL-MOUNT-0906): face-orb-scene.tsx `import * as THREE from
+  // 'three'` needs its type declarations to typecheck — AXON carries @types/three in
+  // its own devDependencies, but the portal never had a mirrored file that imported
+  // 'three' before this, so `npm run build` here failed with "Could not find a
+  // declaration file for module 'three'" until this was added.
+  for (const [name, version] of Object.entries({
+    '@types/three': '^0.185.4',
+  })) {
+    if (pkg.devDependencies[name] !== version) {
+      pkg.devDependencies[name] = version;
+      changed = true;
+    }
+  }
   if (changed) {
     writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
-    console.log('package.json: added three');
+    console.log('package.json: dependencies updated');
   }
 }
 
