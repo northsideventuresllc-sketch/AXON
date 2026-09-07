@@ -58,7 +58,9 @@ export function CronJobsPanel() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-axon-muted">
-        Repeating GitHub Actions workflows — previous run, next run, warnings, and start/stop controls.
+        Repeating jobs — previous run, next run, warnings, and start/stop controls. Jobs
+        scheduled on the Mac mini toggle through the NI-Brain roster, not a GitHub
+        Actions workflow.
       </p>
       {message && (
         <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
@@ -82,6 +84,9 @@ export function CronJobsPanel() {
                 <h3 className="font-medium text-white">{job.title}</h3>
                 <p className="text-xs text-axon-muted">{job.scheduleLabel}</p>
                 <p className="mt-1 text-xs text-axon-teal">{job.workflowRepo} · {job.workflowFile}</p>
+                {job.toggleNote && (
+                  <p className="mt-1 text-[11px] text-axon-muted/80">{job.toggleNote}</p>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
