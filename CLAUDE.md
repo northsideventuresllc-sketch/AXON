@@ -7,6 +7,17 @@
 6. Classify the session (Repeating / Rolling / Cron / One-Off) and close the loop against your previous `session_notes_apartment` row.
 7. Say in one line what loaded. Then work.
 
+**PROOF OF GATE (added 2026-09-08, ENFORCE-GATES-FIRE-IN-FIRED-SESSIONS-0908, synced from
+nv-vault):** a fired/scheduled session rooted at a multi-repo workspace parent with no
+`.claude/settings.json` there never actually loads this repo's `.claude/hooks/*` as harness
+hooks -- this file still loads via recursive discovery, which makes the session *look* gated
+when it is not. Before claiming the mechanical every-task gates are active this session, check
+for `${CLAUDE_PROJECT_DIR:-.}/.nvg/boot-contract-fired-at` dated this session. **Found -> gates
+are live, proceed normally. Missing -> say so in one line ("boot-contract hook did not fire
+this session -- gates OFF, proceeding on manual discipline") and never claim mechanical
+enforcement you cannot prove.** Turning the gate back on is JB's/the launch config's switch,
+not something an agent can flip on itself mid-session.
+
 EVERY TASK (Task Execution Pipeline, locked 2026-08-31): context from the two brains → goal + "done" written → plan in plain English → approval by COUNCIL (or by JB via a Telegram button when it spends money, reaches a person, goes public, deletes with no undo, hits a JB-named hold, or the council lenses disagree) → execute with graph engineering by default (fan out for looking, single thread for deciding, verifier ≠ producer, depth ≤ 2, Haiku/Sonnet for lanes) → council review + stress test → merge only via `scripts/merge-pr.mjs` in nv-vault (needs a passing `nvg_pr_council_reviews` row for the exact head SHA; conflicts resolved by COUNCIL subagents) → report in plain English → close: presence close, `session_notes_apartment` row, Decisions/Learnings written as they happen, one Slack close line under your own name.
 
 COMMS: Slack `#agent-ops` = agents talking (first line `*NAME — what happened*`). Telegram = JB only, four classes (NEEDS APPROVAL / BROKE / FINISHED / DAILY WRAP), one message per outcome, no jargon, no table names. Never Slack-DM JB.

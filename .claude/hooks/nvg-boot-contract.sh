@@ -6,6 +6,17 @@
 # 2026-09-05 orders: graph + loop engineering automatic, goal + done on every task,
 # council + stress test on every sub-task, agents check each other's work.
 set -euo pipefail
+# BOOT SENTINEL (ENFORCE-GATES-FIRE-IN-FIRED-SESSIONS-0908, synced from nv-vault) -- this hook
+# only runs at all when Claude Code actually loaded a SessionStart hook for this session (i.e.
+# gates are wired). A fired/scheduled session rooted at a multi-repo workspace parent with no
+# .claude/settings.json there never runs this file, so it never gets a sentinel -- that absence
+# is the signal. Written under $CLAUDE_PROJECT_DIR (the session's real project root, not
+# necessarily this repo) so a same-session check finds it regardless of which repo's copy of
+# this hook fired. See CLAUDE.md's "PROOF OF GATE" step, which checks for this file's
+# existence before claiming mechanical enforcement is active.
+SENTINEL_DIR="${CLAUDE_PROJECT_DIR:-.}/.nvg"
+mkdir -p "$SENTINEL_DIR" 2>/dev/null || true
+date -u +%Y-%m-%dT%H:%M:%SZ > "$SENTINEL_DIR/boot-contract-fired-at" 2>/dev/null || true
 cat <<'CONTRACT'
 NVG EVERY-TASK CONTRACT (harness-enforced; the Stop gate checks 1, 6 and 7 mechanically):
 1. GOAL + DONE FIRST — before any tool call on a real task, write one line: the deliverable(s) and the checkable proof of done for each. Even small tasks.
