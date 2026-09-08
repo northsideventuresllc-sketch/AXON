@@ -8,8 +8,10 @@
  * those. Real PUBLIC SEO signal runs now — who's actually ranking for each
  * venture's core keyword right now, and whether NVG's own live page shows up
  * — via SerpApi (Google search, real key already in this repo's secrets),
- * synthesized into one usable plain-English finding per venture via Gemini
- * (fallback Anthropic Haiku). First-party SEO data (Search Console
+ * synthesized into one usable plain-English finding per venture via
+ * synthesizeFinding()'s generateViaRouter call (full 5-tier chain — local,
+ * runpod, openrouter, gemini, anthropic — not a direct Gemini/Haiku call).
+ * First-party SEO data (Search Console
  * impressions/clicks once JB wires it in) stays a clearly marked extension
  * point — getFirstPartyAnalytics() in lib/axon-content-scaffold-shared.mjs —
  * added later as an enhancement, never a prerequisite.

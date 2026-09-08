@@ -7,8 +7,10 @@
  * correction: it must NOT wait on those. Real EXTERNAL/PUBLIC research runs
  * now — competitor content and what's trending in each venture's niche —
  * using SerpApi (Google search, real key already in this repo's secrets),
- * synthesized into one usable plain-English finding per venture via Gemini
- * (fallback Anthropic Haiku). First-party analytics (JB's own account
+ * synthesized into one usable plain-English finding per venture via
+ * synthesizeFinding()'s generateViaRouter call (full 5-tier chain — local,
+ * runpod, openrouter, gemini, anthropic — not a direct Gemini/Haiku call).
+ * First-party analytics (JB's own account
  * engagement/follower data) stays a clearly marked extension point —
  * getFirstPartyAnalytics() in lib/axon-content-scaffold-shared.mjs —
  * that gets ADDED later once JB wires in NVG's own social accounts, never a
