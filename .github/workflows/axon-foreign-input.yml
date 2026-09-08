@@ -1,0 +1,54 @@
+name: AXON Foreign-Input Feed
+
+# Excitatory counterweight to the Inhibitor. Posts one foreign-domain concept
+# into J-space per run so retrieval gain cannot converge on itself.
+# Additive only — never deletes/expires/downgrades any memory (AXON NEVER FORGETS).
+
+on:
+  schedule:
+    # 3x/week — Tue/Thu/Sun at 6:00 AM EST = 11:00 UTC (offset from self-research)
+    - cron: '0 11 * * 2'
+    - cron: '0 11 * * 4'
+    - cron: '0 11 * * 0'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (do not post concept)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: axon-foreign-input
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  foreign-input:
+    name: AXON — foreign-input excitatory feed
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run foreign-input feed
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          AXON_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' && '1' || '' }}
+        run: node scripts/axon-foreign-input.mjs
+
+      - name: Report failure
+        if: failure()
+        run: echo "❌ AXON foreign-input feed failed — check Actions logs"
