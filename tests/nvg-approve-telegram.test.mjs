@@ -6,17 +6,19 @@
 //   3. reject sets status='rejected'.
 //   4. Every tap calls editMessageReplyMarkup to remove the inline keyboard, and
 //      answerCallbackQuery is always called.
+//   5. The tap log carries the actual question being decided (jb_ask, or title
+//      flagged as a fallback when jb_ask is empty) — not just the decision + row id.
 import assert from 'node:assert/strict';
 import { handleTelegramCallback } from '../lib/telegram-handler.mjs';
 
 const AGENT_DISPATCH_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
-function makeSb({ existingResultSummary = null } = {}) {
+function makeSb({ existingResultSummary = null, title = 'Some dispatch title', jbAsk = 'Ship the thing?' } = {}) {
   const patches = [];
   const inserts = [];
   const sbSelect = async (table, query) => {
     if (table === 'agent_dispatch') {
-      return [{ id: AGENT_DISPATCH_ID, result_summary: existingResultSummary }];
+      return [{ id: AGENT_DISPATCH_ID, title, jb_ask: jbAsk, result_summary: existingResultSummary }];
     }
     return [];
   };
@@ -168,6 +170,61 @@ const cfg = { telegramToken: 'tok', telegramChatId: '999' };
   const dispatchPatch = patches.find((p) => p.table === 'agent_dispatch');
   assert.ok(dispatchPatch, 'a tap from the correct topic must go through');
   assert.equal(dispatchPatch.values.status, 'queued');
+}
+
+// --- 7. tap log carries the real question (jb_ask) against the decision ----------------
+{
+  const { sb, inserts } = makeSb({ jbAsk: 'OK to merge PR #205?', title: 'AX-RUNPOD-JOB-QUEUE-0908' });
+  const { fn } = fakeFetch();
+  const realFetch = global.fetch;
+  global.fetch = fn;
+  try {
+    await handleTelegramCallback(cfg, sb, makeCallbackQuery(`nvga:d:${AGENT_DISPATCH_ID}:a`));
+  } finally {
+    global.fetch = realFetch;
+  }
+  const tapLog = inserts.find((i) => i.table === 'axon_telegram_messages' && i.row.metadata.note === 'processing');
+  assert.ok(tapLog, 'expected a processing tap log');
+  assert.equal(tapLog.row.metadata.question, 'OK to merge PR #205?');
+  assert.equal(tapLog.row.metadata.question_source, 'jb_ask');
+}
+
+// --- 8. no jb_ask on the row -> title is logged as question, flagged as a fallback -----
+{
+  const { sb, inserts } = makeSb({ jbAsk: null, title: 'AX-RUNPOD-JOB-QUEUE-0908' });
+  const { fn } = fakeFetch();
+  const realFetch = global.fetch;
+  global.fetch = fn;
+  try {
+    await handleTelegramCallback(cfg, sb, makeCallbackQuery(`nvga:d:${AGENT_DISPATCH_ID}:r`));
+  } finally {
+    global.fetch = realFetch;
+  }
+  const tapLog = inserts.find((i) => i.table === 'axon_telegram_messages' && i.row.metadata.note === 'processing');
+  assert.ok(tapLog, 'expected a processing tap log');
+  assert.equal(tapLog.row.metadata.question, 'AX-RUNPOD-JOB-QUEUE-0908');
+  assert.equal(tapLog.row.metadata.question_source, 'title_fallback');
+}
+
+// --- 9. a tap that never reaches a whitelisted row logs no question, not a false one ---
+{
+  const { sb, inserts } = makeSb();
+  const { fn } = fakeFetch();
+  const realFetch = global.fetch;
+  global.fetch = fn;
+  try {
+    // Well-formed "nvga:" prefix but a garbage decision code -> CALLBACK_RE never
+    // matches, so this never reaches the row fetch — question fields must stay null
+    // rather than getting backfilled from some other row.
+    await handleTelegramCallback(cfg, sb, makeCallbackQuery(`nvga:d:${AGENT_DISPATCH_ID}:x`));
+  } finally {
+    global.fetch = realFetch;
+  }
+  const tapLog = inserts.find((i) => i.table === 'axon_telegram_messages');
+  assert.ok(tapLog, 'expected an unparseable-callback tap log');
+  assert.equal(tapLog.row.metadata.note, 'unparseable_callback_data');
+  assert.equal(tapLog.row.metadata.question, null);
+  assert.equal(tapLog.row.metadata.question_source, null);
 }
 
 console.log('nvg-approve-telegram.test.mjs passed');
