@@ -205,6 +205,13 @@ export const LIB_FILES = [
   // plainMiniToggleNote from axon-v0/plain-labels.ts (Mac-mini roster toggle
   // label). Transitively imported by the mirrored axon-cron-service.ts above.
   'axon-v0/plain-labels.ts',
+
+  // AXON Inhibitor (PR #104): axon-web-chat.ts (already on this list) now
+  // imports fetchMemoriesGated from axon-inhibitor.ts, which itself imports
+  // the pure retrieval-gain core. Both transitively mirrored — found by
+  // scripts/check-portal-sync-imports.mjs / tests/portal-sync-drift.test.mjs.
+  'axon-inhibitor.ts',
+  'axon-inhibitor-core.mjs',
 ];
 
 /**
