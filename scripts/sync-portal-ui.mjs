@@ -195,6 +195,11 @@ export const LIB_FILES = [
   'axon-secrets.mjs',
   'slack-post.mjs',
 
+  // Added 2026-09-08: the computer_use lane in axon-router-core.mjs executeLane()
+  // (already on this list) dynamically imports axon-computer-use.mjs. Found by
+  // scripts/check-portal-sync-imports.mjs / tests/portal-sync-drift.test.mjs.
+  'axon-computer-use.mjs',
+
   // NI router mirror gap (NI #205, 2026-09-06): both exist in AXON and are transitively
   // imported by the mirrored sources, but were absent from this list -- that's why the
   // portal mirror drifted from them.
