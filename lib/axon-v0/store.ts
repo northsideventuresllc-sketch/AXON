@@ -2,6 +2,7 @@
 // until the staged migration (db/axon-v0/001) is approved and applied, it
 // falls back to an in-process seeded store so the whole slice still runs.
 import { createSupabaseClient } from '@/lib/supabase.mjs';
+import { setAccountKeyForRoute } from '@/lib/axon-account-keys';
 import {
   AgentMessage,
   AgentModelAssignment,
@@ -346,7 +347,16 @@ export async function listProviders(): Promise<ModelProvider[]> {
 
 /**
  * Add a custom lane (a self-hosted Ollama, or any OpenAI-compatible endpoint). Scoped to
- * this account so it never pollutes the global catalog. Keys are stored by NAME only.
+ * this account so it never pollutes the global catalog.
+ *
+ * Two ways to give it a key, and they're mutually exclusive by convention (the UI only ever
+ * sends one): `secret_key` is the NAME of a key already saved in ni_platform_secrets — never
+ * a value, unchanged from before. `api_key` is the real thing — a raw key pasted straight
+ * into the "Add Your Own" form — encrypted here (AES-256-GCM, lib/axon-account-keys.mjs) and
+ * stored keyed to this lane's own route_id via setAccountKeyForRoute, the same generalized,
+ * whitelist-free path lib/axon-router-core.mjs's executeLane() checks first. This is what
+ * makes a brand-new provider genuinely self-serve: no admin has to pre-create a platform
+ * secret for it.
  */
 export async function addProvider(input: {
   label: string;
@@ -354,9 +364,17 @@ export async function addProvider(input: {
   base_url?: string;
   model: string;
   secret_key?: string;
+  api_key?: string;
 }): Promise<ModelProvider> {
   if (await tableLive('router_models')) {
     const account = await getAccount();
+    const rawKey = input.api_key?.trim();
+    // Fail loudly before writing anything, rather than silently dropping a pasted key (and
+    // reporting has_key:false back through a 200 that reads like success) if the account
+    // can't be resolved right now — the whole point of this field is that the key is safe.
+    if (rawKey && !account) {
+      throw new Error('Could not resolve your account — the key was not saved. Try again.');
+    }
     const route = await sb().sbInsert('router_routes', {
       name: `${input.label}-${Date.now()}`,
       kind: input.kind === 'ollama' ? 'local' : 'api',
@@ -383,13 +401,18 @@ export async function addProvider(input: {
         secret_key: input.secret_key || null,
       });
     }
+    let hasOwnKey = false;
+    if (account && rawKey) {
+      await setAccountKeyForRoute(supabaseKey(), account.id, route.id, rawKey);
+      hasOwnKey = true;
+    }
     return {
       id: lane.id,
       label: input.label,
       kind: input.kind,
       base_url: input.base_url || null,
       model: input.model,
-      has_key: Boolean(input.secret_key),
+      has_key: Boolean(input.secret_key) || hasOwnKey,
     };
   }
   seedMem();
@@ -399,8 +422,8 @@ export async function addProvider(input: {
     kind: input.kind,
     base_url: input.base_url || null,
     model: input.model,
-    api_key: input.secret_key || null,
-    has_key: Boolean(input.secret_key),
+    api_key: input.secret_key || input.api_key || null,
+    has_key: Boolean(input.secret_key) || Boolean(input.api_key?.trim()),
   };
   mem().providers.push(p);
   const { api_key, ...pub } = p;
