@@ -25,8 +25,15 @@ import { callAxonLocal } from '../lib/axon-local-relay.mjs';
   assert.equal(claude.riskFlag, 'low');
   const codex = classifyMiniShellRisk(`codex exec 'hello' --json`);
   assert.equal(codex.riskFlag, 'low');
-  const gemini = classifyMiniShellRisk(`gemini -p 'hello'`);
-  assert.equal(gemini.riskFlag, 'low');
+  // AX-CHAIN-SUBSCRIPTION-TIERS-0909: the retired `gemini` CLI's `gemini -p '...'` shape is
+  // no longer generated anywhere in this codebase and must NOT be allowlisted low any more
+  // — an unmatched high classification here is the correct, safe behavior post-retirement.
+  const deadGeminiCli = classifyMiniShellRisk(`gemini -p 'hello'`);
+  assert.equal(deadGeminiCli.riskFlag, 'high', 'the retired `gemini -p` shape must no longer be allowlisted');
+  // Its replacement, the Antigravity CLI (`agy`), is what axon-subscription-cli.mjs actually
+  // builds now and must be allowlisted low.
+  const antigravity = classifyMiniShellRisk(`agy -p 'hello' --output-format json --print-timeout 35s`);
+  assert.equal(antigravity.riskFlag, 'low');
 }
 
 // --- 2. classifier: anything else defaults high, never null/allow --------------------
