@@ -115,6 +115,21 @@ import {
   assert.equal(parseToolCall('Just a normal reply with no tool call in it.'), null);
 }
 
+// --- 12a. tool-call parsing: mcp_ping missing server is refused (problem #9) -------------
+{
+  const call = parseToolCall('```tool\n{"tool": "mcp_ping"}\n```');
+  const check = validateToolCall(call);
+  assert.equal(check.valid, false, 'mcp_ping without a server name must fail validation');
+}
+
+// --- 12b. tool-call parsing: a valid mcp_ping block passes -------------------------------
+{
+  const call = parseToolCall('```tool\n{"tool": "mcp_ping", "server": "My Notion MCP"}\n```');
+  const check = validateToolCall(call);
+  assert.equal(check.valid, true);
+  assert.equal(call.server, 'My Notion MCP');
+}
+
 // --- 13. gated-action classification only fires on the keywords it is meant to ----------
 {
   assert.equal(classifyGatedAction('send this outreach email to the lead'), 'outreach.run');
@@ -122,4 +137,4 @@ import {
   assert.equal(classifyGatedAction('just say hello back'), null);
 }
 
-console.log('agent-bus-loop-guards: all 13 checks passed');
+console.log('agent-bus-loop-guards: all 15 checks passed');

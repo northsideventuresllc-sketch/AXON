@@ -6,6 +6,7 @@ import { apiUrl } from '@/lib/api-base';
 import '@/components/axon-v0/skills.css';
 import { SkillMcpCreator } from '@/components/axon-v0/skill-mcp-creator';
 import { McpMarketplace } from '@/components/axon-v0/mcp-marketplace';
+import { McpConnections } from '@/components/axon-v0/mcp-connections';
 
 interface Skill {
   id: string;
@@ -332,12 +333,15 @@ export default function SkillsPage() {
       )}
 
       {showMcp && (
-        <McpMarketplace
-          onConnected={() => {
-            setLoading(true);
-            loadSkills();
-          }}
-        />
+        <>
+          <McpConnections />
+          <McpMarketplace
+            onConnected={() => {
+              setLoading(true);
+              loadSkills();
+            }}
+          />
+        </>
       )}
 
       {creator && (
