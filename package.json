@@ -49,6 +49,9 @@
     "test:resend": "node tests/resend-reply-to.test.mjs",
     "test:match-fit-webhook": "node tests/match-fit-posting-confirmation.test.mjs",
     "test:match-fit-outreach": "node tests/match-fit-outreach-event.test.mjs",
+    "test:mcp-connections": "node tests/mcp-connections.test.mjs",
+    "test:mcp-client": "node tests/mcp-client.test.mjs",
+    "test:mcp-ping-tool-call": "node tests/mcp-ping-tool-call.test.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "engines": {

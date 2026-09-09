@@ -217,6 +217,15 @@ export const LIB_FILES = [
   // scripts/check-portal-sync-imports.mjs / tests/portal-sync-drift.test.mjs.
   'axon-inhibitor.ts',
   'axon-inhibitor-core.mjs',
+
+  // AXON MCP connections (problem #9's general MCP path, real paste-in version):
+  // axon-agent-bus.mjs (already on this list) now imports getMcpConnectionByName /
+  // decryptMcpCredential / recordMcpCheckResult from axon-v0/mcp-connections.mjs and
+  // checkMcpConnection from axon-v0/mcp-client.mjs, for the mcp_ping tool call. Both
+  // transitively mirrored — found by scripts/check-portal-sync-imports.mjs /
+  // tests/portal-sync-drift.test.mjs.
+  'axon-v0/mcp-connections.mjs',
+  'axon-v0/mcp-client.mjs',
 ];
 
 /**
