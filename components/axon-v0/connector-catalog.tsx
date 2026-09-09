@@ -103,6 +103,7 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
   const [addKind, setAddKind] = useState<CustomLaneKind>('openai-compatible');
   const [addEndpoint, setAddEndpoint] = useState('');
   const [addModel, setAddModel] = useState('');
+  const [addApiKey, setAddApiKey] = useState('');
   const [addSecretName, setAddSecretName] = useState('');
   const [addBusy, setAddBusy] = useState(false);
   const [addError, setAddError] = useState('');
@@ -220,6 +221,7 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
     setAddKind('openai-compatible');
     setAddEndpoint('');
     setAddModel('');
+    setAddApiKey('');
     setAddSecretName('');
     setAddError('');
   }
@@ -239,6 +241,7 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
     const label = addLabel.trim();
     const model = addModel.trim();
     const endpoint = addEndpoint.trim();
+    const apiKey = addApiKey.trim();
     const secretName = addSecretName.trim();
 
     if (!label) {
@@ -253,9 +256,13 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
       setAddError('This kind needs an endpoint URL.');
       return;
     }
+    if (apiKey && secretName) {
+      setAddError('Paste the key OR reference a saved secret by name — not both.');
+      return;
+    }
     if (secretName && looksLikeSecretValue(secretName)) {
       setAddError(
-        'That looks like the secret itself, not its name. Enter the NAME of the key as it is saved in your secrets — never paste the key.',
+        'That looks like the key itself, not a secret NAME. Either paste it in the API key field above, or enter the NAME of an existing saved secret here.',
       );
       return;
     }
@@ -270,12 +277,13 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
           kind: addKind,
           base_url: endpoint || undefined,
           model,
+          api_key: apiKey || undefined,
           secret_key: secretName || undefined,
         }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Could not add that lane.');
-      setNote(`${label} added to the catalog.`);
+      setNote(`${label} added to the catalog${d.provider?.has_key ? ' — key saved, encrypted.' : '.'}`);
       resetAddForm();
       setAddOpen(false);
       load();
@@ -506,8 +514,26 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
               placeholder="e.g. llama3.1:8b"
             />
 
+            <label className="cc-add-label" htmlFor="cc-add-api-key">
+              API key{addKindMeta.value === 'ollama' ? ' (usually not needed)' : ''}
+            </label>
+            <input
+              id="cc-add-api-key"
+              type="password"
+              className="cc-add-input"
+              value={addApiKey}
+              onChange={(e) => setAddApiKey(e.target.value)}
+              placeholder="Paste the real key for this provider"
+              autoComplete="off"
+            />
+            <p className="cc-hint">
+              Paste the actual key here — this IS where a real key goes. It is encrypted (AES-256-GCM)
+              the moment you save, used only server-side to call this lane, and never shown again —
+              not even to you.
+            </p>
+
             <label className="cc-add-label" htmlFor="cc-add-secret">
-              Name of the secret key (optional)
+              Or reference an existing saved secret by NAME instead (advanced, optional)
             </label>
             <input
               id="cc-add-secret"
@@ -516,10 +542,12 @@ export function ConnectorCatalog({ onChanged }: { onChanged?: () => void } = {})
               onChange={(e) => setAddSecretName(e.target.value)}
               placeholder="e.g. MY_SERVER_API_KEY"
               autoComplete="off"
+              disabled={Boolean(addApiKey.trim())}
             />
             <p className="cc-hint">
-              This is the NAME of a key already saved in your secrets — never the key itself. AXON looks it
-              up by name when it needs to connect.
+              Only for a key that is already saved elsewhere in your secrets — this field takes its
+              NAME, never the key itself. Most people want the API key field above instead; use at most
+              one of the two.
             </p>
 
             {addError && <p className="cc-add-error">{addError}</p>}

@@ -31,11 +31,22 @@ export async function POST(req: Request) {
       await setAssignment({ agent_id: agentId, mode, lane_id: laneId || providerId || null });
       return NextResponse.json({ ok: true });
     }
-    // New custom lane: { label, kind, base_url?, model, secret_key? }
-    // secret_key is the NAME of a key in ni_platform_secrets — never the value itself.
-    const { label, kind, base_url, model, secret_key } = body;
+    // New custom lane: { label, kind, base_url?, model, secret_key?, api_key? }
+    // secret_key is the NAME of a key already saved in ni_platform_secrets — never a value,
+    // for the advanced/legacy "reference an existing secret" path.
+    // api_key is the real thing — a raw key pasted straight into the "Add Your Own" form.
+    // It is AES-256-GCM encrypted (lib/axon-account-keys.mjs) and stored keyed to this new
+    // lane's own route_id, never as plaintext and never returned in any response. The two
+    // are mutually exclusive — send at most one.
+    const { label, kind, base_url, model, secret_key, api_key } = body;
     if (!label?.trim() || !model?.trim()) {
       return NextResponse.json({ error: 'label and model required' }, { status: 400 });
+    }
+    if (secret_key?.trim() && api_key?.trim()) {
+      return NextResponse.json(
+        { error: 'Use either a pasted key or a reference to an existing secret, not both.' },
+        { status: 400 },
+      );
     }
     const provider = await addProvider({
       label: label.trim(),
@@ -43,6 +54,7 @@ export async function POST(req: Request) {
       base_url: base_url?.trim() || undefined,
       model: model.trim(),
       secret_key: secret_key?.trim() || undefined,
+      api_key: typeof api_key === 'string' ? api_key : undefined,
     });
     return NextResponse.json({ provider });
   } catch (err) {

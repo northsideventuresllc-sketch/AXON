@@ -6,6 +6,9 @@ export {
   deleteAccountKey,
   listAccountKeyStatus,
   last4Of,
+  getAccountKeyForRoute,
+  setAccountKeyForRoute,
+  deleteAccountKeyForRoute,
 } from './axon-account-keys.mjs';
 
 export type ChainProvider = 'openrouter' | 'gemini' | 'anthropic' | 'runpod';
