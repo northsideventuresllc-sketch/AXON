@@ -17,9 +17,27 @@ function checkWebhookSecret(req, expectedSecret) {
   return header === expectedSecret;
 }
 
+// In-memory update_id deduplication cache — prevents Telegram webhook retry loops
+// from triggering repeated responses when LLM generation takes >5 seconds.
+const PROCESSED_UPDATES = new Set();
+const UPDATE_CACHE_MAX = 1000;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const update = req.body;
+  const updateId = update?.update_id;
+  if (updateId) {
+    if (PROCESSED_UPDATES.has(updateId)) {
+      return res.status(200).json({ ok: true, duplicate: true });
+    }
+    PROCESSED_UPDATES.add(updateId);
+    if (PROCESSED_UPDATES.size > UPDATE_CACHE_MAX) {
+      const first = PROCESSED_UPDATES.values().next().value;
+      PROCESSED_UPDATES.delete(first);
+    }
   }
 
   const rawAgent = req.query?.agent;
@@ -55,7 +73,6 @@ export default async function handler(req, res) {
       return res.status(503).json({ error: 'Telegram not configured' });
     }
 
-    const update = req.body;
     // Remember every chat this bot hears from (DM, group, forum supergroup).
     // getUpdates is unusable while this webhook is set, so this table is how
     // nv-vault's telegram-topics-setup.mjs finds the "NVG Agents" forum group.
