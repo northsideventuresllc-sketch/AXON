@@ -122,3 +122,20 @@ test('keyboard sends carry the approvals topic when given', async () => {
     globalThis.fetch = realFetch;
   }
 });
+
+test('cleanTelegramHumanText strips raw asterisks, headers, and code backticks', async () => {
+  const { cleanTelegramHumanText, telegramSend } = await import('../lib/telegram.mjs');
+  assert.equal(cleanTelegramHumanText('Here is ****IMPORTANT**** info with **details**.'), 'Here is IMPORTANT info with details.');
+  assert.equal(cleanTelegramHumanText('### Status Update\n`code` and ```js\nconst x = 1;\n```'), 'Status Update\ncode and const x = 1;');
+
+  const realFetch = globalThis.fetch;
+  let body;
+  globalThis.fetch = async (_u, init) => { body = JSON.parse(init.body); return { json: async () => ({ ok: true, result: { message_id: 1 } }) }; };
+  try {
+    await telegramSend('t', '7722', '****ALERT**** Everything is **fine**.', false, { untagged: true });
+    assert.equal(body.text, 'ALERT Everything is fine.');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
