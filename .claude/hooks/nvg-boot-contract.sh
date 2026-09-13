@@ -17,6 +17,19 @@ set -euo pipefail
 SENTINEL_DIR="${CLAUDE_PROJECT_DIR:-.}/.nvg"
 mkdir -p "$SENTINEL_DIR" 2>/dev/null || true
 date -u +%Y-%m-%dT%H:%M:%SZ > "$SENTINEL_DIR/boot-contract-fired-at" 2>/dev/null || true
+# MECHANICAL PRESENCE UPSERT (PULSE-PRESENCE-UPSERT-NOT-MECHANICAL-0913, synced from nv-vault)
+# -- BOOT v2 step 5 ("Upsert nvg_agent_presence at boot") was prose an agent had to remember;
+# this makes it fire every session/compaction-resume automatically. See nvg-presence-upsert.mjs
+# for the full mechanic. Bounded + fail-open on purpose: never lets a missing key, a slow
+# network, or a missing node/timeout binary delay or block printing the contract below.
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if command -v node >/dev/null 2>&1; then
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 6s node "$HOOKS_DIR/nvg-presence-upsert.mjs" >/dev/null 2>&1 || true
+  else
+    node "$HOOKS_DIR/nvg-presence-upsert.mjs" >/dev/null 2>&1 || true
+  fi
+fi
 cat <<'CONTRACT'
 NVG EVERY-TASK CONTRACT (harness-enforced; the Stop gate checks 1, 6 and 7 mechanically):
 1. GOAL + DONE FIRST — before any tool call on a real task, write one line: the deliverable(s) and the checkable proof of done for each. Even small tasks.
