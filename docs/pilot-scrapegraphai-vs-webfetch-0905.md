@@ -36,8 +36,20 @@ WebFetch's accuracy on chrome-vs-content filtering.
 
 ## Repro
 
+The original Python pilot script (`scripts/scrapegraphai-pilot-0905.py`) was
+deleted 2026-09-14 (Scripts OUT, Agents IN, Decision #1786) — this pilot's own
+call above was already **Drop**, so there was nothing live depending on it.
+`scripts/scrapegraphai-pilot-0905.mjs` exists in its place but is **not** a
+faithful reproduction of the real `scrapegraphai` library (there is no Node
+port of it) — it's a plain fetch + regex text-extraction + direct-Ollama
+reimplementation of what `SmartScraperGraph` does for this one prompt shape.
+Its numbers will not match the 93.32s/output-with-nav-chrome result recorded
+above. To genuinely re-run the real ScrapeGraphAI comparison, recreate the
+original Python environment from git history (`git show
+<pre-2026-09-14-commit>:scripts/scrapegraphai-pilot-0905.py`):
+
 ```
 python3 -m venv .venv-pilot && source .venv-pilot/bin/activate
 pip install scrapegraphai && playwright install chromium
-python3 scripts/scrapegraphai-pilot-0905.py
+python3 scrapegraphai-pilot-0905.py   # restored from git history, see above
 ```
