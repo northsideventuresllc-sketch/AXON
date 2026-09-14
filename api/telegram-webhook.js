@@ -1,6 +1,7 @@
 import { loadConfig, loadTelegramConfig } from '../lib/config.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { handleTelegramCallback, handleTelegramMessage } from '../lib/telegram-handler.mjs';
+import { verifySharedSecret } from '../lib/verify-shared-secret.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -11,10 +12,16 @@ function unauthorized(res) {
 // rather than needing its own route file. loadConfig resolves that agent's
 // own token/chat/secret, falling back to the shared default bot if the agent
 // has no dedicated bot provisioned yet.
+//
+// SEC-TELEGRAM-WEBHOOK-FAIL-OPEN-0914: this used to `return true` (accept) when
+// expectedSecret was unset — which is exactly how it ships by default, since
+// TELEGRAM_WEBHOOK_SECRET is documented as "Optional" in .env.example. That let
+// anyone POST a forged Telegram update straight through to real actions (approve/
+// delete outreach leads, resend sends) with no secret configured at all. Fails
+// closed now, matching the MATCH_FIT_WEBHOOK_SECRET webhooks in this repo.
 function checkWebhookSecret(req, expectedSecret) {
-  if (!expectedSecret) return true;
   const header = req.headers['x-telegram-bot-api-secret-token'];
-  return header === expectedSecret;
+  return verifySharedSecret(header, expectedSecret);
 }
 
 // In-memory update_id deduplication cache — prevents Telegram webhook retry loops
