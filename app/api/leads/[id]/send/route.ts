@@ -43,6 +43,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         sent_at: new Date().toISOString(),
       };
 
+      await assertFireAllowed('outreach.run');
       await updateLeadStatus(id, {
         status: 'sent',
         dm_sent: true,
