@@ -97,11 +97,21 @@ export function loadState(file = STATE_FILE) {
     const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
     return {
       ackedTicketIds: Array.isArray(raw.ackedTicketIds) ? raw.ackedTicketIds : [],
-      blockedTicketIds: Array.isArray(raw.blockedTicketIds) ? raw.blockedTicketIds : [],
+      // BUILD-TICKETS-GATE-PERMANENT-BYPASS-0915: this used to be `blockedTicketIds` (an
+      // array a ticket id got pushed onto forever, the moment the gate blocked once) --
+      // that permanently exempted a ticket from ever blocking again even if --ack was
+      // never actually called, so one denied tool call was enough to silently wave every
+      // future tool call through unacknowledged. `graceTicketId` replaces it: at most ONE
+      // ticket id, granting exactly one bypassed call (the one that's meant to run the
+      // `--ack` command itself, since the ack command is itself a gated tool call and would
+      // otherwise deadlock). decide() consumes and clears it on use, so if that one grace
+      // call wasn't actually the ack, the very next call re-blocks and re-arms a fresh
+      // grace slot -- nagging every other call forever instead of giving up permanently.
+      graceTicketId: typeof raw.graceTicketId === 'string' ? raw.graceTicketId : null,
       notes: raw.notes && typeof raw.notes === 'object' ? raw.notes : {},
     };
   } catch {
-    return { ackedTicketIds: [], blockedTicketIds: [], notes: {} };
+    return { ackedTicketIds: [], graceTicketId: null, notes: {} };
   }
 }
 export function saveState(state, file = STATE_FILE) {
@@ -122,15 +132,18 @@ export function ticketsFor(rows, agent) {
 }
 
 // Given this agent's open tickets + local gate state, decide whether to block this tool call.
-// Returns { block: false } or { block: true, ticket, reason }.
+// Returns { block: false } (optionally { graceConsumed: id } when a grace slot was spent) or
+// { block: true, ticket, reason }. Mutates nothing -- runGate() applies the state change the
+// return value implies (see BUILD-TICKETS-GATE-PERMANENT-BYPASS-0915 note by loadState above).
 export function decide(tickets, state) {
   const unacked = tickets.filter((t) => !state.ackedTicketIds.includes(t.id));
   if (!unacked.length) return { block: false };
   const oldest = unacked[0];
-  if (state.blockedTicketIds.includes(oldest.id)) {
-    // Already surfaced this ticket once this working tree — don't re-block on every tool call
-    // (EXEC's livelock nuance). It stays visible via `carry_forward` at close-out instead.
-    return { block: false };
+  if (state.graceTicketId === oldest.id) {
+    // Exactly one bypassed call per block, spent here -- this does NOT mean the ticket is
+    // handled, only that this one call (meant to run --ack) was let through. If it wasn't
+    // the ack, the next call finds graceTicketId cleared and blocks again.
+    return { block: false, graceConsumed: oldest.id };
   }
   return { block: true, ticket: oldest, reason: buildReason(oldest, unacked.length) };
 }
@@ -148,7 +161,7 @@ function buildReason(ticket, openCount) {
     `  node .claude/hooks/nvg-tickets-first-gate.mjs --ack ${ticket.id} --note "claimed, working it now"`,
     `If it genuinely cannot finish this run (needs JB and JB is away, or a hard external blocker): park it on the bus row with the real reason, then run:`,
     `  node .claude/hooks/nvg-tickets-first-gate.mjs --ack ${ticket.id} --note "<why parked>" --park`,
-    `Either way, ack once and this tool call — and the rest of this session — proceeds normally; this gate does not re-block the same ticket twice.`,
+    `The NEXT tool call you make is let through once — that's meant to be the --ack command above, since running it is itself a gated call. If it isn't, this gate re-blocks on the call after that, and keeps nagging every other call until this ticket is actually acked.`,
   ].join('\n');
 }
 
@@ -221,9 +234,19 @@ async function runGate() {
 
   const state = loadState();
   const result = decide(tickets, state);
-  if (!result.block) return;
+  if (!result.block) {
+    if (result.graceConsumed) {
+      // Spend the grace slot now so it does not silently apply to every future call --
+      // if this call wasn't actually the --ack, the next call finds no grace and re-blocks.
+      state.graceTicketId = null;
+      saveState(state);
+    }
+    return;
+  }
 
-  state.blockedTicketIds.push(result.ticket.id);
+  // Arm exactly one grace call so the agent's very next tool call -- meant to run
+  // `--ack`, itself a gated call -- isn't blocked by the ticket it's trying to acknowledge.
+  state.graceTicketId = result.ticket.id;
   saveState(state);
 
   process.stdout.write(
