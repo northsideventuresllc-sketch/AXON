@@ -18,6 +18,17 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/nvg-tickets-first-gate.mjs"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

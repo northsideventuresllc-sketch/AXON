@@ -216,65 +216,16 @@ jobs:
           echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
           echo "Opened PR #${PR_NUMBER}: ${PR_URL} (head ${HEAD_SHA})"
 
-      # Deterministic council-review status. No LLM call — for this specific sync (a
-      # verbatim mechanical file copy, never hand-written logic) the delete-guard
-      # pre-check and the lint-parity check ARE the review. Success is set only when
-      # both gate steps report success in this exact run; otherwise failure. Coordinator
-      # decision, 2026-09-03: no ANTHROPIC_API_KEY use anywhere in this workflow — a paid
-      # API call on every push to AXON main to "read" a diff two deterministic gates
-      # already cover is cost with no added safety (MONEY rule: nothing paid without JB).
-      - name: Set council-review from the deterministic gates
-        id: council
-        if: steps.open_pr.outputs.opened == 'true'
-        env:
-          NI_GITHUB_PAT: ${{ secrets.NI_GITHUB_PAT }}
-        run: |
-          HEAD_SHA="${{ steps.open_pr.outputs.head_sha }}"
-
-          if [ "${{ steps.delete_guard.outcome }}" = "success" ] && [ "${{ steps.lint_parity.outcome }}" = "success" ]; then
-            STATE="success"
-            VERDICT="pass"
-            DESC="mechanical UI sync: delete-guard + lint-parity passed (run ${{ github.run_id }})"
-          else
-            STATE="failure"
-            VERDICT="fail"
-            DESC="mechanical UI sync: delete-guard or lint-parity did not pass (run ${{ github.run_id }})"
-          fi
-          echo "verdict=${VERDICT}" >> "$GITHUB_OUTPUT"
-
-          curl -sS -X POST \
-            -H "Authorization: token ${NI_GITHUB_PAT}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/northsideventuresllc-sketch/northside-intelligence/statuses/${HEAD_SHA}" \
-            -d "$(python3 -c "import json; print(json.dumps({'state': '${STATE}', 'context': 'council-review', 'description': '''${DESC}'''[:140]}))")"
-
-          echo "Set council-review=${STATE} on ${HEAD_SHA}: ${DESC}"
-
-      - name: Squash-merge if the council-review passed
-        if: steps.open_pr.outputs.opened == 'true' && steps.council.outputs.verdict == 'pass'
-        env:
-          NI_GITHUB_PAT: ${{ secrets.NI_GITHUB_PAT }}
-        run: |
-          PR_NUMBER="${{ steps.open_pr.outputs.pr_number }}"
-          PR_URL="${{ steps.open_pr.outputs.pr_url }}"
-
-          HTTP_CODE=$(curl -sS -o /tmp/merge_resp.json -w "%{http_code}" -X PUT \
-            -H "Authorization: token ${NI_GITHUB_PAT}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/northsideventuresllc-sketch/northside-intelligence/pulls/${PR_NUMBER}/merge" \
-            -d '{"merge_method":"squash"}')
-
-          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "Merged ${PR_URL} (squash)."
-          else
-            echo "::warning::Squash-merge refused (HTTP ${HTTP_CODE}) — leaving PR open for manual/COUNCIL merge."
-            cat /tmp/merge_resp.json || true
-            echo "PR left open: ${PR_URL}"
-            exit 0
-          fi
-
+      # SEC-SELF-CERTIFYING-MERGE-0914: this workflow used to set the required
+      # "council-review" status to success itself and then immediately squash-merge
+      # the PR it had just opened — the only thing "reviewing" the change was this
+      # same job, so branch protection on northside-intelligence's council-review
+      # check was not an independent review of anything it synced in. Both steps
+      # (status-setting and auto-merge) are removed: this workflow now only opens
+      # the PR and stops. Normal review/merge into northside-intelligence applies
+      # from here, same as any other PR against that repo.
       - name: Report open PR (not merged)
-        if: steps.open_pr.outputs.opened == 'true' && steps.council.outputs.verdict != 'pass'
+        if: steps.open_pr.outputs.opened == 'true'
         run: |
           echo "PR left open pending review: ${{ steps.open_pr.outputs.pr_url }}"
 

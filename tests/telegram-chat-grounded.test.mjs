@@ -147,7 +147,7 @@ test('an instruction becomes exactly one job, shaped to pass the spec gate', asy
   assert.equal(sbInsert.rows.length, 1, 'one job, not two, not zero');
   const { table, row } = sbInsert.rows[0];
   assert.equal(table, 'agent_dispatch');
-  assert.equal(row.owner, 'BUILD');
+  assert.equal(row.owner, 'EXEC');
   assert.equal(row.status, 'queued');
   assert.equal(row.action_class, 'code');
   assert.equal(row.queued_by, 'jb');
@@ -156,7 +156,7 @@ test('an instruction becomes exactly one job, shaped to pass the spec gate', asy
   assert.match(row.verification_spec.params.reason, /JB asked for this in Telegram/);
   assert.match(row.code, /^TG-20260906-fix-the-cron-tab-so$/);
   assert.match(row.title, /Fix the cron tab/);
-  assert.match(out.reply, /^Filed for BUILD\./);
+  assert.match(out.reply, /^Filed for EXEC\./);
 });
 
 test('a named agent owns it, and look-it-up work files as a question', () => {
@@ -313,7 +313,7 @@ test('two instructions on one day get two different jobs, not one lost one', asy
   });
   assert.equal(sbInsert.rows.length, 1);
   assert.equal(sbInsert.rows[0].row.code, 'TG-20260906-fix-the-cron-tab-so-2');
-  assert.match(out.reply, /^Filed for BUILD\./);
+  assert.match(out.reply, /^Filed for EXEC\./);
   assert.equal(await freeCode(sbSelect, 'TG-20260906-something-else'), 'TG-20260906-something-else');
 });
 
@@ -331,7 +331,7 @@ test('the invented replies from the incident can never be quoted back', () => {
   assert.equal(usableHistory(long).length, 6, 'only the last few turns travel');
 });
 
-test('history is not treated as evidence in the system prompt', async () => {
+test('grounding still bans invented answers now that chat history is allowed as context', async () => {
   const generate = stubGenerate('ok');
   await answerJbChatMessage(CFG, EMPTY_SB, {
     userMessage: 'how is the fleet doing',
@@ -339,6 +339,14 @@ test('history is not treated as evidence in the system prompt', async () => {
     generate,
   });
   const system = generate.calls[0].opts.messages[0].content;
-  assert.match(system, /Earlier messages in this chat are NOT evidence/);
-  assert.match(system, /Answer ONLY from the CONTEXT section\./);
+  // f97ac2f (agent topics, conversational routing) intentionally replaced the
+  // stricter "history is NOT evidence / answer ONLY from CONTEXT" rule with a
+  // conversational one — JB wanted AXON to follow chat flow, not just the
+  // CONTEXT block. What must still hold is the anti-invention guarantee this
+  // test file exists to prove (see file header).
+  assert.match(system, /Never invent a task, a draft, a root cause, a plan, a number or a status/);
+  assert.match(
+    system,
+    /If the answer is not in CONTEXT or the chat history, reply exactly: "I don't have that in front of me"/,
+  );
 });

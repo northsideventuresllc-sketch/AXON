@@ -16,6 +16,7 @@ import { NextResponse } from 'next/server';
 import { loadConfig } from '@/lib/config.mjs';
 import { createSupabaseClient } from '@/lib/supabase.mjs';
 import { telegramSendWithKeyboard } from '@/lib/telegram.mjs';
+import { verifySharedSecret } from '@/lib/verify-shared-secret.mjs';
 import {
   buildLeadKeyboard,
   buildLeadMessage,
@@ -30,9 +31,8 @@ const WEBHOOK_SECRET_HEADER = 'x-match-fit-webhook-secret';
 
 function checkWebhookSecret(req: Request): boolean {
   const secret = process.env.MATCH_FIT_WEBHOOK_SECRET;
-  if (!secret) return false;
   const header = req.headers.get(WEBHOOK_SECRET_HEADER);
-  return header === secret;
+  return verifySharedSecret(header, secret);
 }
 
 export async function POST(req: Request) {

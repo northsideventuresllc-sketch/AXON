@@ -1,6 +1,7 @@
 import { loadConfig, loadTelegramConfig } from '../lib/config.mjs';
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { handleTelegramCallback, handleTelegramMessage } from '../lib/telegram-handler.mjs';
+import { verifySharedSecret } from '../lib/verify-shared-secret.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -11,15 +12,39 @@ function unauthorized(res) {
 // rather than needing its own route file. loadConfig resolves that agent's
 // own token/chat/secret, falling back to the shared default bot if the agent
 // has no dedicated bot provisioned yet.
+//
+// SEC-TELEGRAM-WEBHOOK-FAIL-OPEN-0914: this used to `return true` (accept) when
+// expectedSecret was unset — which is exactly how it ships by default, since
+// TELEGRAM_WEBHOOK_SECRET is documented as "Optional" in .env.example. That let
+// anyone POST a forged Telegram update straight through to real actions (approve/
+// delete outreach leads, resend sends) with no secret configured at all. Fails
+// closed now, matching the MATCH_FIT_WEBHOOK_SECRET webhooks in this repo.
 function checkWebhookSecret(req, expectedSecret) {
-  if (!expectedSecret) return true;
   const header = req.headers['x-telegram-bot-api-secret-token'];
-  return header === expectedSecret;
+  return verifySharedSecret(header, expectedSecret);
 }
+
+// In-memory update_id deduplication cache — prevents Telegram webhook retry loops
+// from triggering repeated responses when LLM generation takes >5 seconds.
+const PROCESSED_UPDATES = new Set();
+const UPDATE_CACHE_MAX = 1000;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const update = req.body;
+  const updateId = update?.update_id;
+  if (updateId) {
+    if (PROCESSED_UPDATES.has(updateId)) {
+      return res.status(200).json({ ok: true, duplicate: true });
+    }
+    PROCESSED_UPDATES.add(updateId);
+    if (PROCESSED_UPDATES.size > UPDATE_CACHE_MAX) {
+      const first = PROCESSED_UPDATES.values().next().value;
+      PROCESSED_UPDATES.delete(first);
+    }
   }
 
   const rawAgent = req.query?.agent;
@@ -55,7 +80,6 @@ export default async function handler(req, res) {
       return res.status(503).json({ error: 'Telegram not configured' });
     }
 
-    const update = req.body;
     // Remember every chat this bot hears from (DM, group, forum supergroup).
     // getUpdates is unusable while this webhook is set, so this table is how
     // nv-vault's telegram-topics-setup.mjs finds the "NVG Agents" forum group.
