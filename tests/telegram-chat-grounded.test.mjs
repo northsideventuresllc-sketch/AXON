@@ -338,6 +338,13 @@ test('conversational continuity does not relax the invention/agreement bans', as
   // the thing that actually mattered in the 2026-09-06 incident: the model
   // can never invent a fact or agree with an unconfirmed claim, regardless
   // of what it's allowed to recall from history.
+  //
+  // f97ac2f (agent topics, conversational routing) intentionally replaced the
+  // stricter "history is NOT evidence / answer ONLY from CONTEXT" rule with a
+  // conversational one — JB wanted AXON to follow chat flow, not just the
+  // CONTEXT block. What must still hold is the anti-invention guarantee this
+  // test file exists to prove (see file header): this also covers the check
+  // PR #231 added for the same CI failure.
   const generate = stubGenerate('ok');
   await answerJbChatMessage(CFG, EMPTY_SB, {
     userMessage: 'how is the fleet doing',
