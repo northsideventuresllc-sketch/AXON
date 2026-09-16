@@ -109,7 +109,8 @@ test('handleTelegramApprovalReply: enriches agent_dispatch and notifies agent_bu
   assert.equal(insertedBus[0].to_agent, 'BUILD');
   assert.ok(insertedBus[0].body.includes('Approve only after running integration tests'));
 
-  // Verify log message
-  assert.equal(insertedMessages.length, 1);
+  // Verify log messages: JB's reply logged, then the assistant's reply logged for conversation history
+  assert.equal(insertedMessages.length, 2);
   assert.equal(insertedMessages[0].message_type, 'approval_reply');
+  assert.equal(insertedMessages[1].message_type, 'approval_reply_assistant');
 });
