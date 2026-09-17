@@ -1,22 +1,27 @@
 #!/usr/bin/env node
 /**
- * AXON-STARTER-TEMPLATES-001 — increment 1: manifest builder.
+ * AXON-STARTER-TEMPLATES-001 — increment 2: manifest builder + zip.
  *
  * Scans the repo for the artifact classes the nightly AXON build produces
  * (skills, workflows, agent templates) and writes a JSON manifest describing
  * what would ship in the starter kit bundled with the AXON default download.
+ * With --zip, also packs those files into dist/axon-starter-kit.zip.
  *
  * SCOPE OF THIS INCREMENT (explicit, not silently partial):
- *   - Discovers candidate source paths and writes dist/starter-kit-manifest.json.
- *   - Does NOT yet zip the bundle or wire into the download flow — that is
- *     increment 2, tracked under the same dispatch code (AXON-STARTER-TEMPLATES-001).
- *   - Packaging deliberately avoids adding a new npm dependency (archiver/jszip)
- *     in this pass; increment 2 should either add one deliberately or shell out
- *     to the system `zip` binary — a dependency change should be its own
- *     reviewed step, not bundled into the manifest scaffold.
+ *   - Increment 1 (manifest only) is done.
+ *   - Increment 2 adds --zip: shells out to the system `zip` binary (no new
+ *     npm dependency — per increment 1's own note that a dependency add
+ *     should be its own reviewed step, not bundled here).
+ *   - Still NOT done: wiring into "the AXON default download flow". As of
+ *     this pass there is no download route/page/flow anywhere in this repo
+ *     (checked app/ and api/ for any "download" reference — none exist), so
+ *     there is nothing to wire into yet. That is increment 3, and it depends
+ *     on the download flow being designed/built first — faking a connection
+ *     to a flow that doesn't exist would be worse than leaving it explicit.
  *
  * Usage:
  *   node scripts/build-starter-kit.mjs
+ *   node scripts/build-starter-kit.mjs --zip
  *   node scripts/build-starter-kit.mjs --source-dirs=.claude/skills,.cursor/skills
  *
  * SOURCE LOCATION — corrected after real recon (2026-08-18, post-review):
@@ -34,9 +39,10 @@
  * 2026-08-17. This script is safe to run standalone any time — it only reads
  * the filesystem and writes dist/starter-kit-manifest.json.
  */
-import { readdirSync, statSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { readdirSync, statSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join, relative, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
@@ -115,12 +121,31 @@ export function buildManifest({ sourceDirs = DEFAULT_SOURCE_DIRS, repoRoot = REP
     source_dirs_missing: missingDirs,
     file_count: scanned.length,
     files: scanned,
-    next_increment: 'zip dist/starter-kit-manifest.json[*].path into dist/axon-starter-kit.zip and wire into the AXON default download flow',
+    next_increment: 'wire dist/axon-starter-kit.zip into the AXON default download flow once that flow exists (none does yet — see file header)',
   };
 }
 
+// Shells out to the system `zip` binary rather than adding an npm dependency
+// (archiver/jszip) — see file header. Returns null (no zip written) when the
+// manifest has zero files, since `zip` errors on an empty file list.
+export function buildZip({ manifest, repoRoot = REPO_ROOT, distDir = join(REPO_ROOT, 'dist'), zipName = 'axon-starter-kit.zip' } = {}) {
+  if (!manifest.file_count) return null;
+
+  mkdirSync(distDir, { recursive: true });
+  const zipPath = join(distDir, zipName);
+  rmSync(zipPath, { force: true });
+
+  const relativePaths = manifest.files.map((f) => f.path);
+  execFileSync('zip', ['-X', '-q', zipPath, ...relativePaths], { cwd: repoRoot });
+
+  return zipPath;
+}
+
 function main() {
-  const sourceDirs = parseSourceDirsArg(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  const sourceDirs = parseSourceDirsArg(argv);
+  const shouldZip = argv.includes('--zip');
+
   const manifest = buildManifest({ sourceDirs });
   manifest.generated_at = new Date().toISOString();
 
@@ -133,6 +158,15 @@ function main() {
   console.log(`files found: ${manifest.file_count}`);
   if (manifest.source_dirs_missing.length) {
     console.log(`source dirs not present in this repo (skipped): ${manifest.source_dirs_missing.join(', ')}`);
+  }
+
+  if (shouldZip) {
+    const zipPath = buildZip({ manifest, repoRoot: REPO_ROOT, distDir });
+    if (zipPath) {
+      console.log(`starter-kit zip written: ${zipPath}`);
+    } else {
+      console.log('starter-kit zip skipped: manifest has 0 files');
+    }
   }
 }
 
