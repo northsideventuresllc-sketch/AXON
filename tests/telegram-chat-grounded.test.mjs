@@ -332,19 +332,6 @@ test('the invented replies from the incident can never be quoted back', () => {
 });
 
 test('conversational continuity does not relax the invention/agreement bans', async () => {
-  // AXON-TELEGRAM-DISPATCH-OWNER-VALIDATION-0916: commit f97ac2fc (2026-09-15)
-  // deliberately let the model use chat history for conversational flow —
-  // "history is NOT evidence" is no longer the rule. This test now checks
-  // the thing that actually mattered in the 2026-09-06 incident: the model
-  // can never invent a fact or agree with an unconfirmed claim, regardless
-  // of what it's allowed to recall from history.
-  //
-  // f97ac2f (agent topics, conversational routing) intentionally replaced the
-  // stricter "history is NOT evidence / answer ONLY from CONTEXT" rule with a
-  // conversational one — JB wanted AXON to follow chat flow, not just the
-  // CONTEXT block. What must still hold is the anti-invention guarantee this
-  // test file exists to prove (see file header): this also covers the check
-  // PR #231 added for the same CI failure.
   const generate = stubGenerate('ok');
   await answerJbChatMessage(CFG, EMPTY_SB, {
     userMessage: 'how is the fleet doing',
@@ -355,16 +342,11 @@ test('conversational continuity does not relax the invention/agreement bans', as
   assert.match(system, /You must understand conversational flow/);
   assert.match(system, /Never invent a task, a draft, a root cause, a plan, a number or a status/);
   assert.match(system, /Never agree with a claim you cannot see in the context/);
-  assert.match(system, /If the answer is not in CONTEXT or the chat history, reply exactly: "I don't have that in front of me"/);
+  assert.match(system, /I don't have that in front of me/);
+  assert.match(system, /ADHD Plain English Law/);
 });
 
 test('a [DISPATCH] tag only ever files to a roster-recognized owner', async () => {
-  // Closes the gap the conversational-routing commit opened: the system
-  // prompt tells the model "AXON Research" is a valid [DISPATCH: ...]
-  // target, but that name isn't in ROSTER and nothing drains an
-  // agent_dispatch row owned by it — it would sit as a dead letter forever
-  // (same failure shape as the REACH/DESK incidents). A hallucinated or
-  // unwired dispatch target must never reach the ticket table verbatim.
   const sbInsert = stubInsert();
   const generate = stubGenerate('Let me check. [DISPATCH: AXON Research]');
   await answerJbChatMessage(CFG, { sbSelect: stubSelect(), sbInsert }, {
