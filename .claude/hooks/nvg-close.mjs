@@ -42,6 +42,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { sweepSiblings } from './nvg-resolution-sweep.mjs';
 
 const PROJECT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -95,8 +96,22 @@ export function buildRows(a) {
     `CARRY FORWARD: ${a.carry_forward.join(' | ') || 'none'}`,
   ].join('\n');
   const apartment = { session_date: date, workspace_type: a.workspace_type, raw_note: raw };
+  // AX-CLOSE-HOOK-FABRICATES-CAUSATION-0917: broke/why/fix are independent lists with no
+  // positional relationship unless the caller supplies them equal-length and in matching
+  // order. The old `|| a.broke[0]` / `|| a.why[0]` fallbacks reused the FIRST entry whenever
+  // arrays ran short, stamping an unrelated root cause onto a symptom with total confidence.
+  // Only zip when lengths genuinely match (the caller has asserted the pairing); otherwise
+  // write the three lists as separate unlinked statements — never invent a pairing.
+  const linked = a.fix.length > 0 && a.broke.length === a.fix.length && a.why.length === a.fix.length;
+  const causalLearnings = linked
+    ? a.fix.map((f, i) => ({ learning: `[LEARNED] ${a.agent} ${date}: ${a.broke[i]} — why: ${a.why[i]} — fix now in place: ${f}`, source: `${a.agent} close-out`, category: 'loop', project: a.workspace_type }))
+    : [
+        a.broke.length ? { learning: `[LEARNED] ${a.agent} ${date}: broke — ${a.broke.join(' | ')}`, source: `${a.agent} close-out`, category: 'loop', project: a.workspace_type } : null,
+        a.why.length ? { learning: `[LEARNED] ${a.agent} ${date}: root causes observed — ${a.why.join(' | ')}`, source: `${a.agent} close-out`, category: 'loop', project: a.workspace_type } : null,
+        a.fix.length ? { learning: `[LEARNED] ${a.agent} ${date}: fixes applied — ${a.fix.join(' | ')}`, source: `${a.agent} close-out`, category: 'loop', project: a.workspace_type } : null,
+      ].filter(Boolean);
   const learnings = [
-    ...a.fix.map((f, i) => ({ learning: `[LEARNED] ${a.agent} ${date}: ${a.broke[i] || a.broke[0] || 'issue'} — why: ${a.why[i] || a.why[0] || 'n/a'} — fix now in place: ${f}`, source: `${a.agent} close-out`, category: 'loop', project: a.workspace_type })),
+    ...causalLearnings,
     ...a.regressed.map((r) => ({ learning: `[REGRESSION] ${a.agent} ${date}: ${r} — regressed; SENSEI/owner must fix in the next run, not note it.`, source: `${a.agent} close-out`, category: 'regression', project: a.workspace_type })),
   ];
   const bus = validInstructionChanges.map((c) => ({
@@ -153,6 +168,18 @@ async function main() {
   }
 }
 // Only run as a CLI, never on import — buildRows() is imported directly by tests.
-if (import.meta.url === `file://${process.argv[1]}`) {
+// AX-CLOSE-HOOK-SILENT-NOOP-ON-SPACES-0917: `file://${process.argv[1]}` never matched
+// import.meta.url on a path containing a space (Node percent-encodes the URL but not
+// argv[1]) — main() silently never ran, exit 0, zero output, zero writes. pathToFileURL
+// produces the same encoding import.meta.url uses. realpathSync matters too: import.meta.url
+// resolves through symlinks (e.g. the documented ~/nv-vault -> .../Northside Ventures Group
+// Vault workspace-root symlink, itself space-containing), argv[1] does not, so without it
+// the same silent no-op recurs for any session rooted at a symlink instead of the real path.
+function isMainInvocation() {
+  if (!process.argv[1]) return false;
+  try { return import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href; }
+  catch { return false; }
+}
+if (isMainInvocation()) {
   main().catch((e) => { console.error('close-out failed: ' + e.message); process.exit(3); });
 }

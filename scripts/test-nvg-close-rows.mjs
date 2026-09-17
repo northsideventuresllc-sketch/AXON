@@ -6,6 +6,10 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { buildRows } from '../.claude/hooks/nvg-close.mjs';
 
 const BASE = {
@@ -68,4 +72,75 @@ test('buildRows: a mix of one valid and one malformed entry keeps only the valid
   const rows = buildRows({ ...BASE, instruction_change: [{ target: 'EXEC.md', change: 'add X', why: 'Y' }, { why: 'no target or change' }], resolved_siblings: [] });
   assert.equal(rows.bus.length, 1);
   assert.equal(rows.bus[0].body.target, 'EXEC.md');
+});
+
+test('buildRows: equal-length broke/why/fix zip index-by-index (the caller-asserted pairing)', () => {
+  const rows = buildRows({ ...BASE, broke: ['X broke'], why: ['root cause of X'], fix: ['patched X'], resolved_siblings: [] });
+  assert.equal(rows.learnings.length, 1);
+  assert.ok(rows.learnings[0].learning.includes('X broke — why: root cause of X — fix now in place: patched X'));
+});
+
+test('buildRows (AX-CLOSE-HOOK-FABRICATES-CAUSATION-0917): mismatched broke/why/fix lengths never fabricate a pairing', () => {
+  const rows = buildRows({ ...BASE, broke: ['symptom A', 'symptom B'], why: ['real cause of A'], fix: ['fix 1', 'fix 2', 'fix 3'], resolved_siblings: [] });
+  const joined = rows.learnings.map((l) => l.learning).join('\n');
+  // must never claim "real cause of A" is the why for symptom B, fix 2, or fix 3
+  assert.ok(!joined.includes('symptom B — why: real cause of A'));
+  assert.ok(!joined.includes('fix now in place: fix 2') && !joined.includes('fix now in place: fix 3'));
+  // the three lists still land, just unlinked
+  assert.ok(joined.includes('broke — symptom A | symptom B'));
+  assert.ok(joined.includes('root causes observed — real cause of A'));
+  assert.ok(joined.includes('fixes applied — fix 1 | fix 2 | fix 3'));
+});
+
+test('AX-CLOSE-HOOK-SILENT-NOOP-ON-SPACES-0917: the CLI entry guard actually runs main() from a path containing a space', () => {
+  // `file://${process.argv[1]}` never matched import.meta.url on a space-containing path
+  // (Node percent-encodes the URL but not argv[1]) -- main() silently never ran, exit 0,
+  // zero output, zero writes. Reproduce the exact shape: copy the hook + its dependency
+  // into a temp dir whose name has a space, invoke it as a real CLI subprocess, and prove
+  // it actually produces output instead of running silent.
+  // realpathSync matters here: os.tmpdir() on macOS is /tmp, itself a symlink to
+  // /private/tmp -- import.meta.url resolves through the symlink but a naive
+  // pathToFileURL(process.argv[1]) would not, which is an unrelated confound, not
+  // the space-encoding bug this test targets. Resolve first so the only variable is the space.
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'nvg close test ')));
+  const hookSrc = fs.readFileSync(new URL('../.claude/hooks/nvg-close.mjs', import.meta.url), 'utf8');
+  const sweepSrc = fs.readFileSync(new URL('../.claude/hooks/nvg-resolution-sweep.mjs', import.meta.url), 'utf8');
+  fs.writeFileSync(path.join(dir, 'nvg-close.mjs'), hookSrc);
+  fs.writeFileSync(path.join(dir, 'nvg-resolution-sweep.mjs'), sweepSrc);
+  const payload = path.join(dir, 'payload.json');
+  fs.writeFileSync(payload, JSON.stringify({ ...BASE, resolved_siblings: [] }));
+
+  try {
+    const out = execFileSync(process.execPath, [path.join(dir, 'nvg-close.mjs'), '--file', payload], { encoding: 'utf8', cwd: dir, env: { ...process.env, SUPABASE_SERVICE_ROLE_KEY: '', SUPABASE_SERVICE_KEY: '' } });
+    assert.ok(out.length > 0, 'main() must produce output even from a space-containing path');
+    assert.ok(fs.existsSync(path.join(dir, '.nvg', 'closeout.ok')), 'main() must write .nvg/closeout.ok even from a space-containing path');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('AX-CLOSE-HOOK-SILENT-NOOP-ON-SPACES-0917: still runs main() when invoked through a symlink into the space-containing path (the documented ~/nv-vault case)', () => {
+  // import.meta.url resolves through symlinks (realpath); a naive pathToFileURL(process.argv[1])
+  // does not. AGENTS.md documents ~/nv-vault as a valid no-space symlink pointing at the real,
+  // space-containing vault directory -- exactly this shape. Without realpathSync on argv[1] too,
+  // the guard silently no-ops again here, just for a different reason than the plain space case.
+  const realDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'nvg close symlink target ')));
+  const linkDir = path.join(os.tmpdir(), `nvg-close-symlink-${process.pid}-${Math.floor(Math.random() * 1e6)}`);
+  fs.symlinkSync(realDir, linkDir, 'dir');
+  const hookSrc = fs.readFileSync(new URL('../.claude/hooks/nvg-close.mjs', import.meta.url), 'utf8');
+  const sweepSrc = fs.readFileSync(new URL('../.claude/hooks/nvg-resolution-sweep.mjs', import.meta.url), 'utf8');
+  fs.writeFileSync(path.join(realDir, 'nvg-close.mjs'), hookSrc);
+  fs.writeFileSync(path.join(realDir, 'nvg-resolution-sweep.mjs'), sweepSrc);
+  const payload = path.join(realDir, 'payload.json');
+  fs.writeFileSync(payload, JSON.stringify({ ...BASE, resolved_siblings: [] }));
+
+  try {
+    // invoke via the no-space symlink path, not the real (space-containing) path
+    const out = execFileSync(process.execPath, [path.join(linkDir, 'nvg-close.mjs'), '--file', payload], { encoding: 'utf8', cwd: linkDir, env: { ...process.env, SUPABASE_SERVICE_ROLE_KEY: '', SUPABASE_SERVICE_KEY: '' } });
+    assert.ok(out.length > 0, 'main() must produce output even when invoked via a symlink into a space-containing path');
+    assert.ok(fs.existsSync(path.join(realDir, '.nvg', 'closeout.ok')), 'main() must write .nvg/closeout.ok even when invoked via a symlink');
+  } finally {
+    fs.rmSync(linkDir, { force: true });
+    fs.rmSync(realDir, { recursive: true, force: true });
+  }
 });
