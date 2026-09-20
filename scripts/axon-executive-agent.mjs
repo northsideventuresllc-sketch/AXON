@@ -132,7 +132,7 @@ async function main() {
         ),
         sbSelect(
           'axon_research_findings',
-          'select=id,research_lane,title,summary,implementation_hint,priority,status,jspace_relevance,brain_gap_category&order=created_at.desc&limit=30',
+          'select=id,research_lane,title,summary,implementation_hint,priority,status,jspace_relevance,brain_gap_category&status=eq.new&order=created_at.desc&limit=30',
         ),
         sbSelect(
           'Learnings',
@@ -168,6 +168,8 @@ async function main() {
     persistItems: async (rows) => upsertWisdomItems(sbSelect, sbInsert, sbPatch, rows),
     persistRun: async (record) => sbInsert(WISDOM_RUNS_TABLE, record),
     persistJspace:async (state) => saveJspaceState(sbInsert, sbPatch, state, 'default', sbSelect),
+    persistFindingsApplied: async (ids) =>
+      sbPatch('axon_research_findings', `id=in.(${ids.join(',')})`, { status: 'applied' }),
   });
 
   // --- 1. durable Decisions/Learnings + git history across NVG repos ---

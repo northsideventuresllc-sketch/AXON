@@ -164,6 +164,33 @@ assert.equal(persistedRun?.watched_count, run.watchedCount);
 assert.ok(persistedJspace?.active_concepts?.length >= 1);
 assert.match(run.summary, /Wisdom absorb/i);
 
+let appliedFindingIds = null;
+const runWithFindings = await runWisdomAbsorbLoop({
+  corpus: [],
+  learnings: [],
+  findings: [
+    {
+      id: 'f-applied-1',
+      title: 'J-space broadcast',
+      summary: 'Capacity-limited workspace improves high-order routing.',
+      implementation_hint: 'Keep ≤6 active concepts.',
+      research_lane: 'ai_models',
+      priority: 'high',
+    },
+  ],
+  signals: [],
+  dryRun: false,
+  forceHeuristic: true,
+  persistItems: async (rows) => rows,
+  persistRun: async (record) => record,
+  persistJspace: async (state) => state,
+  persistFindingsApplied: async (ids) => {
+    appliedFindingIds = ids;
+  },
+});
+assert.equal(runWithFindings.ok, true);
+assert.deepEqual(appliedFindingIds, ['f-applied-1']);
+
 const dry = await runWisdomAbsorbLoop({
   corpus: [],
   findings: [],

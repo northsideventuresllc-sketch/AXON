@@ -175,7 +175,7 @@ export async function POST(req: Request) {
           ),
           sbSelect(
             'axon_research_findings',
-            'select=id,research_lane,title,summary,implementation_hint,priority,status,jspace_relevance,brain_gap_category&order=created_at.desc&limit=30',
+            'select=id,research_lane,title,summary,implementation_hint,priority,status,jspace_relevance,brain_gap_category&status=eq.new&order=created_at.desc&limit=30',
           ),
           sbSelect(
             'Learnings',
@@ -206,6 +206,8 @@ export async function POST(req: Request) {
       persistJspace: async (state: Record<string, unknown>) =>
         // sbSelect passed for upsert path; .mjs signature is untyped for TS
         saveJspaceState(sbInsert, sbPatch, state, 'default', sbSelect as never),
+      persistFindingsApplied: async (ids: string[]) =>
+        sbPatch('axon_research_findings', `id=in.(${ids.join(',')})`, { status: 'applied' }),
     });
 
     return NextResponse.json({
