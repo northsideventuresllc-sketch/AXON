@@ -68,18 +68,18 @@ function stubAreaSearch(rows = [{ title: 'Source', link: 'https://example.test/s
 }
 
 // ---------------------------------------------------------------------------
-// 1. Lane-day selection (Mon/Wed/Fri gate, no new cron)
+// 1. Lane-day selection (BUILD-COMPETITOR-RESEARCH-DAILY-0923: runs every day now)
 // ---------------------------------------------------------------------------
 
-test('competitor lane runs only Mon/Wed/Fri (UTC)', () => {
-  // 2026-09-06 is a Sunday (day 0); 2026-09-07 Mon; 2026-09-09 Wed; 2026-09-11 Fri; 2026-09-12 Sat.
-  assert.equal(isCompetitorLaneDay(new Date('2026-09-06T12:00:00Z')), false); // Sun
+test('competitor lane runs every day (Mon/Wed/Fri gate removed, JB direct 2026-09-23)', () => {
+  // 2026-09-06 is a Sunday; 2026-09-08 Tue; 2026-09-10 Thu; 2026-09-12 Sat — all must be true now.
+  assert.equal(isCompetitorLaneDay(new Date('2026-09-06T12:00:00Z')), true); // Sun
   assert.equal(isCompetitorLaneDay(new Date('2026-09-07T12:00:00Z')), true); // Mon
-  assert.equal(isCompetitorLaneDay(new Date('2026-09-08T12:00:00Z')), false); // Tue
+  assert.equal(isCompetitorLaneDay(new Date('2026-09-08T12:00:00Z')), true); // Tue
   assert.equal(isCompetitorLaneDay(new Date('2026-09-09T12:00:00Z')), true); // Wed
-  assert.equal(isCompetitorLaneDay(new Date('2026-09-10T12:00:00Z')), false); // Thu
+  assert.equal(isCompetitorLaneDay(new Date('2026-09-10T12:00:00Z')), true); // Thu
   assert.equal(isCompetitorLaneDay(new Date('2026-09-11T12:00:00Z')), true); // Fri
-  assert.equal(isCompetitorLaneDay(new Date('2026-09-12T12:00:00Z')), false); // Sat
+  assert.equal(isCompetitorLaneDay(new Date('2026-09-12T12:00:00Z')), true); // Sat
 });
 
 test('competitor venture rotation picks a real venture from the live list, never invents one', () => {
@@ -103,6 +103,7 @@ test('buildCompetitorArea shapes a real, sourced gap-plan instruction — never 
 
 function fakeSb(ventures) {
   const inserted = [];
+  const patched = [];
   const sbSelect = async (table) => {
     if (table === 'content_machine_brand_profiles') return ventures;
     if (table === 'axon_operator_profiles') return [{ context_data: {} }];
@@ -114,8 +115,11 @@ function fakeSb(ventures) {
     if (table === RESEARCH_RUN_TABLE_NAME) return { id: 'run-1', ...row };
     return { id: 'x', ...row };
   };
-  const sbPatch = async () => ({});
-  return { sbSelect, sbInsert, sbPatch, inserted };
+  const sbPatch = async (table, filter, data) => {
+    patched.push({ table, filter, data });
+    return {};
+  };
+  return { sbSelect, sbInsert, sbPatch, inserted, patched };
 }
 const RESEARCH_RUN_TABLE_NAME = 'axon_research_runs';
 
@@ -147,6 +151,9 @@ test('on a lane day, the competitor lane adds a 4th area and writes it to axon_r
   assert.equal(results.length, 4); // 3 base areas + competitor
   const competitorResult = results.find((r) => r.area.id === COMPETITOR_LANE_ID);
   assert.ok(competitorResult, 'competitor area result present');
+  // BUILD-COMPETITOR-RESEARCH-STARVED-FIX-0923 (a): competitor must run FIRST so the
+  // per-area budget check can never starve it by landing on it last.
+  assert.equal(results[0].area.id, COMPETITOR_LANE_ID, 'competitor area runs first');
 
   const competitorRow = sb.inserted.find(
     (r) => r.table === 'axon_research_findings' && r.row.research_lane === COMPETITOR_LANE_ID
@@ -156,9 +163,16 @@ test('on a lane day, the competitor lane adds a 4th area and writes it to axon_r
   assert.equal(competitorRow.row.priority, 'high');
   assert.equal(competitorRow.row.implementation_hint, 'Voice coaching MVP');
   assert.deepEqual(competitorRow.row.source_urls, ['https://example.test/news']);
+
+  // (c): completed areas must now actually write briefing items — no more hardcoded 0.
+  const runRow = sb.inserted.find((r) => r.table === RESEARCH_RUN_TABLE_NAME);
+  assert.ok(runRow.row.briefing_items_added > 0, 'briefing_items_added reflects real writes');
+  const patchedProfile = sb.patched.find((p) => p.table === 'axon_operator_profiles');
+  assert.ok(patchedProfile, 'briefing patch applied to axon_operator_profiles');
+  assert.equal(patchedProfile.data.context_data.workspace.briefing.length, 4);
 });
 
-test('off a lane day, only the 3 base areas run — no competitor row, no new cron behavior invented', async () => {
+test('the competitor lane now runs every day — Tuesday still gets all 4 areas, competitor first', async () => {
   const sb = fakeSb(VENTURES);
   const gen = stubGenerate(
     JSON.stringify({
@@ -180,12 +194,12 @@ test('off a lane day, only the 3 base areas run — no competitor row, no new cr
     dryRun: false,
     generate: gen,
     search: stubAreaSearch(),
-    now: new Date('2026-09-08T12:00:00Z'), // Tuesday
+    now: new Date('2026-09-08T12:00:00Z'), // Tuesday — used to be gated off
   });
 
-  assert.equal(results.length, 3);
-  assert.ok(!results.some((r) => r.area.id === COMPETITOR_LANE_ID));
-  assert.match(summary, /not scheduled today/);
+  assert.equal(results.length, 4);
+  assert.equal(results[0].area.id, COMPETITOR_LANE_ID);
+  assert.match(summary, /4\/4 area\(s\) done/);
 });
 
 test('competitor lane on a lane day with no ventures skips honestly instead of inventing one', async () => {
