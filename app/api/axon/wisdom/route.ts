@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import {
   WISDOM_ITEMS_TABLE,
   WISDOM_RUNS_TABLE,
+  RESEARCH_FINDINGS_TABLE,
   runWisdomAbsorbLoop,
 } from '@/lib/wisdom-absorb-loop.mjs';
 import {
@@ -174,7 +175,7 @@ export async function POST(req: Request) {
             'select=external_id,domain,title,key_finding,axon_application,confidence,source_type,year&order=updated_at.desc.nullslast&limit=40',
           ),
           sbSelect(
-            'axon_research_findings',
+            RESEARCH_FINDINGS_TABLE,
             'select=id,research_lane,title,summary,implementation_hint,priority,status,jspace_relevance,brain_gap_category&status=eq.new&order=created_at.desc&limit=30',
           ),
           sbSelect(
@@ -206,8 +207,17 @@ export async function POST(req: Request) {
       persistJspace: async (state: Record<string, unknown>) =>
         // sbSelect passed for upsert path; .mjs signature is untyped for TS
         saveJspaceState(sbInsert, sbPatch, state, 'default', sbSelect as never),
-      persistFindingsApplied: async (ids: string[]) =>
-        sbPatch('axon_research_findings', `id=in.(${ids.join(',')})`, { status: 'applied' }),
+      persistFindingStatus: async (ids: string[]) =>
+        sbPatch(
+          RESEARCH_FINDINGS_TABLE,
+          `id=in.(${ids.map((id) => encodeURIComponent(id)).join(',')})`,
+          {
+            status: 'applied',
+            applied_at: new Date().toISOString(),
+            applied_artifact: 'axon_wisdom_items',
+            applied_note: 'AX-WISDOM-LOOP absorb cycle',
+          },
+        ),
     });
 
     return NextResponse.json({
@@ -218,6 +228,7 @@ export async function POST(req: Request) {
       digested: result.digested.length,
       enhanced: result.enhancement.enhancedCount,
       absorbed: result.dryRun ? 0 : result.itemRows.length,
+      findingsApplied: result.dryRun ? 0 : result.appliedFindingIds.length,
       summary: result.summary,
     });
   } catch (err) {

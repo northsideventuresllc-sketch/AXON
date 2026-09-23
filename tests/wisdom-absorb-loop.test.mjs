@@ -116,6 +116,7 @@ assert.match(formatWisdomForPrompt([]), /empty/);
 let persistedItems = null;
 let persistedRun = null;
 let persistedJspace = null;
+let persistedFindingIds = null;
 
 const run = await runWisdomAbsorbLoop({
   corpus: [
@@ -136,7 +137,17 @@ const run = await runWisdomAbsorbLoop({
       project: 'AXON',
     },
   ],
-  findings: [],
+  findings: [
+    {
+      id: 'f-applied-1',
+      title: 'J-space broadcast',
+      summary: 'Capacity-limited workspace improves high-order routing.',
+      implementation_hint: 'Keep ≤6 active concepts.',
+      research_lane: 'ai_models',
+      priority: 'high',
+      status: 'new',
+    },
+  ],
   signals: [],
   dryRun: false,
   forceHeuristic: true,
@@ -152,6 +163,10 @@ const run = await runWisdomAbsorbLoop({
     persistedJspace = state;
     return state;
   },
+  persistFindingStatus: async (ids) => {
+    persistedFindingIds = ids;
+    return ids;
+  },
 });
 
 assert.equal(run.ok, true);
@@ -163,33 +178,29 @@ assert.ok(persistedItems?.length >= 2);
 assert.equal(persistedRun?.watched_count, run.watchedCount);
 assert.ok(persistedJspace?.active_concepts?.length >= 1);
 assert.match(run.summary, /Wisdom absorb/i);
+assert.deepEqual(run.appliedFindingIds, ['f-applied-1']);
+assert.deepEqual(persistedFindingIds, ['f-applied-1']);
 
-let appliedFindingIds = null;
-const runWithFindings = await runWisdomAbsorbLoop({
+const noCallback = await runWisdomAbsorbLoop({
   corpus: [],
   learnings: [],
   findings: [
     {
-      id: 'f-applied-1',
-      title: 'J-space broadcast',
-      summary: 'Capacity-limited workspace improves high-order routing.',
-      implementation_hint: 'Keep ≤6 active concepts.',
+      id: 'f-no-callback',
+      title: 'Solo finding',
+      summary: 'Only research source in this cycle.',
       research_lane: 'ai_models',
       priority: 'high',
+      status: 'new',
     },
   ],
   signals: [],
   dryRun: false,
   forceHeuristic: true,
   persistItems: async (rows) => rows,
-  persistRun: async (record) => record,
-  persistJspace: async (state) => state,
-  persistFindingsApplied: async (ids) => {
-    appliedFindingIds = ids;
-  },
 });
-assert.equal(runWithFindings.ok, true);
-assert.deepEqual(appliedFindingIds, ['f-applied-1']);
+assert.deepEqual(noCallback.appliedFindingIds, ['f-no-callback']);
+assert.equal(noCallback.appliedFindings, null);
 
 const dry = await runWisdomAbsorbLoop({
   corpus: [],
