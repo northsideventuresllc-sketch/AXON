@@ -55,7 +55,8 @@ import { callAxonLocal } from '../lib/axon-local-relay.mjs';
   const originalFetch = global.fetch;
   global.fetch = async (url, opts) => {
     const body = opts?.body ? JSON.parse(opts.body) : null;
-    posts.push({ url: String(url), body });
+    // GETs are the 24h card-dedupe lookup (AG-VERIFY-CHAIN-EXHAUSTION-0924); only writes count.
+    if ((opts?.method || 'GET') === 'POST') posts.push({ url: String(url), body });
     return { ok: true, json: async () => [] };
   };
 
