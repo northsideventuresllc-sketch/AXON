@@ -29,14 +29,25 @@ const ID_RE = /^[0-9]+$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 /**
  * Pure: build the PATCH body for one sibling row. No network, no Date.now() (caller
  * supplies `nowIso` so this stays deterministic and testable).
+ *
+ * COLUMN CHOICE (fix 2026-09-24, ARCEUS — bug filed as agent_bus 169f4c67 + CONTENT
+ * dc87dcd7 root-cause-resolution-sweep-schema-mismatch): agent_bus has NO `superseded_note`
+ * column. The prior body wrote one, so PostgREST rejected every sweep PATCH ("column
+ * superseded_note does not exist") and NO sibling row was ever actually closed — the exact
+ * stale-board failure this hook exists to fix, silently un-fixed. We do not add a column
+ * (a DB migration is a Hard Stop, operator-core §7); we write only existing columns:
+ * `status`, `answered_by`, `answered_at`. `answered_by` stays a bare agent name so
+ * consumers that read it as a name (v_bus_unanswered, reply logic) are unaffected; the
+ * "closed as a sibling of <task> — <reason>" detail lives in the closing agent's own
+ * close-out row, which is where operator-core already keeps the audit trail.
  */
 export function buildSupersedePatch(entry, { closeoutTask, agent, nowIso }) {
   if (!entry || !entry.id) throw new Error('resolved_siblings entry needs an id');
   if (!ID_RE.test(String(entry.id))) throw new Error(`resolved_siblings entry id is not a valid row id: ${JSON.stringify(entry.id)}`);
-  const reason = entry.reason || 'resolved as a side effect of a related fix';
   return {
     status: 'superseded',
-    superseded_note: `[RESOLUTION-SWEEP] closed by ${agent} at ${nowIso} as a sibling of "${closeoutTask}" — ${reason}`,
+    answered_by: agent,
+    answered_at: nowIso,
   };
 }
 
