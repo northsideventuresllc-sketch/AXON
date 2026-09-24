@@ -84,7 +84,7 @@ await withCapturedLogs(async (lines) => {
   assert.equal(marker.model, null);
   assert.equal(marker.input_tokens, 0);
   assert.equal(marker.output_tokens, 0);
-  assert.equal(marker.total_tokens, 0);
+  assert.ok(!('total_tokens' in marker), 'total_tokens is a generated column -- never sent in the insert body');
   assert.equal(marker.cost_usd, 0);
   assert.equal(marker.agent_name, 'test-agent');
   const notes = JSON.parse(marker.notes);
