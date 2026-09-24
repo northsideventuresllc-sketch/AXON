@@ -62,7 +62,10 @@ function fakeSbSelect(secrets) {
   });
 }
 
-// --- 2b. group + approvals thread both provisioned — default path prefers the group ---
+// --- 2b. group + approvals thread both provisioned — telegramChatId (JB-facing) stays
+//         the private DM (TELEGRAM-APPROVALS-TO-DM-0924, NI-Brain Decision #2012).
+//         telegramGroupChatId / telegramApprovalsThreadId are still resolved for any
+//         agent-to-agent chatter that is NOT JB-facing, they just no longer win. -------
 {
   const sbSelect = fakeSbSelect({
     TELEGRAM_BOT_TOKEN: 'default-token',
@@ -74,7 +77,7 @@ function fakeSbSelect(secrets) {
   const cfg = await loadTelegramConfig(undefined, sbSelect);
   assert.deepEqual(cfg, {
     telegramToken: 'default-token',
-    telegramChatId: '-1004204591575',
+    telegramChatId: 'default-chat',
     telegramDmChatId: 'default-chat',
     telegramGroupChatId: '-1004204591575',
     telegramWebhookSecret: 'default-secret',
@@ -82,8 +85,9 @@ function fakeSbSelect(secrets) {
   });
 }
 
-// --- 2c. group set WITHOUT the approvals thread — mirrors fn_telegram_approval_ping's
-//         own precedence and stays on the legacy chat until both are provisioned -------
+// --- 2c. group set WITHOUT the approvals thread — telegramChatId is still the DM,
+//         same as 2b; the group/thread being partially or fully provisioned no
+//         longer changes the JB-facing chat id either way. --------------------------
 {
   const sbSelect = fakeSbSelect({
     TELEGRAM_BOT_TOKEN: 'default-token',

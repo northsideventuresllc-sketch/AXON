@@ -29,6 +29,13 @@ const ID_RE = /^[0-9]+$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 /**
  * Pure: build the resolution note for one sibling row. No network, no Date.now() (caller
  * supplies `nowIso` so this stays deterministic and testable).
+ *
+ * NOTE (0924 fix, revised): agent_bus has no top-level `superseded_note` column
+ * (Learning #9478) — PATCHing one as a top-level field 400s (PGRST204) on every sweep,
+ * silently swallowed by sweepSiblings' per-entry try/catch, so the note was never
+ * actually recorded anywhere. Rather than dropping the note (an earlier version of this
+ * fix did that), sweepSiblings folds it into the existing jsonb `body` column instead —
+ * see below — so the audit trail survives without a schema migration.
  */
 export function buildSupersedeNote(entry, { closeoutTask, agent, nowIso }) {
   if (!entry || !entry.id) throw new Error('resolved_siblings entry needs an id');
