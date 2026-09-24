@@ -208,6 +208,10 @@ export const LIB_FILES = [
   // this list) imports axon-model-discovery.mjs.
   'axon-model-discovery.mjs',
 
+  // Added 2026-09-24 (NO-DEAD-MODELS resolver): axon-computer-use.mjs and constants.mjs
+  // (both already on this list) import model-resolve.mjs.
+  'model-resolve.mjs',
+
   // NI router mirror gap (NI #205, 2026-09-06): both exist in AXON and are transitively
   // imported by the mirrored sources, but were absent from this list -- that's why the
   // portal mirror drifted from them.
