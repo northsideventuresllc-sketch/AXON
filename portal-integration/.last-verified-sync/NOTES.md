@@ -33,3 +33,14 @@ What the NI side still needs after this AXON PR merges: an actual run of
 of `main` (post-merge), committed and pushed there via the normal
 `sync-ni-portal.yml` workflow or by hand — this AXON PR does not push to
 northside-intelligence.
+
+- Re-verified 2026-09-24 at `fb486c8` (live model discovery, stacked on #258): `LIB_FILES`
+  81 → 82 (`axon-model-discovery.mjs`, imported by `axon-router-core.mjs`). `--check`
+  clean, then a real run against a disposable detached worktree of northside-intelligence
+  `origin/main` (never pushed). `check-portal-sync-imports.mjs`: no drift. The synced
+  `axon-router-core.mjs` imports cleanly in the NI tree.
+- Re-verified 2026-09-24 at `b2b852d` (local-first, stacked on #260): `LIB_FILES` 82 → 83
+  (`axon-local-intent.mjs`, imported by `axon-router-core.mjs`). `--check` clean, then a real
+  run against a disposable detached worktree of northside-intelligence `origin/main` (never
+  pushed). `check-portal-sync-imports.mjs`: no drift. The synced `axon-router-core.mjs`
+  imports cleanly in the NI tree.

@@ -5,12 +5,11 @@
 -- side too. The gate POLICY (what counts as high risk) is NOT changed here: that is
 -- AX-GATE-BLOCKS-OWN-LOCAL-TIER-0917, still waiting on JB.
 
--- 1. GEMINI_MODEL names a model Google retired. Verified live 2026-09-24 on both platform
---    keys: gemini-2.0-flash -> 404 "no longer available"; gemini-flash-lite-latest -> 200.
---    The value is a model id, not a credential.
-update ni_platform_secrets
-   set value = 'gemini-flash-lite-latest', updated_at = now()
- where key = 'GEMINI_MODEL' and value = 'gemini-2.0-flash';
+-- 1. (DROPPED 2026-09-24, superseded by live model discovery — lib/axon-model-discovery.mjs.)
+--    GEMINI_MODEL is now only an optional pin: a value missing from Google's live ListModels
+--    catalog is ignored with a logged warning, so the stale 'gemini-2.0-flash' row is
+--    harmless. Clearing it is optional housekeeping, not required:
+--      -- delete from ni_platform_secrets where key = 'GEMINI_MODEL' and value = 'gemini-2.0-flash';
 
 -- 2. Server-side card dedupe. The trigger opens one JB approval card per blocked job, so a
 --    repeating blocked local-model call opened one card a minute. With this change, one
