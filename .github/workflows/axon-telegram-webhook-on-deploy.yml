@@ -26,6 +26,18 @@ jobs:
         with:
           node-version: '20'
 
+      # TELEGRAM-WEBHOOK-SECRET-DEPLOY-0924: SUPABASE_SERVICE_KEY is enough on its
+      # own — scripts/axon-telegram-setup.mjs resolves TELEGRAM_WEBHOOK_SECRET
+      # itself from NI-Brain ni_platform_secrets (same lib/config.mjs
+      # loadTelegramConfig() the live webhook handler uses), so it is NOT passed
+      # as a step env here. Do not add a plain TELEGRAM_WEBHOOK_SECRET secret to
+      # this step "to be safe" — that previously meant it was never set (this
+      # workflow never had that secret configured), so the script silently
+      # re-registered the webhook with NO secret_token on every push, and
+      # api/telegram-webhook.js — which fails CLOSED (401) without a matching
+      # secret — rejected every single button tap and message. The script now
+      # refuses (non-zero exit, job fails red) to call setWebhook at all if no
+      # secret resolves, instead of shipping a broken webhook silently.
       - name: Register webhook + slash commands
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
