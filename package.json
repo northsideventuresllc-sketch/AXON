@@ -58,6 +58,7 @@
     "digest:nightly": "node scripts/axon-nightly-digest.mjs",
     "digest:nightly:dry": "AXON_DRY_RUN=1 node scripts/axon-nightly-digest.mjs",
     "test:nightly-digest": "node tests/axon-nightly-digest.test.mjs",
+    "test:droid-runner-target": "node tests/axon-droid-runner-target.test.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "engines": {
