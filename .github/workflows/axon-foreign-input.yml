@@ -4,12 +4,11 @@ name: AXON Foreign-Input Feed
 # into J-space per run so retrieval gain cannot converge on itself.
 # Additive only — never deletes/expires/downgrades any memory (AXON NEVER FORGETS).
 
+# Schedule moved to mac mini cron manifest (AXON-Foreign-Input) on 2026-09-24 (Decision #1699).
+# Was: cron '0 11 * * 2', '0 11 * * 4', '0 11 * * 0' (3x/week, Tue/Thu/Sun 11:00 UTC). Runs: node scripts/axon-foreign-input.mjs.
+# workflow_dispatch below still fires it on demand.
+
 on:
-  schedule:
-    # 3x/week — Tue/Thu/Sun at 6:00 AM EST = 11:00 UTC (offset from self-research)
-    - cron: '0 11 * * 2'
-    - cron: '0 11 * * 4'
-    - cron: '0 11 * * 0'
   workflow_dispatch:
     inputs:
       dry_run:
