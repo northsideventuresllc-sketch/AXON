@@ -29,14 +29,23 @@ const ID_RE = /^[0-9]+$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 /**
  * Pure: build the PATCH body for one sibling row. No network, no Date.now() (caller
  * supplies `nowIso` so this stays deterministic and testable).
+ *
+ * NOTE (0924 fix): agent_bus has no superseded_note (or any other free-text audit)
+ * column — only `status` actually exists to write to here. The human-readable reason
+ * is still computed and returned alongside the patch (see `reason` below) so a caller
+ * that wants it for its own logging/closeout JSON still has it; it is just not sent to
+ * PostgREST, because sending an unknown column previously made every PATCH 400 and get
+ * silently swallowed by sweepSiblings' per-entry try/catch. If an audit trail on the bus
+ * row itself is wanted later, that needs a real migration to add the column — not
+ * something to bundle into this fix.
  */
 export function buildSupersedePatch(entry, { closeoutTask, agent, nowIso }) {
   if (!entry || !entry.id) throw new Error('resolved_siblings entry needs an id');
   if (!ID_RE.test(String(entry.id))) throw new Error(`resolved_siblings entry id is not a valid row id: ${JSON.stringify(entry.id)}`);
   const reason = entry.reason || 'resolved as a side effect of a related fix';
   return {
-    status: 'superseded',
-    superseded_note: `[RESOLUTION-SWEEP] closed by ${agent} at ${nowIso} as a sibling of "${closeoutTask}" — ${reason}`,
+    patch: { status: 'superseded' },
+    reason: `[RESOLUTION-SWEEP] closed by ${agent} at ${nowIso} as a sibling of "${closeoutTask}" — ${reason}`,
   };
 }
 
@@ -50,10 +59,10 @@ export async function sweepSiblings(entries, { agent, closeoutTask, nowIso, patc
   const results = [];
   for (const entry of list) {
     try {
-      const patch = buildSupersedePatch(entry, { closeoutTask, agent, nowIso });
+      const { patch, reason } = buildSupersedePatch(entry, { closeoutTask, agent, nowIso });
       const filter = `id=eq.${encodeURIComponent(String(entry.id))}`;
       await patchRow('agent_bus', filter, patch);
-      results.push({ id: entry.id, ok: true });
+      results.push({ id: entry.id, ok: true, reason });
     } catch (e) {
       results.push({ id: entry.id, ok: false, error: e.message });
     }
