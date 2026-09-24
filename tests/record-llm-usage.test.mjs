@@ -26,7 +26,13 @@ await withFetch(
     assert.equal(body.model, 'gemini-1.5-flash');
     assert.equal(body.input_tokens, 120);
     assert.equal(body.output_tokens, 45);
-    assert.equal(body.total_tokens, 165);
+    // BUILD-AXON-AGENTS-FIX-BUNDLE-0923 (c): total_tokens is a Postgres GENERATED ALWAYS
+    // column on the real axon_cost_ledger table — sending it explicitly makes PostgREST
+    // reject the whole insert (428C9), which is the confirmed live root cause of
+    // axon_cost_ledger sitting at 0 rows fleet-wide. This test previously asserted the
+    // buggy behavior (total_tokens present in the body) as correct; it must never be a
+    // key in the outgoing payload again.
+    assert.equal('total_tokens' in body, false);
     assert.equal(body.ms, 812);
     assert.ok(body.called_at);
     return { ok: true, status: 200 };
