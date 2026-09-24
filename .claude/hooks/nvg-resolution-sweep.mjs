@@ -29,23 +29,23 @@ const ID_RE = /^[0-9]+$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 /**
  * Pure: build the PATCH body for one sibling row. No network, no Date.now() (caller
  * supplies `nowIso` so this stays deterministic and testable).
- *
- * NOTE (0924 fix): agent_bus has no superseded_note (or any other free-text audit)
- * column — only `status` actually exists to write to here. The human-readable reason
- * is still computed and returned alongside the patch (see `reason` below) so a caller
- * that wants it for its own logging/closeout JSON still has it; it is just not sent to
- * PostgREST, because sending an unknown column previously made every PATCH 400 and get
- * silently swallowed by sweepSiblings' per-entry try/catch. If an audit trail on the bus
- * row itself is wanted later, that needs a real migration to add the column — not
- * something to bundle into this fix.
  */
 export function buildSupersedePatch(entry, { closeoutTask, agent, nowIso }) {
   if (!entry || !entry.id) throw new Error('resolved_siblings entry needs an id');
   if (!ID_RE.test(String(entry.id))) throw new Error(`resolved_siblings entry id is not a valid row id: ${JSON.stringify(entry.id)}`);
   const reason = entry.reason || 'resolved as a side effect of a related fix';
+  // agent_bus has no free-text note column (verified live via information_schema,
+  // Learning #9478/LRNB-T07) — the old `superseded_note` key doesn't exist on the
+  // table, so every PATCH here 400'd (PGRST204) and silently never closed the
+  // sibling row. The resolution reason still needs a home: it goes into `body`,
+  // the one jsonb column this table has, merged onto whatever the caller already
+  // read there so an existing row's body isn't clobbered.
   return {
-    patch: { status: 'superseded' },
-    reason: `[RESOLUTION-SWEEP] closed by ${agent} at ${nowIso} as a sibling of "${closeoutTask}" — ${reason}`,
+    status: 'superseded',
+    body: {
+      ...(entry.body || {}),
+      resolution_note: `[RESOLUTION-SWEEP] closed by ${agent} at ${nowIso} as a sibling of "${closeoutTask}" — ${reason}`,
+    },
   };
 }
 
@@ -54,15 +54,20 @@ export function buildSupersedePatch(entry, { closeoutTask, agent, nowIso }) {
  * (same shape as scripts/lib/hermes-supabase.mjs sbPatch). Never throws — a failure to
  * close one sibling must not fail the close-out itself; each result is reported instead.
  */
-export async function sweepSiblings(entries, { agent, closeoutTask, nowIso, patchRow }) {
+export async function sweepSiblings(entries, { agent, closeoutTask, nowIso, patchRow, fetchRow }) {
   const list = Array.isArray(entries) ? entries : [];
   const results = [];
   for (const entry of list) {
     try {
-      const { patch, reason } = buildSupersedePatch(entry, { closeoutTask, agent, nowIso });
+      if (!entry || !entry.id) throw new Error('resolved_siblings entry needs an id');
+      if (!ID_RE.test(String(entry.id))) throw new Error(`resolved_siblings entry id is not a valid row id: ${JSON.stringify(entry.id)}`);
       const filter = `id=eq.${encodeURIComponent(String(entry.id))}`;
+      // Read the row's existing body first (when a fetcher is supplied) so the
+      // resolution note is merged in, not a full-body overwrite.
+      const existingBody = fetchRow ? await fetchRow('agent_bus', filter) : entry.body;
+      const patch = buildSupersedePatch({ ...entry, body: existingBody }, { closeoutTask, agent, nowIso });
       await patchRow('agent_bus', filter, patch);
-      results.push({ id: entry.id, ok: true, reason });
+      results.push({ id: entry.id, ok: true });
     } catch (e) {
       results.push({ id: entry.id, ok: false, error: e.message });
     }
