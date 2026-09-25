@@ -6,7 +6,7 @@
  * Run: node tests/record-llm-usage.test.mjs
  */
 import assert from 'node:assert/strict';
-import { recordLlmUsage } from '../lib/axon-router-core.mjs';
+import { recordLlmUsage, recordUsage } from '../lib/axon-router-core.mjs';
 
 const originalFetch = globalThis.fetch;
 function withFetch(handler, fn) {
@@ -82,6 +82,38 @@ await withFetch(
   async () => {
     const ok = await recordLlmUsage('fake-key', { provider: 'runpod' });
     assert.equal(ok, false);
+  },
+);
+
+// --- 5. AX-COST-LEDGER-EMPTY-0924: model is NOT NULL on axon_cost_ledger. A skipped or
+// unresolved attempt has no model, so recordLlmUsage must send a placeholder, never a
+// literal null, or PostgREST rejects the whole insert (23502) and the row silently
+// vanishes -- exactly the bug that left the table near-empty even after #252 fixed the
+// separate generated-column problem.
+await withFetch(
+  async (url, opts) => {
+    const body = JSON.parse(opts.body);
+    assert.equal(body.model, 'none', 'no literal null ever goes into the NOT NULL model column');
+    return { ok: true, status: 200 };
+  },
+  async () => {
+    const ok = await recordLlmUsage('fake-key', {
+      provider: 'runpod',
+      meta: { status: 'skipped', reason: 'RunPod disabled' },
+    });
+    assert.equal(ok, true);
+  },
+);
+
+// --- 6. same NOT NULL placeholder rule applies to recordUsage's lane-based path ---------
+await withFetch(
+  async (url, opts) => {
+    const body = JSON.parse(opts.body);
+    assert.equal(body.model, 'none');
+    return { ok: true, status: 200 };
+  },
+  async () => {
+    await recordUsage('fake-key', { lane: { model: null, costTier: 'local' }, venture: 'axon' });
   },
 );
 

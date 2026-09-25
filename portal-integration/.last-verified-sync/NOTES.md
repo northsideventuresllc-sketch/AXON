@@ -39,3 +39,8 @@ northside-intelligence.
   clean, then a real run against a disposable detached worktree of northside-intelligence
   `origin/main` (never pushed). `check-portal-sync-imports.mjs`: no drift. The synced
   `axon-router-core.mjs` imports cleanly in the NI tree.
+- Re-verified 2026-09-24 at `b2b852d` (local-first, stacked on #260): `LIB_FILES` 82 → 83
+  (`axon-local-intent.mjs`, imported by `axon-router-core.mjs`). `--check` clean, then a real
+  run against a disposable detached worktree of northside-intelligence `origin/main` (never
+  pushed). `check-portal-sync-imports.mjs`: no drift. The synced `axon-router-core.mjs`
+  imports cleanly in the NI tree.
