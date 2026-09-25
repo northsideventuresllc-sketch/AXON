@@ -52,7 +52,7 @@ const REQUIRED = ['agent', 'workspace_type', 'task', 'deliverables', 'done_proof
 
 function arg(name) { const i = process.argv.indexOf(name); return i > -1 ? process.argv[i + 1] : undefined; }
 
-async function sbInsert(table, row) {
+export async function sbInsert(table, row) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: 'POST',
     headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
@@ -62,7 +62,7 @@ async function sbInsert(table, row) {
   const rows = await r.json(); return rows[0];
 }
 
-async function sbPatch(table, filter, patch) {
+export async function sbPatch(table, filter, patch) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
     method: 'PATCH',
     headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
@@ -160,6 +160,23 @@ export function buildRows(a) {
   return { apartment, learnings, bus, heartbeat, resolved_siblings: a.resolved_siblings };
 }
 
+// The actual Supabase write path — split out of main() so it can be exercised directly
+// by scripts/test-nvg-close-dbwrite.mjs with a mocked fetch, instead of only via buildRows().
+export async function writeToBrain(a, rows) {
+  const out = { apartment: (await sbInsert('session_notes_apartment', rows.apartment)).id, learnings: [], bus: [] };
+  for (const l of rows.learnings) out.learnings.push((await sbInsert('Learnings', l)).id);
+  for (const b of rows.bus) out.bus.push((await sbInsert('agent_bus', b)).id);
+  out.heartbeat = (await sbInsert('nvg_run_heartbeats', rows.heartbeat)).id;
+  out.resolved_siblings = await sweepSiblings(a.resolved_siblings, {
+    agent: a.agent,
+    closeoutTask: a.task,
+    nowIso: new Date().toISOString(),
+    patchRow: sbPatch,
+    getRow: sbGet,
+  });
+  return out;
+}
+
 async function main() {
   const jsonArg = arg('--json') || (arg('--file') ? fs.readFileSync(arg('--file'), 'utf8') : null);
   if (!jsonArg) { console.error('usage: nvg-close.mjs --json <answers> | --file <path>'); process.exit(1); }
@@ -177,17 +194,7 @@ async function main() {
   fs.writeFileSync(path.join(dir, 'closeout.ok'), ts);
 
   if (KEY) {
-    const out = { apartment: (await sbInsert('session_notes_apartment', rows.apartment)).id, learnings: [], bus: [] };
-    for (const l of rows.learnings) out.learnings.push((await sbInsert('Learnings', l)).id);
-    for (const b of rows.bus) out.bus.push((await sbInsert('agent_bus', b)).id);
-    out.heartbeat = (await sbInsert('nvg_run_heartbeats', rows.heartbeat)).id;
-    out.resolved_siblings = await sweepSiblings(a.resolved_siblings, {
-      agent: a.agent,
-      closeoutTask: a.task,
-      nowIso: new Date().toISOString(),
-      patchRow: sbPatch,
-      getRow: sbGet,
-    });
+    const out = await writeToBrain(a, rows);
     console.log('close-out written to the brain: ' + JSON.stringify(out));
   } else {
     fs.appendFileSync(path.join(dir, 'closeout-queue.jsonl'), JSON.stringify(rows) + '\n');
