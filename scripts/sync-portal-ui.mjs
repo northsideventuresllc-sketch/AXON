@@ -200,6 +200,22 @@ export const LIB_FILES = [
   // scripts/check-portal-sync-imports.mjs / tests/portal-sync-drift.test.mjs.
   'axon-computer-use.mjs',
 
+  // Added 2026-09-21 (BUILD-AXON-DROID-AGENT-0920): axon-computer-use.mjs (already on
+  // this list) imports axon-droid-live-view.mjs for droid-run live-view upserts.
+  'axon-droid-live-view.mjs',
+
+  // Added 2026-09-24 (live model discovery, AG-VERIFY): axon-router-core.mjs (already on
+  // this list) imports axon-model-discovery.mjs.
+  'axon-model-discovery.mjs',
+
+  // Added 2026-09-24 (NO-DEAD-MODELS resolver): axon-computer-use.mjs and constants.mjs
+  // (both already on this list) import model-resolve.mjs.
+  'model-resolve.mjs',
+
+  // Added 2026-09-24 (LOCAL-FIRST, Decision #2001): axon-router-core.mjs (already on this
+  // list) imports axon-local-intent.mjs for task-specialized local model choice.
+  'axon-local-intent.mjs',
+
   // NI router mirror gap (NI #205, 2026-09-06): both exist in AXON and are transitively
   // imported by the mirrored sources, but were absent from this list -- that's why the
   // portal mirror drifted from them.

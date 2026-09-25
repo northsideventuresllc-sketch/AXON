@@ -12,3 +12,6 @@ dist/
 
 # NVG close-out markers (per-session, never committed)
 .nvg/
+
+# Claude Code Workflow tool's own isolated-worktree scratch space (per-run, never committed)
+.claude/worktrees/

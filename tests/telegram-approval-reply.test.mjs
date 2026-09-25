@@ -47,6 +47,7 @@ test('handleTelegramApprovalReply: enriches agent_dispatch and notifies agent_bu
             id: 'orig-msg-1',
             conversation_id: 'conv-1',
             telegram_message_id: originalMsgId,
+            message_type: 'approval_ping',
             content: '🟡 Deploy pricing changes to main',
             metadata: {
               dispatch_id: dispatchId,
@@ -97,7 +98,8 @@ test('handleTelegramApprovalReply: enriches agent_dispatch and notifies agent_bu
   const reply = await handleTelegramApprovalReply(cfg, sb, incomingMsg);
 
   assert.ok(reply, 'should return a reply');
-  assert.ok(reply.includes('Noted for BUILD'), 'reply mentions owning agent');
+  assert.ok(reply.includes('GOT YOUR REPLY'), 'reply confirms receipt');
+  assert.ok(reply.includes('The build agent will act on it next.'), 'reply names who acts on it');
   assert.ok(reply.includes('Deploy pricing changes to main'), 'reply mentions task title');
 
   // Verify agent_dispatch patch

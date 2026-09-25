@@ -4,7 +4,7 @@
 //   2. approve sets needs_jb_approval=false, status='queued', and stamps
 //      [JB approved <iso>] into result_summary (no jb_approved_at column known to exist).
 //   3. reject sets status='rejected'.
-//   4. Every tap calls editMessageReplyMarkup to remove the inline keyboard, and
+//   4. Every tap rewrites the card (editMessageText) so its buttons become a receipt, and
 //      answerCallbackQuery is always called.
 //   5. The tap log carries the actual question being decided (jb_ask, or title
 //      flagged as a fallback when jb_ask is empty) — not just the decision + row id.
@@ -113,12 +113,14 @@ const cfg = { telegramToken: 'tok', telegramChatId: '999' };
   } finally {
     global.fetch = realFetch;
   }
-  assert.ok(calls.some((c) => c.url.includes('editMessageReplyMarkup')), 'expected editMessageReplyMarkup call');
+  // P2-ACK: the card is rewritten in place (buttons replaced by a receipt).
+  assert.ok(calls.some((c) => c.url.includes('editMessageText')), 'expected editMessageText call');
   assert.ok(calls.some((c) => c.url.includes('answerCallbackQuery')), 'expected answerCallbackQuery call');
-  const editCall = calls.find((c) => c.url.includes('editMessageReplyMarkup'));
+  const editCall = calls.find((c) => c.url.includes('editMessageText'));
   const body = JSON.parse(editCall.opts.body);
   assert.equal(body.message_id, 555);
   assert.deepEqual(body.reply_markup, { inline_keyboard: [] });
+  assert.match(body.text, /GOT IT/);
 
   const tapLog = inserts.find((i) => i.table === 'axon_telegram_messages');
   assert.ok(tapLog, 'expected a tap logged to axon_telegram_messages');

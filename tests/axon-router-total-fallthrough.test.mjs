@@ -81,10 +81,14 @@ await withCapturedLogs(async (lines) => {
   const failureMarkerRows = ledgerCalls.filter((c) => c.body?.provider === 'none');
   assert.equal(failureMarkerRows.length, 1, 'exactly one failure-marker usage row for the exhausted chain');
   const marker = failureMarkerRows[0].body;
-  assert.equal(marker.model, null);
+  // AX-COST-LEDGER-EMPTY-0924: axon_cost_ledger.model is NOT NULL -- a literal null here
+  // makes PostgREST reject the whole insert (23502), which was silently dropping every
+  // chain-exhausted row even after #252's generated-column fix. 'none' is the required
+  // placeholder, not null.
+  assert.equal(marker.model, 'none');
   assert.equal(marker.input_tokens, 0);
   assert.equal(marker.output_tokens, 0);
-  assert.equal(marker.total_tokens, 0);
+  assert.ok(!('total_tokens' in marker), 'total_tokens is a generated column -- never sent in the insert body');
   assert.equal(marker.cost_usd, 0);
   assert.equal(marker.agent_name, 'test-agent');
   const notes = JSON.parse(marker.notes);

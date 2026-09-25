@@ -17,9 +17,26 @@ import { callAxonLocal } from '../lib/axon-local-relay.mjs';
 
 // --- 1. classifier: allowlisted templates come back low / allowlisted -----------------
 {
-  const ollama = classifyMiniShellRisk('curl -s -m 40 http://localhost:11434/api/generate -d {"model":"x"}');
+  // AX-GATE-BLOCKS-OWN-LOCAL-TIER-0917: the real builder (axon-local-relay.mjs
+  // callAxonLocalAttempt) always wraps the -d body in a single-quoted, shell-escaped
+  // string -- this fixture must match that exact shape, not an unquoted body.
+  const ollama = classifyMiniShellRisk(`curl -s -m 40 http://localhost:11434/api/generate -d '{"model":"x"}'`);
   assert.equal(ollama.riskFlag, 'low');
   assert.equal(ollama.allowlisted, true);
+  const ollamaChat = classifyMiniShellRisk(`curl -s -m 40 http://127.0.0.1:11434/api/chat -d '{"model":"x"}'`);
+  assert.equal(ollamaChat.riskFlag, 'low', '/api/chat must also be allowlisted, same as /api/generate');
+
+  // The old unquoted-body shape must no longer match -- it never matched the real
+  // builder's output, and matching it left the gate looser than it needed to be.
+  const ollamaUnquoted = classifyMiniShellRisk('curl -s -m 40 http://localhost:11434/api/generate -d {"model":"x"}');
+  assert.equal(ollamaUnquoted.riskFlag, 'high', 'unquoted -d body must not be allowlisted');
+
+  // Trailing-injection: a recognized curl prefix followed by a second command must never
+  // ride along as allowlisted just because the line starts with the safe shape.
+  const ollamaInjection = classifyMiniShellRisk(
+    `curl -s -m 40 http://localhost:11434/api/generate -d '{}' && rm -rf ~`,
+  );
+  assert.equal(ollamaInjection.riskFlag, 'high', 'trailing shell after the curl body must not be allowlisted');
 
   const claude = classifyMiniShellRisk(`claude -p 'hello' --output-format json`);
   assert.equal(claude.riskFlag, 'low');
@@ -55,7 +72,8 @@ import { callAxonLocal } from '../lib/axon-local-relay.mjs';
   const originalFetch = global.fetch;
   global.fetch = async (url, opts) => {
     const body = opts?.body ? JSON.parse(opts.body) : null;
-    posts.push({ url: String(url), body });
+    // GETs are the 24h card-dedupe lookup (AG-VERIFY-CHAIN-EXHAUSTION-0924); only writes count.
+    if ((opts?.method || 'GET') === 'POST') posts.push({ url: String(url), body });
     return { ok: true, json: async () => [] };
   };
 

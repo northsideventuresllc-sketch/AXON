@@ -92,7 +92,10 @@ async function withFetch(fn, run) {
   assert.match(text, /axon-executive/);
   assert.match(text, /AXON Research/);
   assert.match(text, /Tighten the fire-gate default/);
-  assert.match(text, new RegExp(REQUEST_ID));
+  // Plain-English fix (BUILD-TELEGRAM-JB-UX-AUDIT-0923): the raw row ID must
+  // never appear in JB-facing text, and the message must state the actual ask.
+  assert.ok(!text.includes(REQUEST_ID), 'JB-facing text must not contain the raw row ID');
+  assert.match(text, /Approve it, deny it, or reply with your own note\./);
 
   const kb = buildInstructionChangeKeyboard(SAMPLE_REQUEST);
   const buttons = kb.inline_keyboard[0];
@@ -203,7 +206,9 @@ async function withFetch(fn, run) {
       message_id: 1,
     })
   );
-  assert.match(reply, new RegExp(`noted on ${REQUEST_ID}`));
+  // Confirmation names the request in plain terms, never the raw row ID.
+  assert.match(reply, /AXON Research/);
+  assert.ok(!reply.includes(REQUEST_ID), 'confirmation must not contain the raw row ID');
   assert.equal(row.jb_note, 'Here is my note.');
   assert.ok(calls.some((c) => c.url.includes('sendMessage')));
 }

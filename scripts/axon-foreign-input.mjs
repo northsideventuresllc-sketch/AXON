@@ -12,26 +12,18 @@
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { getJspaceState, postConcept, saveJspaceState } from '../lib/axon-j-space-core.mjs';
 import { pickForeignDomain, buildForeignConcept } from '../lib/axon-foreign-input-core.mjs';
+import { webSearch } from '../lib/web-search.mjs';
 
+/**
+ * AX-SERPAPI-QUOTA-PATCHED-NOT-FIXED-0917: this script previously called SerpApi
+ * directly (and read the wrong env var, `SERPAPI_KEY` instead of `SERPAPI_API_KEY`),
+ * so it always silently returned zero sources with no fallback. Routed through the
+ * shared `webSearch` door — same free-fallback pattern every other caller uses
+ * (SerpApi while it has quota, keyless DuckDuckGo when it does not).
+ */
 async function searchWeb(serpApiKey, query) {
-  if (!serpApiKey) return [];
-  const url = new URL('https://serpapi.com/search.json');
-  url.searchParams.set('engine', 'google');
-  url.searchParams.set('q', query);
-  url.searchParams.set('num', '4');
-  url.searchParams.set('api_key', serpApiKey);
-  try {
-    const r = await fetch(url);
-    if (!r.ok) return [];
-    const data = await r.json();
-    return (data.organic_results || []).slice(0, 4).map((i) => ({
-      title: i.title,
-      link: i.link,
-      snippet: i.snippet || '',
-    }));
-  } catch {
-    return [];
-  }
+  const { results } = await webSearch({ serpApiKey, query, num: 4 });
+  return results.map((r) => ({ title: r.title, link: r.link, snippet: r.snippet || '' }));
 }
 
 async function main() {
@@ -41,7 +33,7 @@ async function main() {
   const dryRun = process.env.AXON_DRY_RUN === '1';
 
   const domain = pickForeignDomain();
-  const sources = await searchWeb(process.env.SERPAPI_KEY, domain.query);
+  const sources = await searchWeb(process.env.SERPAPI_API_KEY, domain.query);
   const concept = buildForeignConcept(domain, sources);
 
   console.log(`Foreign domain: ${domain.label} · ${sources.length} source(s)`);

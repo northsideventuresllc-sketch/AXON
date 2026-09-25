@@ -23,10 +23,12 @@
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { SUPABASE_URL } from '../lib/constants.mjs';
 import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
+import { printTrustBanner, assertHaltClear, GlobalHaltError } from './lib/axon-global-halt.mjs';
 import { AGENT } from '../lib/agent-names.mjs';
 import {
   WISDOM_ITEMS_TABLE,
   WISDOM_RUNS_TABLE,
+  RESEARCH_FINDINGS_TABLE,
 } from '../lib/wisdom-absorb-loop.mjs';
 import {
   getJspaceState,
@@ -124,6 +126,17 @@ async function main() {
 
     if (await cronGuardShouldSkip(CRON_JOB_ID, sbSelect)) return;
 
+    await printTrustBanner();
+    try {
+      await assertHaltClear('axon-executive-agent run');
+    } catch (err) {
+      if (err instanceof GlobalHaltError) {
+        console.error(`axon-executive-agent: ${err.message} — no-op, exiting clean.`);
+        return;
+      }
+      throw err;
+    }
+
     try {
       [corpus, findings, learnings, signals, jspaceState] = await Promise.all([
         sbSelect(
@@ -131,8 +144,8 @@ async function main() {
           'select=external_id,domain,title,key_finding,axon_application,confidence,source_type,year&order=updated_at.desc.nullslast&limit=40',
         ),
         sbSelect(
-          'axon_research_findings',
-          'select=id,research_lane,title,summary,implementation_hint,priority,status,jspace_relevance,brain_gap_category&order=created_at.desc&limit=30',
+          RESEARCH_FINDINGS_TABLE,
+          'select=id,research_lane,title,summary,implementation_hint,priority,status,jspace_relevance,brain_gap_category&status=eq.new&order=created_at.desc&limit=30',
         ),
         sbSelect(
           'Learnings',
@@ -168,6 +181,17 @@ async function main() {
     persistItems: async (rows) => upsertWisdomItems(sbSelect, sbInsert, sbPatch, rows),
     persistRun: async (record) => sbInsert(WISDOM_RUNS_TABLE, record),
     persistJspace:async (state) => saveJspaceState(sbInsert, sbPatch, state, 'default', sbSelect),
+    persistFindingStatus: async (ids) =>
+      sbPatch(
+        RESEARCH_FINDINGS_TABLE,
+        `id=in.(${ids.map((id) => encodeURIComponent(id)).join(',')})`,
+        {
+          status: 'applied',
+          applied_at: new Date().toISOString(),
+          applied_artifact: 'axon_wisdom_items',
+          applied_note: 'AX-WISDOM-LOOP absorb cycle',
+        },
+      ),
   });
 
   // --- 1. durable Decisions/Learnings + git history across NVG repos ---
