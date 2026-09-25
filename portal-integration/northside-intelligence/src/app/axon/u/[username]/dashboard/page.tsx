@@ -11,11 +11,12 @@ export const dynamic = 'force-dynamic';
 
 const AXON_HOME_URL = 'https://northsideintelligence.com/axon';
 
-export default async function AxonUserDashboardPage({
-  params,
-}: {
-  params: { username: string };
-}) {
+export default async function AxonUserDashboardPage(
+  props: {
+    params: Promise<{ username: string }>;
+  }
+) {
+  const params = await props.params;
   const { username, operatorId } = await requireAxonPortalUser(params.username);
   const basePath = axonPublicPath(username);
 
