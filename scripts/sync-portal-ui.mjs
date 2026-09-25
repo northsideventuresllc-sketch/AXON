@@ -176,7 +176,6 @@ export const LIB_FILES = [
   'wisdom-absorb-loop.mjs',
   'axon-comm-skill.mjs',
   'axon-local-relay.mjs',
-  'axon-v1-cloud-relay.mjs',
   'relay-metrics.mjs',
 
   // Added after merging main (2026-09-06): #178 extracted the pure cron parser out
