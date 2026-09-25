@@ -6,7 +6,7 @@
  * Run: node tests/record-llm-usage.test.mjs
  */
 import assert from 'node:assert/strict';
-import { recordLlmUsage } from '../lib/axon-router-core.mjs';
+import { recordLlmUsage, recordUsage } from '../lib/axon-router-core.mjs';
 
 const originalFetch = globalThis.fetch;
 function withFetch(handler, fn) {
@@ -26,7 +26,13 @@ await withFetch(
     assert.equal(body.model, 'gemini-1.5-flash');
     assert.equal(body.input_tokens, 120);
     assert.equal(body.output_tokens, 45);
-    assert.equal(body.total_tokens, 165);
+    // BUILD-AXON-AGENTS-FIX-BUNDLE-0923 (c): total_tokens is a Postgres GENERATED ALWAYS
+    // column on the real axon_cost_ledger table — sending it explicitly makes PostgREST
+    // reject the whole insert (428C9), which is the confirmed live root cause of
+    // axon_cost_ledger sitting at 0 rows fleet-wide. This test previously asserted the
+    // buggy behavior (total_tokens present in the body) as correct; it must never be a
+    // key in the outgoing payload again.
+    assert.equal('total_tokens' in body, false);
     assert.equal(body.ms, 812);
     assert.ok(body.called_at);
     return { ok: true, status: 200 };
@@ -76,6 +82,38 @@ await withFetch(
   async () => {
     const ok = await recordLlmUsage('fake-key', { provider: 'runpod' });
     assert.equal(ok, false);
+  },
+);
+
+// --- 5. AX-COST-LEDGER-EMPTY-0924: model is NOT NULL on axon_cost_ledger. A skipped or
+// unresolved attempt has no model, so recordLlmUsage must send a placeholder, never a
+// literal null, or PostgREST rejects the whole insert (23502) and the row silently
+// vanishes -- exactly the bug that left the table near-empty even after #252 fixed the
+// separate generated-column problem.
+await withFetch(
+  async (url, opts) => {
+    const body = JSON.parse(opts.body);
+    assert.equal(body.model, 'none', 'no literal null ever goes into the NOT NULL model column');
+    return { ok: true, status: 200 };
+  },
+  async () => {
+    const ok = await recordLlmUsage('fake-key', {
+      provider: 'runpod',
+      meta: { status: 'skipped', reason: 'RunPod disabled' },
+    });
+    assert.equal(ok, true);
+  },
+);
+
+// --- 6. same NOT NULL placeholder rule applies to recordUsage's lane-based path ---------
+await withFetch(
+  async (url, opts) => {
+    const body = JSON.parse(opts.body);
+    assert.equal(body.model, 'none');
+    return { ok: true, status: 200 };
+  },
+  async () => {
+    await recordUsage('fake-key', { lane: { model: null, costTier: 'local' }, venture: 'axon' });
   },
 );
 

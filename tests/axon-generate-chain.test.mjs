@@ -284,7 +284,7 @@ await withFetch(
       assert.equal(out.model, 'gemini-override-model', 'GEMINI_MODEL secret must win over router_models.model');
     },
   );
-  const geminiCall = calls.find((c) => c.url.includes('generativelanguage.googleapis.com'));
+  const geminiCall = calls.find((c) => c.url.includes('generativelanguage.googleapis.com') && c.url.includes(':generateContent'));
   assert.ok(
     geminiCall.url.includes('/models/gemini-override-model:generateContent'),
     `expected the override model in the call URL, got: ${geminiCall.url}`,
