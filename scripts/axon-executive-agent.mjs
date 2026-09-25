@@ -23,6 +23,7 @@
 import { createSupabaseClient } from '../lib/supabase.mjs';
 import { SUPABASE_URL } from '../lib/constants.mjs';
 import { cronGuardShouldSkip } from '../lib/axon-cron-guard.mjs';
+import { printTrustBanner, assertHaltClear, GlobalHaltError } from './lib/axon-global-halt.mjs';
 import { AGENT } from '../lib/agent-names.mjs';
 import {
   WISDOM_ITEMS_TABLE,
@@ -124,6 +125,17 @@ async function main() {
     sbPatch = client.sbPatch;
 
     if (await cronGuardShouldSkip(CRON_JOB_ID, sbSelect)) return;
+
+    await printTrustBanner();
+    try {
+      await assertHaltClear('axon-executive-agent run');
+    } catch (err) {
+      if (err instanceof GlobalHaltError) {
+        console.error(`axon-executive-agent: ${err.message} — no-op, exiting clean.`);
+        return;
+      }
+      throw err;
+    }
 
     try {
       [corpus, findings, learnings, signals, jspaceState] = await Promise.all([
