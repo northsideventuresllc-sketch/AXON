@@ -52,7 +52,7 @@ const REQUIRED = ['agent', 'workspace_type', 'task', 'deliverables', 'done_proof
 
 function arg(name) { const i = process.argv.indexOf(name); return i > -1 ? process.argv[i + 1] : undefined; }
 
-async function sbInsert(table, row) {
+export async function sbInsert(table, row) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: 'POST',
     headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
@@ -62,7 +62,7 @@ async function sbInsert(table, row) {
   const rows = await r.json(); return rows[0];
 }
 
-async function sbPatch(table, filter, patch) {
+export async function sbPatch(table, filter, patch) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
     method: 'PATCH',
     headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
@@ -79,6 +79,28 @@ async function sbGet(table, filter) {
   const rows = await r.json(); return rows[0];
 }
 
+// LRNB-DELIVERABLES-OBJECT-TOSTRING-0925: `deliverables` is documented as an array of
+// strings, but callers sometimes hand it objects ({title, proof} or similar) or nested
+// arrays. Array#join() calls each entry's default toString(), which for a plain object
+// is "[object Object]" -- that string landed verbatim in session_notes_apartment rows
+// #967/#968/#990/#991. Render anything that isn't already a string as readable text
+// instead of letting join() silently stringify it.
+function fmtDeliverable(d) {
+  if (d == null) return '';
+  if (typeof d === 'string') return d;
+  if (Array.isArray(d)) return d.map(fmtDeliverable).filter(Boolean).join(', ');
+  if (typeof d === 'object') {
+    const title = d.title ?? d.name ?? d.deliverable ?? d.what;
+    const proof = d.proof ?? d.done_proof ?? d.evidence;
+    if (title && proof) return `${title} \u2014 ${proof}`;
+    if (title) return String(title);
+    const vals = Object.values(d).filter((v) => v !== null && v !== undefined && v !== '');
+    if (vals.length) return vals.map(String).join(' \u2014 ');
+    try { return JSON.stringify(d); } catch { return String(d); }
+  }
+  return String(d);
+}
+
 export function buildRows(a) {
   const date = new Date().toISOString().slice(0, 10);
   // A malformed entry (missing target/change) has nothing ARCEUS can act on — posting it
@@ -92,7 +114,7 @@ export function buildRows(a) {
   }
   const raw = [
     `CLOSE-OUT ${a.agent} — ${a.task}`,
-    `DELIVERABLES: ${a.deliverables.join(' | ') || 'none'}`,
+    `DELIVERABLES: ${a.deliverables.map(fmtDeliverable).filter(Boolean).join(' | ') || 'none'}`,
     `PROOF: ${a.done_proof.join(' | ') || 'none'}`,
     `WORKED: ${a.worked.join(' | ') || 'none'}`,
     `BROKE: ${a.broke.join(' | ') || 'none'}`,
@@ -138,6 +160,23 @@ export function buildRows(a) {
   return { apartment, learnings, bus, heartbeat, resolved_siblings: a.resolved_siblings };
 }
 
+// The actual Supabase write path — split out of main() so it can be exercised directly
+// by scripts/test-nvg-close-dbwrite.mjs with a mocked fetch, instead of only via buildRows().
+export async function writeToBrain(a, rows) {
+  const out = { apartment: (await sbInsert('session_notes_apartment', rows.apartment)).id, learnings: [], bus: [] };
+  for (const l of rows.learnings) out.learnings.push((await sbInsert('Learnings', l)).id);
+  for (const b of rows.bus) out.bus.push((await sbInsert('agent_bus', b)).id);
+  out.heartbeat = (await sbInsert('nvg_run_heartbeats', rows.heartbeat)).id;
+  out.resolved_siblings = await sweepSiblings(a.resolved_siblings, {
+    agent: a.agent,
+    closeoutTask: a.task,
+    nowIso: new Date().toISOString(),
+    patchRow: sbPatch,
+    getRow: sbGet,
+  });
+  return out;
+}
+
 async function main() {
   const jsonArg = arg('--json') || (arg('--file') ? fs.readFileSync(arg('--file'), 'utf8') : null);
   if (!jsonArg) { console.error('usage: nvg-close.mjs --json <answers> | --file <path>'); process.exit(1); }
@@ -155,17 +194,7 @@ async function main() {
   fs.writeFileSync(path.join(dir, 'closeout.ok'), ts);
 
   if (KEY) {
-    const out = { apartment: (await sbInsert('session_notes_apartment', rows.apartment)).id, learnings: [], bus: [] };
-    for (const l of rows.learnings) out.learnings.push((await sbInsert('Learnings', l)).id);
-    for (const b of rows.bus) out.bus.push((await sbInsert('agent_bus', b)).id);
-    out.heartbeat = (await sbInsert('nvg_run_heartbeats', rows.heartbeat)).id;
-    out.resolved_siblings = await sweepSiblings(a.resolved_siblings, {
-      agent: a.agent,
-      closeoutTask: a.task,
-      nowIso: new Date().toISOString(),
-      patchRow: sbPatch,
-      getRow: sbGet,
-    });
+    const out = await writeToBrain(a, rows);
     console.log('close-out written to the brain: ' + JSON.stringify(out));
   } else {
     fs.appendFileSync(path.join(dir, 'closeout-queue.jsonl'), JSON.stringify(rows) + '\n');
