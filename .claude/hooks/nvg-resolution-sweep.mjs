@@ -27,42 +27,44 @@
 const ID_RE = /^[0-9]+$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Pure: build the PATCH body for one sibling row. No network, no Date.now() (caller
+ * Pure: build the resolution note for one sibling row. No network, no Date.now() (caller
  * supplies `nowIso` so this stays deterministic and testable).
  *
- * NOTE (0924 fix): agent_bus has no superseded_note (or any other free-text audit)
- * column — only `status` actually exists to write to here. The human-readable reason
- * is still computed and returned alongside the patch (see `reason` below) so a caller
- * that wants it for its own logging/closeout JSON still has it; it is just not sent to
- * PostgREST, because sending an unknown column previously made every PATCH 400 and get
- * silently swallowed by sweepSiblings' per-entry try/catch. If an audit trail on the bus
- * row itself is wanted later, that needs a real migration to add the column — not
- * something to bundle into this fix.
+ * NOTE (0924 fix, revised): agent_bus has no top-level `superseded_note` column
+ * (Learning #9478) — PATCHing one as a top-level field 400s (PGRST204) on every sweep,
+ * silently swallowed by sweepSiblings' per-entry try/catch, so the note was never
+ * actually recorded anywhere. Rather than dropping the note (an earlier version of this
+ * fix did that), sweepSiblings folds it into the existing jsonb `body` column instead —
+ * see below — so the audit trail survives without a schema migration.
  */
-export function buildSupersedePatch(entry, { closeoutTask, agent, nowIso }) {
+export function buildSupersedeNote(entry, { closeoutTask, agent, nowIso }) {
   if (!entry || !entry.id) throw new Error('resolved_siblings entry needs an id');
   if (!ID_RE.test(String(entry.id))) throw new Error(`resolved_siblings entry id is not a valid row id: ${JSON.stringify(entry.id)}`);
   const reason = entry.reason || 'resolved as a side effect of a related fix';
-  return {
-    patch: { status: 'superseded' },
-    reason: `[RESOLUTION-SWEEP] closed by ${agent} at ${nowIso} as a sibling of "${closeoutTask}" — ${reason}`,
-  };
+  return `[RESOLUTION-SWEEP] closed by ${agent} at ${nowIso} as a sibling of "${closeoutTask}" — ${reason}`;
 }
 
 /**
  * Apply the sweep: PATCH every listed sibling to superseded via the injected `patchRow`
  * (same shape as scripts/lib/hermes-supabase.mjs sbPatch). Never throws — a failure to
  * close one sibling must not fail the close-out itself; each result is reported instead.
+ *
+ * agent_bus has no `superseded_note` column (Learning #9478) — PATCHing one as a top-level
+ * field 400s (PGRST204) on every single sweep, silently. Fold the note into the existing
+ * jsonb `body` column instead, merged with whatever is already there via `getRow` so a
+ * sender's original payload on that row is not clobbered.
  */
-export async function sweepSiblings(entries, { agent, closeoutTask, nowIso, patchRow }) {
+export async function sweepSiblings(entries, { agent, closeoutTask, nowIso, patchRow, getRow }) {
   const list = Array.isArray(entries) ? entries : [];
   const results = [];
   for (const entry of list) {
     try {
-      const { patch, reason } = buildSupersedePatch(entry, { closeoutTask, agent, nowIso });
+      const note = buildSupersedeNote(entry, { closeoutTask, agent, nowIso });
       const filter = `id=eq.${encodeURIComponent(String(entry.id))}`;
-      await patchRow('agent_bus', filter, patch);
-      results.push({ id: entry.id, ok: true, reason });
+      const existing = await getRow('agent_bus', `${filter}&select=body`);
+      const existingBody = existing && existing.body && typeof existing.body === 'object' && !Array.isArray(existing.body) ? existing.body : {};
+      await patchRow('agent_bus', filter, { status: 'superseded', body: { ...existingBody, superseded_note: note } });
+      results.push({ id: entry.id, ok: true });
     } catch (e) {
       results.push({ id: entry.id, ok: false, error: e.message });
     }

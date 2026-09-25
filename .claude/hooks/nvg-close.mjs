@@ -71,6 +71,14 @@ async function sbPatch(table, filter, patch) {
   if (!r.ok) throw new Error(`${table} PATCH: HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
 }
 
+async function sbGet(table, filter) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+    headers: { apikey: KEY, Authorization: `Bearer ${KEY}` },
+  });
+  if (!r.ok) throw new Error(`${table} GET: HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
+  const rows = await r.json(); return rows[0];
+}
+
 export function buildRows(a) {
   const date = new Date().toISOString().slice(0, 10);
   // A malformed entry (missing target/change) has nothing ARCEUS can act on — posting it
@@ -156,6 +164,7 @@ async function main() {
       closeoutTask: a.task,
       nowIso: new Date().toISOString(),
       patchRow: sbPatch,
+      getRow: sbGet,
     });
     console.log('close-out written to the brain: ' + JSON.stringify(out));
   } else {
