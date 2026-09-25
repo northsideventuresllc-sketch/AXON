@@ -208,6 +208,10 @@ export const LIB_FILES = [
   // this list) imports axon-model-discovery.mjs.
   'axon-model-discovery.mjs',
 
+  // Added 2026-09-24 (NO-DEAD-MODELS resolver): axon-computer-use.mjs and constants.mjs
+  // (both already on this list) import model-resolve.mjs.
+  'model-resolve.mjs',
+
   // Added 2026-09-24 (LOCAL-FIRST, Decision #2001): axon-router-core.mjs (already on this
   // list) imports axon-local-intent.mjs for task-specialized local model choice.
   'axon-local-intent.mjs',
