@@ -79,6 +79,28 @@ async function sbGet(table, filter) {
   const rows = await r.json(); return rows[0];
 }
 
+// LRNB-DELIVERABLES-OBJECT-TOSTRING-0925: `deliverables` is documented as an array of
+// strings, but callers sometimes hand it objects ({title, proof} or similar) or nested
+// arrays. Array#join() calls each entry's default toString(), which for a plain object
+// is "[object Object]" -- that string landed verbatim in session_notes_apartment rows
+// #967/#968/#990/#991. Render anything that isn't already a string as readable text
+// instead of letting join() silently stringify it.
+function fmtDeliverable(d) {
+  if (d == null) return '';
+  if (typeof d === 'string') return d;
+  if (Array.isArray(d)) return d.map(fmtDeliverable).filter(Boolean).join(', ');
+  if (typeof d === 'object') {
+    const title = d.title ?? d.name ?? d.deliverable ?? d.what;
+    const proof = d.proof ?? d.done_proof ?? d.evidence;
+    if (title && proof) return `${title} \u2014 ${proof}`;
+    if (title) return String(title);
+    const vals = Object.values(d).filter((v) => v !== null && v !== undefined && v !== '');
+    if (vals.length) return vals.map(String).join(' \u2014 ');
+    try { return JSON.stringify(d); } catch { return String(d); }
+  }
+  return String(d);
+}
+
 export function buildRows(a) {
   const date = new Date().toISOString().slice(0, 10);
   // A malformed entry (missing target/change) has nothing ARCEUS can act on — posting it
@@ -92,7 +114,7 @@ export function buildRows(a) {
   }
   const raw = [
     `CLOSE-OUT ${a.agent} — ${a.task}`,
-    `DELIVERABLES: ${a.deliverables.join(' | ') || 'none'}`,
+    `DELIVERABLES: ${a.deliverables.map(fmtDeliverable).filter(Boolean).join(' | ') || 'none'}`,
     `PROOF: ${a.done_proof.join(' | ') || 'none'}`,
     `WORKED: ${a.worked.join(' | ') || 'none'}`,
     `BROKE: ${a.broke.join(' | ') || 'none'}`,
