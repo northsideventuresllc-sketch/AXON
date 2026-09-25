@@ -58,15 +58,25 @@ function fakeSelect({ group = '-100999', threads = {} } = {}) {
   };
 }
 
-test('jb-route: agent topic, EXEC fallback, approvals topic, private chat without group', async () => {
+test('jb-route: agent topic, EXEC fallback, private chat without group', async () => {
   const threads = { 'AXON Executive': 10, EXEC: 36 };
   assert.deepEqual(await resolveJbTarget(fakeSelect({ threads }), { agentName: 'AXON Executive' }),
     { chatId: '-100999', threadId: 10, viaGroup: true });
   assert.deepEqual(await resolveJbTarget(fakeSelect({ threads }), { agentName: 'Nobody' }),
     { chatId: '-100999', threadId: 36, viaGroup: true });
-  assert.deepEqual(await resolveJbTarget(fakeSelect({ threads }), { approvals: true }),
-    { chatId: '-100999', threadId: 80, viaGroup: true });
   assert.deepEqual(await resolveJbTarget(fakeSelect({ group: null, threads }), { agentName: 'EXEC' }),
+    { chatId: '7722', threadId: null, viaGroup: false });
+});
+
+// TELEGRAM-RETIRE-APPROVALS-TOPIC-0924 (Decision #2012): an approvals ask
+// always resolves to JB's private chat, even when the group + a leftover
+// TELEGRAM_APPROVALS_THREAD_ID secret are still provisioned — the retired
+// group topic must never be resolved to again.
+test('jb-route: approvals always go to the private chat, never the retired group topic', async () => {
+  const threads = { EXEC: 36 };
+  assert.deepEqual(await resolveJbTarget(fakeSelect({ threads }), { approvals: true }),
+    { chatId: '7722', threadId: null, viaGroup: false });
+  assert.deepEqual(await resolveJbTarget(fakeSelect({ group: null, threads }), { approvals: true }),
     { chatId: '7722', threadId: null, viaGroup: false });
 });
 
