@@ -61,7 +61,9 @@ update router_routes
 --    call, each one is a vendor CLI subprocess over the mini relay — slower to cold-start
 --    than local/openrouter/gemini-api, and the Antigravity lane in particular carries a
 --    documented headless-hang risk in non-TTY environments (see CLI_SPECS.antigravity
---    comment). So: keep the existing free HTTP lanes (local/runpod/openrouter/gemini-api)
+--    comment). So: keep the existing direct HTTP lanes (local/runpod/openrouter/gemini-api;
+--    local/openrouter/gemini-api are free, runpod is paid but auto-skipped while unfunded per
+--    Decision #2001 — do not call runpod "free")
 --    ahead of the subscription CLIs, and keep the subscription CLIs ahead of the metered $
 --    lanes (deepseek, anthropic) they're meant to substitute for. Within the three
 --    subscriptions: claude_subscription first (matches router_models priority 10 vs. 20 vs.
