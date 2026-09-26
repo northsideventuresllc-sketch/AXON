@@ -16,7 +16,7 @@ interface ChainTier {
 // Plain-English labels — never a raw tier id on screen (matches lib/axon-v0/plain-labels.ts).
 const TIER_LABEL: Record<Tier, string> = {
   local: 'Your Mac Mini (local, free)',
-  runpod: 'RunPod — AXON v1 (free)',
+  runpod: 'RunPod — AXON v1 (paid, off until funded)',
   openrouter: 'OpenRouter — free models',
   gemini: 'Google Gemini Flash (free)',
   anthropic: 'Claude (paid — last resort)',
