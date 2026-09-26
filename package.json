@@ -36,7 +36,6 @@
     "test:wisdom": "node tests/wisdom-absorb-loop.test.mjs",
     "test:cron-guard": "node tests/axon-cron-guard.test.mjs",
     "test:global-halt": "node tests/axon-global-halt.test.mjs",
-    "test:runpod-tier": "node tests/runpod-tier.test.mjs",
     "test:axon-generate-chain": "node tests/axon-generate-chain.test.mjs",
     "lint:portal-parity": "eslint --config .eslintrc.portal-parity.json --ext .ts,.tsx components/axon",
     "test:router": "node tests/router-scoring.test.mjs",
