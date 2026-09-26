@@ -15,3 +15,6 @@ dist/
 
 # Claude Code Workflow tool's own isolated-worktree scratch space (per-run, never committed)
 .claude/worktrees/
+
+# FRONTIER-08 local-only training export output — never committed
+var/axon-history-export/
