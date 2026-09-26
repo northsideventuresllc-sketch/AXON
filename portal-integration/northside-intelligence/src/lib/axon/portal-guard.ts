@@ -32,7 +32,7 @@ export async function requireAxonPortalUser(username: string) {
   const allowed = await canEnterAxonPortal(user.id);
   if (!allowed) redirect('/axon');
 
-  const sessionToken = cookies().get(AXON_SESSION_COOKIE)?.value;
+  const sessionToken = (await cookies()).get(AXON_SESSION_COOKIE)?.value;
   if (!readAxonSessionFromCookieValue(sessionToken, user.id)) {
     redirect(`/api/axon/bootstrap?username=${encodeURIComponent(normalized)}`);
   }

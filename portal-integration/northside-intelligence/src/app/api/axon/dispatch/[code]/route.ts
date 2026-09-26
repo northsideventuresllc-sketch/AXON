@@ -4,7 +4,8 @@ import { requireAxonOperatorId } from '@/lib/axon/operator';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: NextRequest, { params }: { params: { code: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ code: string }> }) {
+  const params = await props.params;
   try {
     await requireAxonOperatorId();
     const task = await fetchDispatchTask(params.code);
@@ -17,7 +18,8 @@ export async function GET(_req: NextRequest, { params }: { params: { code: strin
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { code: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ code: string }> }) {
+  const params = await props.params;
   try {
     await requireAxonOperatorId();
     const body = await req.json().catch(() => ({}));
