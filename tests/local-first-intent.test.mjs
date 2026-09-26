@@ -199,7 +199,11 @@ const TAGS = JSON.stringify({ models: ALL.map((name) => ({ name })) });
   assert.equal(out.model, 'axon-ornith:latest');
 }
 {
-  // local failure (no stdout) → failure metric names the model that was tried
+  // local failure (no stdout on EVERY candidate) → AXON-LOCAL-TIMEOUTS-0925: a timeout no
+  // longer aborts the whole local tier after just the specialized model — it falls through
+  // to the next installed candidate (bounded at 3 tried, same cap as the model-not-found
+  // path), so a total mini outage here tries 3 different models before giving up, and the
+  // failure metric names the LAST one tried, not just the first.
   __resetModelDiscoveryCache();
   __resetOllamaWarmThrottle();
   const m = mock({ tagsStdout: TAGS, generateReply: () => '' });
@@ -208,8 +212,11 @@ const TAGS = JSON.stringify({ models: ALL.map((name) => ({ name })) });
   globalThis.fetch = originalFetch;
   const metric = m.metrics.find((p) => p.tier === 'local');
   assert.equal(metric.success, false);
-  assert.equal(metric.model, 'qwen2.5-coder:1.5b');
   assert.equal(metric.intent, 'code');
+  assert.equal(m.generated[0], 'qwen2.5-coder:1.5b', 'still tries the specialized model first');
+  const distinctTried = [...new Set(m.generated)];
+  assert.equal(distinctTried.length, 3, 'falls through to 2 more installed candidates instead of giving up on one');
+  assert.equal(metric.model, distinctTried[distinctTried.length - 1], 'metric names the last model actually tried');
 }
 
 console.log('local-first-intent.test.mjs: all assertions passed');
