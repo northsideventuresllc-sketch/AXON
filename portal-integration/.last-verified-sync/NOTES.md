@@ -50,3 +50,9 @@ northside-intelligence.
   detached worktree of northside-intelligence `origin/main` (never pushed).
   `check-portal-sync-imports.mjs`: no drift. The synced `axon-router-core.mjs` and
   `model-resolve.mjs` import cleanly in the NI tree.
+- Re-verified 2026-09-25 (this merge, PR #260 merging `main` after #262 landed):
+  `axon-model-discovery.mjs` kept at main's superset (LOCAL-FIRST ollama-tags-job cache
+  read) and `axon-router-core.mjs` kept at main's task-specialized local-intent ordering;
+  this PR's own live-model-discovery `axon-router-core.mjs`/`axon-model-discovery.mjs`
+  changes are already subsumed by what's on `main` via #262. `check-portal-sync-imports.mjs`
+  should be re-run against the merged tree before the next real sync.
