@@ -129,6 +129,29 @@ test('the waiting list keeps parked jobs, drops closed ones, and never shows a j
   assert.equal(JSON.stringify(shaped).includes('COUNCIL-JB-ROUTE-0906'), false);
 });
 
+test('BUILD-JB-ANSWERED-BUT-STUCK-0926: a row with a verified approve_token is never counted as waiting, even if needs_jb_approval/status have not caught up yet', () => {
+  const shaped = shapeNeedsMe([
+    {
+      code: 'MF-CONTENT-AVATAR-WIRE-0925',
+      title: 'JB already tapped this one.',
+      owner: 'CONTENT',
+      status: 'queued',
+      needs_jb_approval: false,
+      approve_token: 'jb-tap:0a07f0c2-b619-4613-8655-2d8f7c1ff9b4',
+    },
+    {
+      code: 'STILL-OPEN-1',
+      title: 'Genuinely still waiting.',
+      owner: 'BUILD',
+      status: 'needs_jb',
+      approve_token: null,
+    },
+  ]);
+
+  assert.equal(shaped.items.length, 1);
+  assert.equal(shaped.items[0].what, 'Genuinely still waiting.');
+});
+
 test('an unreadable queue says so; an empty one says nothing is waiting', () => {
   const unreadable = shapeNeedsMe(null);
   assert.equal(unreadable.readable, false);
