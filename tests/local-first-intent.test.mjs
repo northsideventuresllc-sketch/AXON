@@ -11,6 +11,7 @@ import {
   resolveLocalIntent,
   specializedModelFor,
   pickLocalModelCandidates,
+  localModelSizeB,
 } from '../lib/axon-local-intent.mjs';
 import { axonGenerate, __resetOllamaWarmThrottle, localMetricFields } from '../lib/axon-router-core.mjs';
 import { __resetModelDiscoveryCache } from '../lib/axon-model-discovery.mjs';
@@ -37,6 +38,17 @@ assert.equal(specializedModelFor('extraction', ENV), 'qwen2.5:0.5b');
 assert.equal(specializedModelFor('general', ENV), null);
 assert.equal(specializedModelFor('code', { AXON_CODE_MODEL: 'my-coder:3b' }), 'my-coder:3b');
 
+// --- 2b. model size parsing (localModelSizeB) ------------------------------------------------
+assert.equal(localModelSizeB('qwen2.5:0.5b'), 0.5);
+assert.equal(localModelSizeB('qwen2.5-coder:1.5b'), 1.5);
+assert.equal(localModelSizeB('deepseek-r1:1.5b'), 1.5);
+assert.equal(localModelSizeB('axon-llama:latest'), 3.2);
+assert.equal(localModelSizeB('axon-llama:canary'), 3.2);
+assert.equal(localModelSizeB('llama3.2:latest'), 3.2);
+assert.equal(localModelSizeB('axon-ornith:latest'), 9);
+assert.equal(localModelSizeB('ornith:9b'), 9);
+assert.equal(localModelSizeB('unknown-custom-tag'), null);
+
 // --- 3. each intent route with the real (2026-09-24) installed list --------------------------
 for (const [intent, want] of [['code', 'qwen2.5-coder:1.5b'], ['reasoning', 'deepseek-r1:1.5b'], ['extraction', 'qwen2.5:0.5b']]) {
   const p = pickLocalModelCandidates({ intent, installed: ALL, configured: ['axon-ornith:latest'], env: ENV });
@@ -49,6 +61,28 @@ for (const [intent, want] of [['code', 'qwen2.5-coder:1.5b'], ['reasoning', 'dee
   const p = pickLocalModelCandidates({ intent: 'general', installed: ALL, configured: [], env: ENV });
   assert.equal(p.candidates[0], 'axon-ornith:latest', 'general → axon-ornith');
   assert.equal(p.reason, 'general');
+}
+
+// --- 3b. quality floor & fastest routing (AXON-MODEL-FRONTIER-SESSION-0925) ------------------
+{
+  // 7B floor: reasoning intent skips 1.5B deepseek-r1 in favour of 9B axon-ornith
+  const p = pickLocalModelCandidates({ intent: 'reasoning', installed: ALL, minLocalModelB: 7, env: ENV });
+  assert.equal(p.reason, 'specialized_below_floor');
+  assert.equal(p.specialized, null);
+  assert.equal(p.candidates[0], 'axon-ornith:canary');
+  assert.ok(p.candidates.every((m) => localModelSizeB(m) == null || localModelSizeB(m) >= 7));
+}
+{
+  // 3B floor + fastest: 0.5B and 1.5B excluded, 3.2B axon-llama routes before 9B axon-ornith
+  const p = pickLocalModelCandidates({ intent: 'general', installed: ALL, minLocalModelB: 3, fastest: true, env: ENV });
+  assert.equal(p.candidates[0], 'axon-llama:canary');
+  assert.ok(localModelSizeB(p.candidates[0]) < 9);
+  assert.ok(p.candidates.every((m) => localModelSizeB(m) == null || localModelSizeB(m) >= 3));
+}
+{
+  // fastest / interactive: routes fastest passing model (0.5B qwen2.5) first
+  const p = pickLocalModelCandidates({ intent: 'general', installed: ALL, interactive: true, env: ENV });
+  assert.equal(p.candidates[0], 'qwen2.5:0.5b');
 }
 
 // --- 4. fallbacks ----------------------------------------------------------------------------
@@ -78,7 +112,10 @@ for (const [intent, want] of [['code', 'qwen2.5-coder:1.5b'], ['reasoning', 'dee
   assert.equal(p.candidates[0], 'axon-ornith');
 }
 assert.deepEqual(localMetricFields(null), {});
-assert.deepEqual(localMetricFields({ intent: 'code', pickReason: 'specialized', specialized: 'q' }), { intent: 'code', pick_reason: 'specialized', specialized_model: 'q' });
+assert.deepEqual(
+  localMetricFields({ intent: 'code', pickReason: 'specialized', specialized: 'q', minLocalModelB: 7 }),
+  { intent: 'code', pick_reason: 'specialized', specialized_model: 'q', min_local_model_b: 7 },
+);
 
 // --- 5. end to end through axonGenerate: installed list read from the latest tags job --------
 function json(data, status = 200) {
