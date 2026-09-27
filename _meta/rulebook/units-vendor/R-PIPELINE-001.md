@@ -11,16 +11,16 @@ scope:
   ventures: [ALL]
   harnesses: [ALL]
 triggers: ["task pipeline", "execution pipeline", "plan approval", "non-trivial task"]
-source: "nvg-operator-core §3A; Decision #1587"
+source: "nvg-operator-core §3A; Decision #1587; Decision #2029 (COUNCIL GATE sole merger)"
 lives_in:
   - "nvg-operator-core §3A; Decision #1587"
-version: 1
-updated: 2026-09-24
+version: 2
+updated: 2026-09-26
 superseded_by: 
 owner: COUNCIL
 tags: [rulebook, should, pipeline]
 ---
 
-Context (two brains first) → goal + done written down → plan in plain English, approved by COUNCIL or JB → execute with graph engineering by default → council review + stress test → ship only via `scripts/merge-pr.mjs` → report plain English → close (presence, session_notes_apartment, write-back, one close line). Skipping a step is a failed run.
+Context (two brains first) → goal + done written down → plan in plain English, approved by COUNCIL or JB → execute with graph engineering by default → council review + stress test → ship via COUNCIL GATE, the sole merger (Decision #2029) — the producing session never self-merges; it files `fn_request_council_gate_review` and COUNCIL GATE runs `scripts/merge-pr.mjs` → report plain English → close (presence, session_notes_apartment, write-back, one close line). Skipping a step is a failed run.
 
 See [[_meta/rulebook/INDEX|Rulebook Index]].

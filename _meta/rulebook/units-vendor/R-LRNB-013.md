@@ -13,13 +13,6 @@ version: 1
 updated: 2026-09-24
 status: active
 ---
-Five reusable checks: (1) a "correctness guarantee" that is really only a format guarantee is
-the most convincing wrong answer available — read the scoping note, not the headline claim.
-(2) A binary allowlist whose fallback is a hard block will eventually block something
-legitimate — prefer answer + confidence + an explicit "none of the above" path. (3) When a
-pipeline parses free text for a decision, the parser is the failure mode — fix the output
-contract, not the prompt. (4) "Open source" is a badge, not a permission — read the LICENSE
-file before building on a dependency, not after. (5) A tool list answers "what could we add";
-check what is actually the bottleneck before adding to it.
+Five reusable judgment checks: (1) A format guarantee is not a correctness guarantee — inspect actual scoping. (2) Binary allowlists that fail closed will eventually block legitimate work; provide an explicit escape path. (3) Fix structured output contracts instead of trying to parse free text. (4) Verify license files before adopting dependencies. (5) Audit actual operational bottlenecks before expanding tool lists.
 
 Related: [[_meta/rulebook/learnings-apply/INDEX-B]]

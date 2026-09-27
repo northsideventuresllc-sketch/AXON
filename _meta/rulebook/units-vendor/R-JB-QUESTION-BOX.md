@@ -22,7 +22,7 @@ owner: COUNCIL
 tags: [rulebook, must, adhd, comms, approvals]
 ---
 
-Anything JB must see or answer goes in a **box outline** (or a table) at the **top** of the message — one question per box, with the exact reply options inside it (e.g. `Reply: YES or NO`). Never bury a question inside status text, and never rely on bold alone: bold does not always register for JB. Status that needs no answer goes below the box in short tables. Telegram cards draw the box in a `<pre>` block, under ~32 characters wide so it fits a phone, followed by 2-4 specific buttons (never only Approve/Reject).
+Anything JB must see or answer goes in a boxed outline or table at the top of the message — one question per box, with exact reply options inside (e.g. `Reply: YES or NO`). Never bury questions inside status text or rely on bold styling alone. Non-actionable status goes below the box. Telegram cards format the box in a `<pre>` block under 32 characters wide, accompanied by 2–4 distinct actionable buttons.
 
 Example:
 
