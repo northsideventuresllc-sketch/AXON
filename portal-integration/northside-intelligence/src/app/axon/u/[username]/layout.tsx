@@ -11,13 +11,18 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function AxonUserLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: { username: string };
-}) {
+export default async function AxonUserLayout(
+  props: {
+    children: React.ReactNode;
+    params: Promise<{ username: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
   const { username } = await requireAxonPortalUser(params.username);
   const basePath = axonPublicPath(username);
 
