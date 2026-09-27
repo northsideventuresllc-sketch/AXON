@@ -53,6 +53,36 @@ import { callAxonLocal } from '../lib/axon-local-relay.mjs';
   assert.equal(antigravity.riskFlag, 'low');
 }
 
+// --- 1b. classifier: BUILD-MINI-DEFAULT-DENY-COUNCIL-CHURN-0927 read-only introspection
+//     shapes must auto-allow, never fall into the default-deny/COUNCIL-TRIAGE bucket ----
+{
+  assert.equal(classifyMiniShellRisk('which ffmpeg').riskFlag, 'low');
+  assert.equal(classifyMiniShellRisk('which /usr/local/bin/node').riskFlag, 'low');
+  assert.equal(classifyMiniShellRisk('ffmpeg -version').riskFlag, 'low');
+  assert.equal(classifyMiniShellRisk('node --version').riskFlag, 'low');
+  assert.equal(classifyMiniShellRisk('python3 -V').riskFlag, 'low');
+  assert.equal(classifyMiniShellRisk('pip3 show airllm').riskFlag, 'low');
+  assert.equal(classifyMiniShellRisk("find . -iname 'audit*.json'").riskFlag, 'low');
+  assert.equal(classifyMiniShellRisk('echo $(which claude)').riskFlag, 'low');
+
+  // Trailing/chained injection after a read-only shape must still refuse -- the
+  // anchored end-of-string match is what makes this safe, not the prefix alone.
+  assert.equal(classifyMiniShellRisk('which ffmpeg && rm -rf ~').riskFlag, 'high', 'chained command after "which" must not be allowlisted');
+  assert.equal(classifyMiniShellRisk("find . -iname '*.json' -delete").riskFlag, 'high', 'find -delete must never be allowlisted as read-only');
+  assert.equal(classifyMiniShellRisk("find . -iname '*.json' -exec rm {} \\;").riskFlag, 'high', 'find -exec must never be allowlisted as read-only');
+  assert.equal(classifyMiniShellRisk('ffmpeg -version; rm -rf ~').riskFlag, 'high', 'trailing shell after a version flag must not be allowlisted');
+
+  // A node -e payload (even one wrapping the allowlisted `claude -p` call)
+  // is deliberately NOT allowlisted -- see the file's own comment on why a
+  // regex can't safely tell a real multi-statement JS script apart from one
+  // smuggling a second exec call. It must still fall into the safe default
+  // (unrecognised -> high/blocked), never a silent allow.
+  const nodeE = classifyMiniShellRisk(
+    `node -e "require('child_process').execFileSync('claude', ['-p', 'hello world'])"`,
+  );
+  assert.equal(nodeE.riskFlag, 'high', 'node -e is intentionally left unclassified (blocked, not silently allowed) -- see file comment');
+}
+
 // --- 2. classifier: anything else defaults high, never null/allow --------------------
 {
   const arbitrary = classifyMiniShellRisk('rm -rf /some/path');
