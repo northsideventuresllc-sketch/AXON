@@ -103,7 +103,7 @@ test('tap success: card keeps its question and its buttons become a boxed receip
   assert.equal(patch.values.status, 'queued');
   assert.match(patch.values.result_summary, /^\[JB selected: "✅ Approve" /);
 
-  const answer = calls.find((c) => c.method === 'answerCallbackQuery');
+  const answer = calls.find((c) => c.method === 'answerCallbackQuery' && c.body.text);
   assert.ok(answer, 'answerCallbackQuery is still called');
   const edit = calls.find((c) => c.method === 'editMessageText');
   assert.ok(edit, 'card is edited');
@@ -129,7 +129,7 @@ test('tap failure: card says it did not go through and keeps the buttons', async
     const out = await handleTelegramCallback(cfg, sb, tap(0));
     assert.equal(out, false);
   });
-  const answer = calls.find((c) => c.method === 'answerCallbackQuery');
+  const answer = calls.find((c) => c.method === 'answerCallbackQuery' && c.body.text);
   assert.equal(answer.body.text, JB_TEXT.failed);
   assert.equal(answer.body.show_alert, true);
   const edit = calls.find((c) => c.method === 'editMessageText');
@@ -143,7 +143,7 @@ test('tap failure: card says it did not go through and keeps the buttons', async
 test('tap failure: a missing task row also shows the retry text, never silence', async () => {
   const { sb } = makeSb({ row: null });
   const calls = await withFetch(() => handleTelegramCallback(cfg, sb, tap(0)));
-  assert.equal(calls.find((c) => c.method === 'answerCallbackQuery').body.text, JB_TEXT.failed);
+  assert.equal(calls.find((c) => c.method === 'answerCallbackQuery' && c.body.text).body.text, JB_TEXT.failed);
   assert.match(calls.find((c) => c.method === 'editMessageText').body.text, /Tap again\./);
 });
 
@@ -166,7 +166,7 @@ test('double tap is idempotent: one write, second tap says what was chosen', asy
   assert.equal(state.patches.filter((p) => p.table === 'agent_dispatch').length, 1);
   calls = await withFetch(() => handleTelegramCallback(cfg, sb, tap(1, 'cbq-b')));
   assert.equal(state.patches.filter((p) => p.table === 'agent_dispatch').length, 1, 'no second write');
-  const answer = calls.find((c) => c.method === 'answerCallbackQuery');
+  const answer = calls.find((c) => c.method === 'answerCallbackQuery' && c.body.text);
   assert.equal(answer.body.text, 'Already answered: you chose ✅ Approve.');
   const edit = calls.find((c) => c.method === 'editMessageText');
   assert.match(edit.body.text, /You chose: ✅ Approve/, 'card shows the original choice');
