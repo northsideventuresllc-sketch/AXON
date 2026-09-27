@@ -22,13 +22,14 @@ async function fetchSentLeads() {
   };
 }
 
-export default async function AxonNiOutreachPage({
-  params,
-  searchParams,
-}: {
-  params: { username: string };
-  searchParams: { tab?: string; status?: string };
-}) {
+export default async function AxonNiOutreachPage(
+  props: {
+    params: Promise<{ username: string }>;
+    searchParams: Promise<{ tab?: string; status?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const { username } = await requireAxonPortalUser(params.username);
   const basePath = axonPublicPath(username);
   const { tab, status } = searchParams;

@@ -5,7 +5,8 @@ import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AxonItBuilderPage({ params }: { params: { username: string } }) {
+export default async function AxonItBuilderPage(props: { params: Promise<{ username: string }> }) {
+  const params = await props.params;
   const { username } = await requireAxonPortalUser(params.username);
   const basePath = axonPublicPath(username);
 

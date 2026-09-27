@@ -8,11 +8,12 @@ import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AxonLeadPage({
-  params,
-}: {
-  params: { username: string; id: string };
-}) {
+export default async function AxonLeadPage(
+  props: {
+    params: Promise<{ username: string; id: string }>;
+  }
+) {
+  const params = await props.params;
   const { username } = await requireAxonPortalUser(params.username);
   const basePath = axonPublicPath(username);
   const lead = await fetchLeadById(params.id);
