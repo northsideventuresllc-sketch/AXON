@@ -17,7 +17,8 @@ const GUARDRAILS = [
   { label: 'Adaptive tone', detail: 'AXON learns from every message. Reset anytime below.' },
 ];
 
-export default async function AxonSettingsPage({ params }: { params: { username: string } }) {
+export default async function AxonSettingsPage(props: { params: Promise<{ username: string }> }) {
+  const params = await props.params;
   const { operatorId } = await requireAxonPortalUser(params.username);
 
   const [profile, signals, memories, preferences, outreachTraining] = await Promise.all([
