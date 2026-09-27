@@ -69,7 +69,7 @@ for (const [intent, want] of [['code', 'qwen2.5-coder:1.5b'], ['reasoning', 'dee
   const p = pickLocalModelCandidates({ intent: 'reasoning', installed: ALL, minLocalModelB: 7, env: ENV });
   assert.equal(p.reason, 'specialized_below_floor');
   assert.equal(p.specialized, null);
-  assert.equal(p.candidates[0], 'axon-ornith:canary');
+  assert.equal(p.candidates[0], 'axon-ornith:latest');
   assert.ok(p.candidates.every((m) => localModelSizeB(m) == null || localModelSizeB(m) >= 7));
 }
 {
@@ -165,7 +165,11 @@ function mock({ tagsStdout, generateReply = (m) => JSON.stringify({ response: `h
     }
     if (u.includes('/rest/v1/nvg_mini_jobs')) {
       const id = Number(new URL(u).searchParams.get('id')?.replace('eq.', ''));
-      return json([{ status: 'done', result: { stdout: jobs.get(id) } }]);
+      const res = jobs.get(id);
+      if (res && typeof res === 'object' && ('status' in res || 'result' in res)) {
+        return json([res]);
+      }
+      return json([{ status: 'done', result: { stdout: res } }]);
     }
     return json([]);
   };
@@ -255,5 +259,56 @@ const TAGS = JSON.stringify({ models: ALL.map((name) => ({ name })) });
   assert.equal(distinctTried.length, 3, 'falls through to 2 more installed candidates instead of giving up on one');
   assert.equal(metric.model, distinctTried[distinctTried.length - 1], 'metric names the last model actually tried');
 }
+{
+  // minLocalModelB floor enforced end-to-end: skips 1.5B coder model and picks axon-ornith (9B)
+  __resetModelDiscoveryCache();
+  __resetOllamaWarmThrottle();
+  const m = mock({ tagsStdout: TAGS });
+  globalThis.fetch = m.fetchImpl;
+  const out = await axonGenerate('k', {
+    system: 's',
+    user: 'const x = 1; fix it',
+    agentName: 't',
+    kind: 'cheap_chat',
+    minLocalModelB: 7,
+  });
+  globalThis.fetch = originalFetch;
+  assert.deepEqual(m.generated, ['axon-ornith:latest']);
+  assert.equal(out.provider, 'local');
+  assert.equal(out.model, 'axon-ornith:latest');
+  const metric = m.metrics.find((p) => p.tier === 'local');
+  assert.equal(metric.model, 'axon-ornith:latest');
+  assert.equal(metric.min_local_model_b, 7);
+  assert.equal(metric.success, true);
+}
+{
+  // timeout fallthrough without redundant retry: candidate 1 times out, candidate 2 succeeds
+  __resetModelDiscoveryCache();
+  __resetOllamaWarmThrottle();
+  const m = mock({
+    tagsStdout: TAGS,
+    generateReply: (model) => (model === 'qwen2.5-coder:1.5b'
+      ? { status: 'done', result: { stdout: null, reason: 'command timed out after 6s' } }
+      : JSON.stringify({ response: `hi from ${model}` })),
+  });
+  globalThis.fetch = m.fetchImpl;
+  const out = await axonGenerate('k', {
+    system: 's',
+    user: 'const x = 1; fix it',
+    agentName: 't',
+    kind: 'cheap_chat',
+  });
+  globalThis.fetch = originalFetch;
+  assert.equal(m.generated[0], 'qwen2.5-coder:1.5b');
+  assert.equal(m.generated.filter((mName) => mName === 'qwen2.5-coder:1.5b').length, 1, 'no redundant retry on timeout');
+  assert.equal(m.generated[1], 'axon-ornith:latest');
+  assert.equal(out.provider, 'local');
+  assert.equal(out.model, 'axon-ornith:latest');
+  assert.equal(out.text, 'hi from axon-ornith:latest');
+  const metric = m.metrics.find((p) => p.tier === 'local');
+  assert.equal(metric.success, true);
+  assert.equal(metric.model, 'axon-ornith:latest');
+}
 
 console.log('local-first-intent.test.mjs: all assertions passed');
+
