@@ -9,6 +9,8 @@
     "build": "next build",
     "start": "next start",
     "telegram:setup": "node scripts/axon-telegram-setup.mjs",
+    "history:export": "node scripts/axon-history-export.mjs",
+    "history:export:write": "node scripts/axon-history-export.mjs --write",
     "research": "node scripts/axon-self-research.mjs",
     "research:dry": "AXON_DRY_RUN=1 node scripts/axon-self-research.mjs",
     "test:research-runs": "node tests/axon-research-runs.test.mjs",
