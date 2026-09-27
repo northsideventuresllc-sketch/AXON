@@ -89,7 +89,9 @@ export async function loadDayPlan(): Promise<FaceDayPlan> {
 export async function loadNeedsMe(): Promise<FaceNeedsMe> {
   const rows = await readOrNull(
     'agent_dispatch',
-    'status=not.in.(done,rejected,skipped)&select=title,owner,status,needs_jb_approval,created_at&order=created_at.desc&limit=200'
+    // approve_token is required here (not just status/needs_jb_approval) so shapeNeedsMe
+    // can drop a row JB already tapped -- see BUILD-JB-ANSWERED-BUT-STUCK-0926.
+    'status=not.in.(done,rejected,skipped,cancelled)&select=title,owner,status,needs_jb_approval,approve_token,created_at&order=created_at.desc&limit=200'
   );
 
   return shapeNeedsMe(rows) as FaceNeedsMe;

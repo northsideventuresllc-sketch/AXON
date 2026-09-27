@@ -78,12 +78,47 @@ function clip(text, n = 4000) {
 }
 
 /**
+ * FRONTIER-08-TRAIN-AXON-ON-OUR-HISTORY: hard scrub pass, run on every record
+ * before it can leave this process. Pure — no I/O — so it's directly
+ * unit-testable (see the "scrubs secrets and personal data" tests). This is a
+ * defense-in-depth filter, not a promise NI-Brain never holds secrets — it
+ * exists so a fine-tune corpus built from this export cannot leak one even if
+ * a row upstream does.
+ *
+ * Redacts, in order: common API-key/token shapes (sk-, ghp_, AKIA, Bearer …),
+ * key=value pairs whose key names a secret (password/api_key/token/secret/
+ * DATABASE_URL/…), email addresses, and US-shaped phone numbers.
+ */
+const SECRET_PATTERNS = [
+  // Provider-shaped API keys / tokens (sk-…, ghp_…, AKIA…, xox[baprs]-…, Bearer …)
+  /\b(sk-[a-zA-Z0-9]{16,}|ghp_[a-zA-Z0-9]{20,}|gho_[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{12,}|xox[baprs]-[a-zA-Z0-9-]{10,})\b/g,
+  /\bBearer\s+[A-Za-z0-9._-]{16,}\b/gi,
+  // key=value / "key": "value" pairs whose key names a secret
+  /\b((?:api[_-]?key|secret|password|passwd|token|auth[_-]?token|access[_-]?key|private[_-]?key|DATABASE_URL|SUPABASE_[A-Z_]*KEY)\s*[:=]\s*)("?[^\s,"'}]{6,}"?)/gi,
+  // Emails
+  /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+  // US-shaped phone numbers
+  /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
+];
+
+export function scrubSecretsAndPii(text) {
+  let out = String(text || '');
+  out = out.replace(SECRET_PATTERNS[0], '[REDACTED-KEY]');
+  out = out.replace(SECRET_PATTERNS[1], '[REDACTED-TOKEN]');
+  out = out.replace(SECRET_PATTERNS[2], '$1[REDACTED]');
+  out = out.replace(SECRET_PATTERNS[3], '[REDACTED-EMAIL]');
+  out = out.replace(SECRET_PATTERNS[4], '[REDACTED-PHONE]');
+  return out;
+}
+
+/**
  * Shape one raw NI-Brain row into a training example: an instruction-style
  * record an eventual local fine-tune / RAG index can consume directly.
- * Pure function — no I/O, easy to unit test.
+ * Pure function — no I/O, easy to unit test. Every record is scrubbed before
+ * it is returned — there is no code path that hands back unscrubbed text.
  */
 export function toTrainingRecord(row, kind, textFields) {
-  const text = clip(firstNonEmpty(row, textFields));
+  const text = scrubSecretsAndPii(clip(firstNonEmpty(row, textFields)));
   if (!text) return null;
   return {
     kind,

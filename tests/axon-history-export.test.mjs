@@ -10,7 +10,41 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { buildRecordsForSource, runExport, toTrainingRecord } from '../scripts/axon-history-export.mjs';
+import { buildRecordsForSource, runExport, toTrainingRecord, scrubSecretsAndPii } from '../scripts/axon-history-export.mjs';
+
+// scrubSecretsAndPii: redacts API keys/tokens, key=value secrets, emails, phone numbers
+{
+  const cases = [
+    ['sk-abcdefghijklmnopqrstuvwx', '[REDACTED-KEY]'],
+    ['ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ01234', '[REDACTED-KEY]'],
+    ['AKIAABCDEFGHIJKLMNOP', '[REDACTED-KEY]'],
+    ['Authorization: Bearer eyJhbGciOiJIUzI1NiJ9abcdefg', '[REDACTED-TOKEN]'],
+    ['SUPABASE_SERVICE_ROLE_KEY=verylongsecretvalue123', '[REDACTED]'],
+    ['api_key: "abcd1234efgh"', '[REDACTED]'],
+    ['contact jonny@northsideventures.com for help', '[REDACTED-EMAIL]'],
+    ['call 404-555-0199 anytime', '[REDACTED-PHONE]'],
+  ];
+  for (const [input, expectedFragment] of cases) {
+    const out = scrubSecretsAndPii(input);
+    assert.ok(out.includes(expectedFragment), `expected "${out}" to include "${expectedFragment}" (input: ${input})`);
+    assert.ok(!/eyJhbGciOiJIUzI1NiJ9abcdefg|verylongsecretvalue123|jonny@northsideventures\.com|404-555-0199|sk-abcdefghijklmnopqrstuvwx|AKIAABCDEFGHIJKLMNOP/.test(out), `secret leaked through scrub: ${out}`);
+  }
+  // ordinary text passes through untouched
+  assert.equal(scrubSecretsAndPii('Ship the outreach fix by Friday.'), 'Ship the outreach fix by Friday.');
+}
+
+// toTrainingRecord scrubs before returning — no code path hands back raw secrets
+{
+  const rec = toTrainingRecord(
+    { id: 7, project: 'AXON', learning: 'Rotated key sk-abcdefghijklmnopqrstuvwx, notify ops@northside.dev.' },
+    'learning',
+    ['learning'],
+  );
+  assert.ok(!rec.completion.includes('sk-abcdefghijklmnopqrstuvwx'));
+  assert.ok(!rec.completion.includes('ops@northside.dev'));
+  assert.match(rec.completion, /\[REDACTED-KEY\]/);
+  assert.match(rec.completion, /\[REDACTED-EMAIL\]/);
+}
 
 // toTrainingRecord: shapes a raw row, drops rows with no usable text
 {

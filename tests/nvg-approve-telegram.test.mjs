@@ -229,4 +229,42 @@ const cfg = { telegramToken: 'tok', telegramChatId: '999' };
   assert.equal(tapLog.row.metadata.question_source, null);
 }
 
+// --- 10. BUILD-JB-APPROVAL-LOOPBACK-AUTOTAP-0925: a forged/replayed callback_query.id
+// (well-formed data, right chat, right secret -- but an id Telegram itself rejects as
+// stale/invalid) must NEVER mutate agent_dispatch or log a valid=true tap. This is the
+// one check that can't be satisfied by something that only has read access to
+// ni_platform_secrets + a real dispatch/ping row (i.e. most agents), because Telegram --
+// not this codebase -- is the one that decides whether a callback_query.id is real.
+{
+  const { sb, patches, inserts } = makeSb();
+  const calls = [];
+  const realFetch = global.fetch;
+  global.fetch = async (url, opts) => {
+    calls.push({ url: String(url), opts });
+    if (String(url).includes('answerCallbackQuery')) {
+      // Telegram's real response to an id it never issued (or already answered).
+      return { ok: true, json: async () => ({ ok: false, description: 'Bad Request: query ID is invalid' }) };
+    }
+    return { ok: true, json: async () => ({ ok: true }) };
+  };
+  try {
+    const result = await handleTelegramCallback(cfg, sb, makeCallbackQuery(`nvga:d:${AGENT_DISPATCH_ID}:a`));
+    assert.equal(result, null, 'a stale/forged callback_query.id must not be treated as a genuine tap');
+  } finally {
+    global.fetch = realFetch;
+  }
+  assert.ok(
+    !patches.some((p) => p.table === 'agent_dispatch'),
+    'must NEVER patch agent_dispatch (approve/queue) off an id Telegram itself rejects',
+  );
+  const tapLog = inserts.find((i) => i.table === 'axon_telegram_messages');
+  assert.ok(tapLog, 'expected a tap log even for a rejected callback id');
+  assert.equal(tapLog.row.metadata.valid, false, 'a Telegram-rejected callback id must be logged invalid, never valid:true');
+  assert.match(tapLog.row.metadata.note, /telegram_rejected_callback_id/);
+  // Verification must happen before any DB read/write racing against it -- only one
+  // answerCallbackQuery call total for this callback_query.id (Telegram's one-shot rule).
+  assert.equal(calls.filter((c) => c.url.includes('answerCallbackQuery')).length, 1);
+  assert.equal(calls.filter((c) => c.url.includes('editMessageText')).length, 0);
+}
+
 console.log('nvg-approve-telegram.test.mjs passed');
