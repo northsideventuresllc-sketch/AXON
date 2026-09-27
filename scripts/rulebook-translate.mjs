@@ -70,6 +70,17 @@ export function selectCanonicalActive(units, { scopeAgent } = {}) {
   });
 }
 
+/** Returns the first paragraph of a unit body (text up to the first blank
+ *  line), with any hard-wrapped lines inside it joined by single spaces —
+ *  instead of truncating at the body's first newline, which cut a wrapped
+ *  first sentence off mid-word. */
+export function firstParagraph(body) {
+  const text = (body || '').replace(/\r\n/g, '\n');
+  const firstBlank = text.search(/\n[ \t]*\n/);
+  const para = firstBlank === -1 ? text : text.slice(0, firstBlank);
+  return para.split('\n').map((l) => l.trim()).filter(Boolean).join(' ');
+}
+
 export function renderRulebookBlock(units) {
   const lines = [BEGIN];
   lines.push('<!-- Rendered by scripts/rulebook-translate.mjs from _meta/rulebook/units — DO NOT hand-edit between the markers. Edit the source unit, re-run the translator. -->');
@@ -79,7 +90,7 @@ export function renderRulebookBlock(units) {
     lines.push('');
     lines.push(`### ${priority.toUpperCase()}`);
     for (const u of group) {
-      lines.push(`- **${u.id}** — ${u.title || ''}: ${(u.body || '').split('\n')[0]}`);
+      lines.push(`- **${u.id}** — ${u.title || ''}: ${firstParagraph(u.body)}`);
     }
   }
   lines.push('');
