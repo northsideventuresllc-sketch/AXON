@@ -10,6 +10,7 @@ import {
   renderRulebookBlock,
   spliceIntoTarget,
   extractCurrentBlock,
+  firstParagraph,
 } from './rulebook-translate.mjs';
 
 const UNIT_A = `---
@@ -46,6 +47,22 @@ canonical: true
 ---
 
 Should never appear in the render.
+`;
+
+const UNIT_WRAPPED = `---
+id: R-TEST-004
+title: "Hard-wrapped rule"
+priority: must
+kind: rule
+status: active
+canonical: true
+---
+
+This first sentence was hard-wrapped by an editor at a fixed column so it
+spans several physical lines before the paragraph actually ends with a
+period.
+
+A second paragraph that must never appear in the rendered summary.
 `;
 
 function makeUnitsDir(files) {
@@ -124,4 +141,28 @@ test('extractCurrentBlock returns the exact block including markers', () => {
   const block = extractCurrentBlock(existing);
   assert.match(block, /^<!-- RULEBOOK:BEGIN -->/);
   assert.match(block, /foo/);
+});
+
+test('firstParagraph joins hard-wrapped lines instead of truncating at the first newline', () => {
+  const { body } = parseFrontmatter(UNIT_WRAPPED);
+  const para = firstParagraph(body);
+  // The old `body.split('\n')[0]` behavior would cut this mid-sentence,
+  // right after "editor at a fixed column so it" with no terminal period.
+  assert.equal(
+    para,
+    'This first sentence was hard-wrapped by an editor at a fixed column so it spans several physical lines before the paragraph actually ends with a period.'
+  );
+  assert.ok(para.endsWith('.'), 'first paragraph must end at real sentence punctuation, not a hard line-wrap');
+  assert.doesNotMatch(para, /second paragraph/);
+});
+
+test('renderRulebookBlock does not truncate a hard-wrapped unit mid-sentence', () => {
+  const units = selectCanonicalActive(loadUnits(makeUnitsDir({ 'wrapped.md': UNIT_WRAPPED })));
+  const block = renderRulebookBlock(units);
+  // Regression for the bug COUNCIL GATE rejected northstarswimschool PR #19
+  // over: `split('\n')[0]` of the body cut a hard-wrapped first paragraph
+  // off mid-sentence in the rendered CLAUDE.md block.
+  assert.match(block, /ends with a period\./);
+  assert.doesNotMatch(block, /fixed column so it\n/);
+  assert.doesNotMatch(block, /second paragraph/);
 });
