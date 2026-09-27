@@ -6,9 +6,15 @@
  * `maxWaitMs: RELAY_LOCAL_MAX_WAIT_MS`, but nothing actually called executeLane() /
  * axonGenerate() and observed queueMiniShellJob() receive those values at runtime.
  *
- * This file does that, for BOTH changed call sites, including the retry path:
+ * This file does that, for BOTH changed call sites:
  *   1. executeLane()'s connectorKind==='local' branch (no retry).
- *   2. executeChainTier()'s tier==='local' branch (first attempt + its one retry).
+ *   2. executeChainTier()'s tier==='local' branch — a single attempt here, updated for
+ *      AXON-LOCAL-TIMEOUTS-0925 (this PR): a model that timed out is never retried (the
+ *      queue-level deadline timeout surfaces reason:"timed out after Xms", which the
+ *      isTimeout check in executeChainTier matches same as a per-call curl timeout) — the
+ *      retry-once behavior this section used to assert was exactly the wasteful case that
+ *      fix targets, since retrying an already-timed-out model just burns a second full
+ *      timeout window on a known-slow model.
  *
  * Two things are checked per site, from what the code actually does when run, not from
  * reading the source:
@@ -168,18 +174,23 @@ await withFakeClockAndFetch(makeChainFetch([]), async () => {
   );
   const elapsed = Date.now() - start;
 
-  assert.equal(capturedCmds.length, 2, 'executeChainTier local tier should try twice: first attempt + its one retry');
-  for (const [i, cmd] of capturedCmds.entries()) {
-    assert.match(cmd, /-m 120 /, `chain local tier attempt ${i + 1} must send curl -m 120, not -m 40`);
-  }
-  // Both attempts each run their own ~130s poll loop, plus a small fixed retry backoff
-  // between them — total simulated time must clear roughly two old-default timeouts to
-  // prove BOTH the first attempt and the retry got the new budget, not just one of them.
+  // AXON-LOCAL-TIMEOUTS-0925: exactly one attempt, not two — a queue-level deadline
+  // timeout is timeout-shaped (reason:"timed out after Xms") same as a per-call curl
+  // timeout, so it is never retried.
+  assert.equal(capturedCmds.length, 1, 'executeChainTier local tier should NOT retry a model that timed out');
+  assert.match(capturedCmds[0], /-m 120 /, 'chain local tier attempt must send curl -m 120, not -m 40');
+  // The single attempt runs its own ~130s poll loop — simulated time must clear one
+  // old-default timeout floor to prove it got the new budget, and must NOT clear double
+  // that floor, which would mean a retry silently crept back in.
   assert.ok(
-    elapsed >= NEW_BUDGET_FLOOR_MS * 2,
-    `chain local tier's two attempts together only ran ${elapsed}ms of simulated time — expected roughly 2x130000ms if both the first attempt and its retry each got the ~130s budget`,
+    elapsed >= NEW_BUDGET_FLOOR_MS,
+    `chain local tier's one attempt only ran ${elapsed}ms of simulated time — expected roughly 130000ms for the ~130s budget`,
+  );
+  assert.ok(
+    elapsed < NEW_BUDGET_FLOOR_MS * 2,
+    `chain local tier ran ${elapsed}ms of simulated time — that's enough for two full timeout windows, meaning a retry happened when it should not have`,
   );
 });
-console.log('ok - executeChainTier local tier sends -m 120 on both the first attempt and its retry, each waiting out a ~130s budget');
+console.log('ok - executeChainTier local tier sends -m 120 and does not retry a model that timed out');
 
 console.log('relay-timeout-runtime.test.mjs: all assertions passed');
