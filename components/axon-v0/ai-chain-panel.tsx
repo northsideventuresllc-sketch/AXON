@@ -16,7 +16,7 @@ interface ChainTier {
 // Plain-English labels — never a raw tier id on screen (matches lib/axon-v0/plain-labels.ts).
 const TIER_LABEL: Record<Tier, string> = {
   local: 'Your Mac Mini (local, free)',
-  runpod: 'RunPod — AXON v1 (free)',
+  runpod: 'RunPod — AXON v1 (paid — off until funded)',
   openrouter: 'OpenRouter — free models',
   gemini: 'Google Gemini Flash (free)',
   anthropic: 'Claude (paid — last resort)',
@@ -24,7 +24,7 @@ const TIER_LABEL: Record<Tier, string> = {
 
 const TIER_HINT: Record<Tier, string> = {
   local: 'Runs on the Mac mini. No key needed here.',
-  runpod: "NVG's own model. Not live yet — this tier is skipped until it is.",
+  runpod: "NVG's own model on paid GPU hosting. Skipped until JB funds it, so it costs nothing by default.",
   openrouter: 'Free community models. Uses the shared NVG key unless you add your own below.',
   gemini: 'Free Google key. Uses the shared NVG key unless you add your own below.',
   anthropic: 'Costs money. Only used when everything above it is down or disabled.',
