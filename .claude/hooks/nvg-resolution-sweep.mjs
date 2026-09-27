@@ -27,6 +27,12 @@
 const ID_RE = /^[0-9]+$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
+ * FIX 2026-09-26 (ticket BUILD-BUS-SUPERSEDED-STATUS-0925): agent_bus_status_check
+ * only allows status IN (open, answered, dropped) -- 'superseded' violates the
+ * constraint, so every sibling PATCH here 400'd and silently never closed the
+ * sibling row. Now writes status='dropped' (+ answered_by/answered_at) and keeps
+ * the reason in body.superseded_note.
+ *
  * Pure: build the resolution note for one sibling row. No network, no Date.now() (caller
  * supplies `nowIso` so this stays deterministic and testable).
  *
@@ -63,7 +69,7 @@ export async function sweepSiblings(entries, { agent, closeoutTask, nowIso, patc
       const filter = `id=eq.${encodeURIComponent(String(entry.id))}`;
       const existing = await getRow('agent_bus', `${filter}&select=body`);
       const existingBody = existing && existing.body && typeof existing.body === 'object' && !Array.isArray(existing.body) ? existing.body : {};
-      await patchRow('agent_bus', filter, { status: 'superseded', body: { ...existingBody, superseded_note: note } });
+      await patchRow('agent_bus', filter, { status: 'dropped', answered_by: agent, answered_at: nowIso, body: { ...existingBody, superseded_note: note } });
       results.push({ id: entry.id, ok: true });
     } catch (e) {
       results.push({ id: entry.id, ok: false, error: e.message });

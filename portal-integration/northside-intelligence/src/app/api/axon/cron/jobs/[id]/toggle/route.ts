@@ -5,9 +5,10 @@ import { assertFireAllowed, FireHoldError } from '@/lib/axon/axon-fire-gate';
 
 export const dynamic = 'force-dynamic';
 
-type RouteCtx = { params: { id: string } };
+type RouteCtx = { params: Promise<{ id: string }> };
 
-export async function POST(req: NextRequest, { params }: RouteCtx) {
+export async function POST(req: NextRequest, props: RouteCtx) {
+  const params = await props.params;
   try {
     await requireAxonOperatorId();
     const body = await req.json().catch(() => ({}));
