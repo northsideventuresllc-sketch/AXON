@@ -32,7 +32,6 @@ import { queueMiniShellJob } from '../lib/nvg-mini-queue.mjs';
     'touch /tmp/foo/bar.txt',
     'mv /tmp/a /tmp/b',
     'cp /tmp/a /tmp/b',
-    `curl -X POST https://example.com/api -d '{"x":1}'`,
   ];
   for (const cmd of cases) {
     const r = classifyMiniShellRiskTier(cmd);
@@ -60,6 +59,27 @@ import { queueMiniShellJob } from '../lib/nvg-mini-queue.mjs';
     const r = classifyMiniShellRiskTier(cmd);
     assert.equal(r.tier, 'high', `expected high for: ${cmd}`);
     assert.equal(r.route, 'jb', `expected jb route for: ${cmd}`);
+  }
+}
+
+// --- 3b. REGRESSION (found by an independent verifier on ticket 252adefa, 2026-09-28):
+// classifyMiniShellRiskTier() previously had a host-unscoped `curl -X POST/PUT/PATCH` /
+// `curl -d` rule in the COUNCIL (medium) bucket, so a real send to a person-facing/public
+// endpoint (e.g. a Facebook post or a Resend email) matched COUNCIL review instead of JB
+// (R-MONEY-002: anything that reaches a real person needs JB's explicit approval). This
+// test fails on the pre-fix code (asserted medium/council) and passes after moving those
+// curl rules to JB_PERSON_FACING_PATTERNS, checked before the COUNCIL bucket.
+{
+  const cases = [
+    `curl -X POST https://example.com/api -d '{"x":1}'`,
+    `curl -X POST https://graph.facebook.com/v20.0/me/feed -d 'message=hi'`,
+    `curl https://api.resend.com/emails -d '{"to":"x@y.com"}'`,
+    'mail -s "subject" someone@example.com',
+  ];
+  for (const cmd of cases) {
+    const r = classifyMiniShellRiskTier(cmd);
+    assert.equal(r.tier, 'high', `expected high (JB) for a send/publish shape: ${cmd}`);
+    assert.equal(r.route, 'jb', `expected jb route, not council, for: ${cmd}`);
   }
 }
 
