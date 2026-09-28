@@ -83,3 +83,29 @@ test('an unrelated unmatched shell payload still defaults to high/not-allowliste
   assert.equal(r.allowlisted, false);
   assert.equal(r.riskFlag, 'high');
 });
+
+// MINI-RISKGATE-READONLY-DIAG-ALLOWLIST-0928: the 5 read-only mini diagnostics that were
+// default-denied and re-routed to COUNCIL-TRIAGE in the 2026-09-28 fire (8 of 16 tickets).
+// which/ffmpeg -version were already allowlisted before this ticket (BUILD-MINI-DEFAULT-
+// DENY-COUNCIL-CHURN-0927) -- re-asserted here alongside the 3 genuinely new entries
+// (df, du, brctl status) so this file is the single regression test for all 5, per the
+// ticket's done bar ("regression test names the before/after").
+for (const cmd of ['df', 'df -h', 'du -sh /tmp', 'which node', 'ffmpeg -version', 'brctl status']) {
+  test(`readonly mini diagnostic is allowlisted: ${cmd}`, () => {
+    const r = classifyMiniShellRisk(cmd);
+    assert.equal(r.allowlisted, true, `expected "${cmd}" to be allowlisted, got: ${r.riskReason}`);
+    assert.equal(r.riskFlag, 'low');
+  });
+}
+
+test('df/du allowlist entry does not swallow a chained second command', () => {
+  const r = classifyMiniShellRisk("df -h && rm -rf /");
+  assert.equal(r.allowlisted, false);
+  assert.equal(r.riskFlag, 'high');
+});
+
+test('brctl status allowlist entry is exact -- a different brctl subcommand stays denied', () => {
+  const r = classifyMiniShellRisk('brctl start');
+  assert.equal(r.allowlisted, false);
+  assert.equal(r.riskFlag, 'high');
+});
