@@ -38,8 +38,14 @@
  * Run: node tests/relay-timeout-runtime.test.mjs
  */
 import assert from 'node:assert/strict';
-import { executeLane, axonGenerate } from '../lib/axon-router-core.mjs';
+import { executeLane, axonGenerate, computeLocalTimeoutS } from '../lib/axon-router-core.mjs';
 import { MINI_MAX_WAIT_MS } from '../lib/nvg-mini-queue.mjs';
+
+// AXON-MODEL-FRONTIER-SESSION-0925: the timeout is now tuned per model/prompt size
+// (computeLocalTimeoutS) instead of the old flat RELAY_LOCAL_CURL_TIMEOUT_S=120 constant —
+// asserted dynamically below rather than hardcoding "-m 120", so this test tracks the real
+// formula instead of one frozen value.
+const ORNITH_SHORT_PROMPT_TIMEOUT_S = computeLocalTimeoutS('axon-ornith', 40); // ~len of "\n\nUser: hi\nAssistant:"
 
 process.env.AXON_KEYSTORE_SECRET = process.env.AXON_KEYSTORE_SECRET || 'test-only-secret-do-not-use-in-prod';
 
@@ -104,10 +110,11 @@ async function withFakeClockAndFetch(fetchImpl, fn) {
   }
 }
 
-// A 45s-default timeout gives up well under 50000ms of simulated time; a real 130s budget
-// must clear at least 125000ms (allowing one poll interval of slack either side).
+// A 45s-default timeout gives up well under 50000ms of simulated time; the tuned budget for
+// axon-ornith (computeLocalTimeoutS + 10s buffer, computeLocalMaxWaitMs) must clear that with
+// headroom either side.
 const OLD_DEFAULT_CEILING_MS = 50_000;
-const NEW_BUDGET_FLOOR_MS = 125_000;
+const NEW_BUDGET_FLOOR_MS = (ORNITH_SHORT_PROMPT_TIMEOUT_S - 5) * 1000;
 
 // --- 1. executeLane(), connectorKind==='local' — no retry ---------------------------
 await withFakeClockAndFetch(makeNeverDoneMiniFetch([]), async () => {
@@ -127,10 +134,14 @@ await withFakeClockAndFetch(makeNeverDoneMiniFetch([]), async () => {
   const elapsed = Date.now() - start;
 
   assert.equal(capturedCmds.length, 1, 'executeLane local lane should insert exactly one mini job');
-  assert.match(capturedCmds[0], /-m 120 /, 'executeLane local lane must send curl -m 120, not -m 40');
+  assert.match(
+    capturedCmds[0],
+    new RegExp(`-m ${ORNITH_SHORT_PROMPT_TIMEOUT_S} `),
+    `executeLane local lane must send curl -m ${ORNITH_SHORT_PROMPT_TIMEOUT_S} (computeLocalTimeoutS), not -m 40`,
+  );
   assert.ok(
     elapsed >= NEW_BUDGET_FLOOR_MS,
-    `executeLane local lane gave up after only ${elapsed}ms of simulated time — expected it to run the poll loop out to ~130000ms (RELAY_LOCAL_MAX_WAIT_MS), not the library's ${MINI_MAX_WAIT_MS}ms default`,
+    `executeLane local lane gave up after only ${elapsed}ms of simulated time — expected it to run the poll loop out to ~${ORNITH_SHORT_PROMPT_TIMEOUT_S * 1000}ms (computeLocalMaxWaitMs), not the library's ${MINI_MAX_WAIT_MS}ms default`,
   );
   assert.ok(
     elapsed > OLD_DEFAULT_CEILING_MS,
@@ -178,7 +189,11 @@ await withFakeClockAndFetch(makeChainFetch([]), async () => {
   // timeout is timeout-shaped (reason:"timed out after Xms") same as a per-call curl
   // timeout, so it is never retried.
   assert.equal(capturedCmds.length, 1, 'executeChainTier local tier should NOT retry a model that timed out');
-  assert.match(capturedCmds[0], /-m 120 /, 'chain local tier attempt must send curl -m 120, not -m 40');
+  assert.match(
+    capturedCmds[0],
+    new RegExp(`-m ${ORNITH_SHORT_PROMPT_TIMEOUT_S} `),
+    `chain local tier attempt must send curl -m ${ORNITH_SHORT_PROMPT_TIMEOUT_S} (computeLocalTimeoutS), not -m 40`,
+  );
   // The single attempt runs its own ~130s poll loop — simulated time must clear one
   // old-default timeout floor to prove it got the new budget, and must NOT clear double
   // that floor, which would mean a retry silently crept back in.
@@ -191,6 +206,6 @@ await withFakeClockAndFetch(makeChainFetch([]), async () => {
     `chain local tier ran ${elapsed}ms of simulated time — that's enough for two full timeout windows, meaning a retry happened when it should not have`,
   );
 });
-console.log('ok - executeChainTier local tier sends -m 120 and does not retry a model that timed out');
+console.log('ok - executeChainTier local tier sends -m <computeLocalTimeoutS> and does not retry a model that timed out');
 
 console.log('relay-timeout-runtime.test.mjs: all assertions passed');
