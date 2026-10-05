@@ -133,15 +133,19 @@ export async function runBackupPoll(argv = [], deps = {}) {
     const info = await getWebhookInfo(token);
     const url = env.AXON_WEBHOOK_URL || info?.url || state.url || DEFAULT_WEBHOOK_URL;
 
+    // Three probes ~3 s apart: a short blip must not make us delete the webhook.
     let up = await probe(url);
-    if (!up) {
+    for (let i = 0; i < 2 && !up; i++) {
       await sleep(3000);
       up = await probe(url);
     }
 
     // HOST UP
     if (up) {
-      if (state.mode !== 'backup') return { code: 0, line: 'host healthy, nothing to do' };
+      // Repair case: host is up but no webhook is registered (state file lost, reboot,
+      // or a crash right after deleteWebhook). Re-register whatever the state says.
+      const needsWebhook = state.mode === 'backup' || !info?.url;
+      if (!needsWebhook) return { code: 0, line: 'host healthy, nothing to do' };
       if (!telegram.telegramWebhookSecret) {
         return { code: 1, line: 'host is back but webhook secret is missing, refusing to re-register the webhook' };
       }
@@ -161,9 +165,10 @@ export async function runBackupPoll(argv = [], deps = {}) {
     }
     let cur = { ...state, url };
     if (webhookSet || state.mode !== 'backup') {
-      if (webhookSet) await deleteWebhook(token);
+      // Record backup mode BEFORE deleting, so a crash in between is still repaired next run.
       cur = { ...cur, mode: 'backup', since: now() };
       wr(statePath, cur);
+      if (webhookSet) await deleteWebhook(token);
     }
 
     const cfg = await loadFullCfg(sb, telegram);

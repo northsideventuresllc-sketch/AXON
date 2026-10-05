@@ -134,3 +134,32 @@ test('--help prints usage', async () => {
   const r = await runBackupPoll(['--help']);
   assert.match(r.line, /Usage/);
 });
+
+test('regression: host up, webhook missing, state not backup => re-register (lost state / crash repair)', async () => {
+  const t = setup({ probes: [true], webhookUrl: '', state: {} });
+  const r = await t.run();
+  assert.equal(r.code, 0);
+  assert.ok(names(t.calls).includes('setWebhook'));
+  assert.equal(t.calls.find((c) => c[0] === 'setWebhook')[2], 'sec');
+});
+
+test('regression: host up, webhook missing, secret missing => refuse (exit 1), never register without secret', async () => {
+  const t = setup({ probes: [true], webhookUrl: '', state: {}, secret: '' });
+  const r = await t.run();
+  assert.equal(r.code, 1);
+  assert.ok(!names(t.calls).includes('setWebhook'));
+});
+
+test('regression: backup mode is written to state BEFORE deleteWebhook (crash-safe order)', async () => {
+  const t = setup({ probes: [false, false, false], state: {} });
+  await t.run();
+  const n = names(t.calls);
+  assert.ok(n.indexOf('writeState') < n.indexOf('deleteWebhook'));
+});
+
+test('regression: two quick down probes then up does NOT delete the webhook (3 probes)', async () => {
+  const t = setup({ probes: [false, false, true] });
+  const r = await t.run();
+  assert.equal(r.code, 0);
+  assert.ok(!names(t.calls).includes('deleteWebhook'));
+});

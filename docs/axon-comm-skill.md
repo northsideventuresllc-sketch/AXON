@@ -88,7 +88,7 @@ npm run test:comm-skill
 
 ## Telegram tap backup (Mac mini)
 
-- **Host is primary:** taps arrive at the Vercel webhook (`api/telegram-webhook.js`). The mini only steps in when the host is down (HTTP 402, 5xx, timeout) on 2 probes ~3 s apart.
+- **Host is primary:** taps arrive at the Vercel webhook (`api/telegram-webhook.js`). The mini only steps in when the host is down (HTTP 402, 5xx, timeout) on 3 probes ~3 s apart.
 - **Mini is backup:** `scripts/telegram-backup-poll.mjs` removes the webhook, polls `getUpdates`, and feeds taps to the same handlers; when the host is back it re-registers the webhook with its secret_token (refuses if the secret is missing).
 - **Cron (one short run per minute, not a daemon):** `* * * * * cd ~/nvg/repos/AXON && node scripts/telegram-backup-poll.mjs --apply` (default without `--apply` is dry-run).
 - **State file:** `~/nvg/state/telegram-backup.json` holds `{mode, offset, since}` (plus `url`, `seen`, `retries`); override path with `TELEGRAM_BACKUP_STATE`.
