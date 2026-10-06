@@ -13,6 +13,9 @@
     "history:export:write": "node scripts/axon-history-export.mjs --write",
     "research": "node scripts/axon-self-research.mjs",
     "research:dry": "AXON_DRY_RUN=1 node scripts/axon-self-research.mjs",
+    "competitor-scan": "node scripts/axon-competitor-scan.mjs",
+    "competitor-scan:dry": "AXON_DRY_RUN=1 node scripts/axon-competitor-scan.mjs",
+    "test:competitor-scan": "node --test scripts/axon-competitor-scan.test.mjs",
     "test:research-runs": "node tests/axon-research-runs.test.mjs",
     "test:inhibitor": "node tests/axon-inhibitor.test.mjs",
     "foreign-input": "node scripts/axon-foreign-input.mjs",
@@ -61,7 +64,7 @@
     "digest:nightly:dry": "AXON_DRY_RUN=1 node scripts/axon-nightly-digest.mjs",
     "test:nightly-digest": "node tests/axon-nightly-digest.test.mjs",
     "test:droid-runner-target": "node tests/axon-droid-runner-target.test.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs scripts/axon-competitor-scan.test.mjs"
   },
   "engines": {
     "node": ">=20"
