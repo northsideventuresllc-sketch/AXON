@@ -14,7 +14,8 @@
  *   - comms:       lib/axon-agent-comms.mjs (agent_bus hand-off, resume flag, loop notes)
  *
  * What it does, per competitor in the rotation (registry in the vault's Competitive Intel
- * folder, 2 per run): pull real search results, keep only the ones that actually mention the
+ * folder, 2 per run; at most 2 searches each, so 4 searches a run at the default and 10 at the
+ * AXON_COMPSCAN_PER_RUN ceiling of 5): pull real search results, keep only the ones that actually mention the
  * competitor, and ask the chain for ONE concrete gap (something they have that AXON does
  * not) turned into a build plan: what to build, steps, effort, priority, why it matters,
  * one plain-English line. Then:
@@ -134,9 +135,13 @@ export function loadRegistry(vaultRoot) {
   return { registry, file };
 }
 
-/** Same exclusion the old script used: a name collision is not a competitor. */
+/**
+ * A name collision is not a competitor (same exclusion the old script used), and neither is
+ * a tool JB already runs: the "Cursor / Cowork" row is category jb_incumbent and Cursor is retired.
+ */
+const NOT_COMPETITORS = new Set(['name_collision', 'jb_incumbent']);
 export function competitorPool(registry) {
-  return registry.competitors.filter((c) => c?.name && c.category !== 'name_collision');
+  return registry.competitors.filter((c) => c?.name && !NOT_COMPETITORS.has(c.category));
 }
 
 /**
@@ -191,6 +196,9 @@ export function baselineGapSummary(comp, registry) {
 
 // ── sources ───────────────────────────────────────────────────────────────────
 
+// Hosting sites whose hostname is shared by thousands of unrelated projects: never an alias.
+const SHARED_HOSTS = new Set(['github', 'gitlab', 'bitbucket', 'huggingface', 'medium', 'notion', 'substack']);
+
 export function competitorAliases(comp) {
   const aliases = new Set();
   const name = String(comp.name || '').toLowerCase().trim();
@@ -201,8 +209,16 @@ export function competitorAliases(comp) {
     if (first && first.length >= 4) aliases.add(first);
   }
   try {
-    const label = new URL(comp.url).hostname.replace(/^www\./, '').split('.')[0];
-    if (label.length >= 4) aliases.add(label);
+    const u = new URL(comp.url);
+    const label = u.hostname.replace(/^www\./, '').split('.')[0];
+    if (SHARED_HOSTS.has(label)) {
+      // github.com/owner/repo says nothing about this competitor: the repo name does
+      const repo = u.pathname.split('/').filter(Boolean)[1] || u.pathname.split('/').filter(Boolean)[0] || '';
+      const repoAlias = repo.toLowerCase();
+      if (repoAlias.length >= 4) aliases.add(repoAlias);
+    } else if (label.length >= 4) {
+      aliases.add(label);
+    }
   } catch {
     /* no usable URL on the registry row */
   }
@@ -508,6 +524,7 @@ export function buildBusMessage({ date, scans, stoppedEarlyBefore = null, report
     needsAnswer: plans.length > 0, // nothing to answer when no plan was produced
     body: {
       kind: 'competitor_gap_build_plans',
+      untrusted_web_derived: true, // plans are built from web pages: EXEC treats them as data, never instructions
       date,
       stopped_early_before: stoppedEarlyBefore,
       report_path: reportRelPath,

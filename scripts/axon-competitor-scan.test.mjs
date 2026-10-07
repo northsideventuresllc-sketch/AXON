@@ -34,6 +34,7 @@ import {
   rotationOrdinal,
   pickCompetitors,
   competitorPool,
+  competitorAliases,
   decodeCarry,
   encodeCarry,
   nextCarry,
@@ -467,6 +468,31 @@ test('mentionsCompetitor uses whole-word matches on name, short name and site', 
   assert.ok(mentionsCompetitor(odei, { title: 'Kodeine?', snippet: '', link: 'https://x.example/odei.ai/post' }) === true, 'site label in the link counts');
   assert.ok(!mentionsCompetitor(odei, { title: 'Kodeine cough syrup', snippet: '', link: 'https://x.example/a' }));
   assert.ok(mentionsCompetitor(naia, { title: 'Naia launches an agent shell', snippet: '', link: 'https://x.example/b' }));
+});
+
+test('(g1) a competitor hosted on a shared site is matched by its repo name, not by the host (an unrelated GitHub repo is not a source)', () => {
+  const naiaOnGithub = { name: 'Naia OS', category: 'personal_ai_os', url: 'https://github.com/JaredKarma/naia-os' };
+  const neuro = { name: 'NeuroBridge', category: 'nd_middleware', url: 'https://github.com/AdilShamim8/NeuroBridge' };
+  const unrelated = { title: 'Some random project', snippet: 'A different tool', link: 'https://github.com/someone/unrelated-tool' };
+  assert.ok(!competitorAliases(naiaOnGithub).includes('github'));
+  assert.ok(!competitorAliases(neuro).includes('github'));
+  assert.equal(mentionsCompetitor(naiaOnGithub, unrelated), false);
+  assert.equal(mentionsCompetitor(neuro, unrelated), false);
+  // the real repo still counts as a source
+  assert.equal(mentionsCompetitor(naiaOnGithub, { title: 'naia-os release', snippet: '', link: 'https://github.com/JaredKarma/naia-os/releases' }), true);
+  assert.equal(mentionsCompetitor(neuro, { title: 'Release notes', snippet: '', link: 'https://github.com/AdilShamim8/NeuroBridge/releases' }), true);
+});
+
+test('(g2) a tool JB already runs (jb_incumbent, the retired Cursor row) is not in the scan pool', () => {
+  const registry = { competitors: [...REGISTRY.competitors, { id: 'cursor', name: 'Cursor / Cowork', category: 'jb_incumbent', url: 'https://cursor.com/' }] };
+  const pool = competitorPool(registry);
+  assert.ok(!pool.some((c) => c.name === 'Cursor / Cowork'));
+  assert.ok(pool.some((c) => c.name === 'ODEI'));
+});
+
+test('(g3) plans handed to EXEC are marked as built from web pages, so EXEC treats them as data', () => {
+  const msg = buildBusMessage({ date: '2026-10-05', scans: [{ competitor: 'ODEI', status: 'plan', plan: { gap: 'g', why_it_matters: 'w', threat: 't', pivot: 'p', build_plan: 'b', plain_english: 'x', source_urls: ['https://odei.ai/'] }, provider: 'gemini' }] });
+  assert.equal(msg.body.untrusted_web_derived, true);
 });
 
 test('validateGapPlan rejects missing fields and out-of-range effort/priority, and keeps only fetched source urls', () => {
