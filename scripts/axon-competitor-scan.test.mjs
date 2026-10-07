@@ -16,7 +16,7 @@
  *
  * Run: node --test scripts/axon-competitor-scan.test.mjs
  */
-import test from 'node:test';
+import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -40,6 +40,20 @@ import {
   nextCarry,
   buildBusMessage,
 } from './axon-competitor-scan.mjs';
+
+// handoffToAgent prints one console line per bus row. Under `node --test` that write lands in the
+// runner's own stdout stream and intermittently breaks result deserialisation ("Unable to deserialize
+// cloned data"). Drop only those lines; every other console call passes through.
+const realConsoleLog = console.log;
+before(() => {
+  console.log = (...args) => {
+    if (typeof args[0] === 'string' && /^(✅|⚠️) agent_bus/.test(args[0])) return;
+    realConsoleLog(...args);
+  };
+});
+after(() => {
+  console.log = realConsoleLog;
+});
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'axon-competitor-scan.mjs');
 const NOW = new Date('2026-10-05T12:00:00Z'); // a Monday
@@ -481,6 +495,14 @@ test('(g1) a competitor hosted on a shared site is matched by its repo name, not
   // the real repo still counts as a source
   assert.equal(mentionsCompetitor(naiaOnGithub, { title: 'naia-os release', snippet: '', link: 'https://github.com/JaredKarma/naia-os/releases' }), true);
   assert.equal(mentionsCompetitor(neuro, { title: 'Release notes', snippet: '', link: 'https://github.com/AdilShamim8/NeuroBridge/releases' }), true);
+});
+
+test('(g1b) the repo name from a shared-host URL is itself an alias (pins the repo-name branch)', () => {
+  const comp = { name: 'Orbit Assistant', category: 'personal_ai_os', url: 'https://github.com/acme-labs/zeta-runtime' };
+  assert.ok(competitorAliases(comp).includes('zeta-runtime'));
+  assert.ok(!competitorAliases(comp).includes('acme-labs'), 'the owner segment is not the project');
+  assert.equal(mentionsCompetitor(comp, { title: 'zeta-runtime 2.0 released', snippet: '', link: 'https://example.org/post' }), true);
+  assert.equal(mentionsCompetitor(comp, { title: 'Another repo', snippet: '', link: 'https://github.com/other-owner/other-tool' }), false);
 });
 
 test('(g2) a tool JB already runs (jb_incumbent, the retired Cursor row) is not in the scan pool', () => {
