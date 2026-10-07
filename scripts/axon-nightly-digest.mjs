@@ -13,7 +13,7 @@
  *   node scripts/axon-nightly-digest.mjs --top-n=20
  *   AXON_DRY_RUN=1 node scripts/axon-nightly-digest.mjs   # print only, no write
  */
-import { runNightlyDigest } from '../lib/axon-nightly-digest.mjs';
+import { runNightlyDigest, SENSEI_DIGEST_QUERY } from '../lib/axon-nightly-digest.mjs';
 
 function yesterdayUtcKey() {
   const d = new Date();
@@ -52,11 +52,24 @@ async function main() {
     console.log(`  ${row.score.toFixed(3)}  ${row.entry_ref}  "${row.summary.slice(0, 70)}"`);
   }
 
+  // AXON-WIRING-1006: record, per top-N entry, which agent it feeds — never
+  // persisted (no column for it yet), but always printed so it's visible proof
+  // the "feeds no AXON agent" gap (agent note, Not wired yet #3) is being tracked.
+  for (const route of result.feedRouting.slice(0, 10)) {
+    console.log(`  feeds: ${route.feeds || 'unrouted'}  (${route.entry_ref}) — ${route.reason}`);
+  }
+  console.log(`SENSEI reads this day's digest via: ${SENSEI_DIGEST_QUERY.replace('<YYYY-MM-DD>', dayKey)}`);
+
   if (dryRun) {
-    console.log('DRY RUN — nothing written. Unset AXON_DRY_RUN to write.');
+    console.log('DRY RUN — nothing written, no heartbeat. Unset AXON_DRY_RUN to write.');
     return;
   }
   console.log(`Wrote ${result.written} row(s) to axon_nightly_digest.`);
+  console.log(
+    result.heartbeat?.ok
+      ? `Heartbeat recorded (${result.heartbeat.row.run_id}).`
+      : `⚠️ Heartbeat FAILED: ${result.heartbeat?.error || 'unknown'} — digest rows still wrote above.`,
+  );
 }
 
 main().catch((err) => {
